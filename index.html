@@ -31,6 +31,9 @@
           <span class="lab-badge">🎯 Sports Analytics Video Lab</span>
         </div>
         <div class="header-actions">
+          <button id="btnLabHelp" class="btn btn-amber" style="font-weight: 700;" title="Open comprehensive guide for each step of the project">
+            📖 Lab Guide &amp; Rubric
+          </button>
           <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics or sports experiment">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
             Sports Presets
@@ -78,6 +81,22 @@
   <main class="app-container" id="videoWorkspaceStage">
     <!-- Left Column: Video Workspace & Controls -->
     <section class="card" aria-label="Video Analysis Workspace">
+      <!-- Dynamic Step Guidance Alert -->
+      <div id="stepGuidanceBar" class="guidance-banner" style="margin-bottom: 0.75rem;">
+        <div class="guidance-icon">🧭</div>
+        <div class="guidance-content">
+          <strong id="guidanceTitle">Step 1: Calibration &amp; Coordinate Setup</strong>
+          <p id="guidanceText">
+            1. Select <strong>Set Origin</strong> and click on the ground or projectile release point.
+            2. Select <strong>Set Scale</strong> and drag across the amber 1.00 m reference stick on the floor.
+            3. Verify the scale readout in meters before advancing to Step 2.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
+          ❓ Step Guide
+        </button>
+      </div>
+
       <!-- Primary Toolbar -->
       <div class="toolbar">
         <div class="tool-group">
@@ -211,7 +230,6 @@
     <aside class="card" aria-label="Kinematic Data and Plots">
       <nav class="tabs-nav">
         <button class="tab-btn active" data-tab="tab-graphs">Graphs &amp; Fits</button>
-        <button class="tab-btn" data-tab="tab-linearization">Linearization Guide</button>
         <button class="tab-btn" data-tab="tab-table">Data Table</button>
         <button class="tab-btn" data-tab="tab-calibration">Scale &amp; Calibration</button>
       </nav>
@@ -228,11 +246,6 @@
                 <option value="vertical">Vertical Only (y)</option>
                 <option value="horizontal">Horizontal Only (x)</option>
               </select>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <button id="btnToggleLinearize" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Linearize parabolic vertical motion using apex or t²">
-                Linearize: y vs (t-t_apex)²
-              </button>
             </div>
           </div>
 
@@ -262,38 +275,6 @@
             <div id="fitResultVel" class="fit-readout" style="display: none; margin-bottom: 0.35rem;"></div>
             <div class="chart-canvas-container">
               <canvas id="velChart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Linearization Tab -->
-        <div id="tab-linearization" class="tab-content">
-          <div class="pedagogy-card">
-            <h4>💡 Why Linearize Parabolic Motion?</h4>
-            <p>
-              In physics, fitting a parabola \(y(t) = \frac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
-            </p>
-            <div class="formula-box" style="text-align: center; font-size: 1rem;">
-              \[y(t) = \frac{1}{2}at^2 + v_0t + y_0\]
-            </div>
-          </div>
-
-          <div class="pedagogy-card">
-            <h4>🎯 The Discovery Method: Avoiding Dependence on v₀</h4>
-            <p>
-              How can students isolate acceleration \(a\) without needing \(v_0 = 0\) at the release point?
-            </p>
-            <p>
-              <strong>Look at the apex (peak) of the position-time curve!</strong>
-              At the apex \((t_{\text{apex}}, y_{\text{apex}})\), the instantaneous vertical velocity is exactly zero: \(v_y(t_{\text{apex}}) = 0\).
-            </p>
-            <div class="formula-box">
-              <div style="font-weight: 600; margin-bottom: 0.35rem; color: var(--primary-teal);">Shifted Vertex Form:</div>
-              \[[y - y_{\text{apex}}] = \frac{1}{2}a(t - t_{\text{apex}})^2\]
-              <div style="margin-top: 0.5rem;">
-                Let \(Y' = [y - y_{\text{apex}}]\) and \(X' = (t - t_{\text{apex}})^2\):
-                \[Y' = (\text{Slope}) \cdot X' \quad \text{where} \quad \text{Slope} = \frac{1}{2}a \implies a = 2 \cdot (\text{Slope})\]
-              </div>
             </div>
           </div>
         </div>
@@ -368,6 +349,22 @@
         <div style="display: flex; gap: 0.5rem;">
           <button id="btnAutoFitAll" class="btn btn-amber" style="font-size: 0.8rem;">Auto-Fit All 6 Graphs</button>
         </div>
+      </div>
+
+      <!-- Step 3 Guidance -->
+      <div class="guidance-banner" style="margin-bottom: 1rem;">
+        <div class="guidance-icon">📈</div>
+        <div class="guidance-content">
+          <strong>Step 3: 6 Kinematics Graphs &amp; Tangent Slope Method</strong>
+          <p>
+            1. <strong>Vertical Position [y(t)]</strong>: Fits a parabolic curve \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).<br>
+            2. <strong>The Tangent Slope Method</strong>: In high school physics, vertical velocity is constructed from 10 tangent slopes along the \(y(t)\) position curve. Move the <strong>Tangent Slider</strong> to see the tangent line touch the curve and compute \(\frac{dy}{dt}\). Click <strong>Record Tangent Point</strong> (or <strong>Auto-Sample 10 Tangents</strong>).<br>
+            3. <strong>Vertical Velocity [v_y(t)]</strong>: Plots the 10 tangent slopes and fits a line whose slope is vertical acceleration \(a_y\) (theoretically \(-9.80\text{ m/s}^2\)).
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
+          ❓ Tangent Guide
+        </button>
       </div>
 
       <!-- Graph Subnav -->
@@ -477,6 +474,20 @@
           <p style="font-size: 0.88rem; color: var(--muted); margin: 0.25rem 0 0 0;">Complete all lab calculations, compare measured curve fits with theoretical kinematic models, and verify consistency.</p>
         </div>
         <button id="btnAutoCalculateWorksheet" class="btn btn-amber">Auto-Calculate from Curve Fits</button>
+      </div>
+
+      <!-- Step 4 Guidance -->
+      <div class="guidance-banner" style="margin-top: 1rem; margin-bottom: 1.25rem;">
+        <div class="guidance-icon">🧮</div>
+        <div class="guidance-content">
+          <strong>Step 4: Theoretical Calculations &amp; Percent Differences</strong>
+          <p>
+            Compare your video measurements against theoretical projectile motion formulas. Verify initial speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), launch angle \(\theta = \arctan(v_{0y}/v_{0x})\), maximum height \(y_{\max}\), hang time \(t_{\text{hang}}\), and horizontal range \(\Delta x\). Write a 5+ sentence reflection on sports analytics biomechanics.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
+          ❓ Formulas
+        </button>
       </div>
 
       <!-- Section 1: Measured Values from Logger Pro Fits -->
@@ -653,6 +664,20 @@
   <!-- Stage 5: Presentation & Reports Stage -->
   <section id="stepView5" class="step-view" style="padding: 1.25rem 1.5rem; max-width: 1100px; margin: 0 auto;">
     <div class="presentation-stage">
+      <!-- Step 5 Guidance -->
+      <div class="guidance-banner" style="margin-bottom: 1rem;">
+        <div class="guidance-icon">📊</div>
+        <div class="guidance-content">
+          <strong>Step 5: Classroom Presentation &amp; Report Submission</strong>
+          <p>
+            Review all 8 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves and video trajectory capture, or print your lab report.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
+          ❓ Rubric Guide
+        </button>
+      </div>
+
       <!-- Lab Submission & Student Profile Bar -->
       <div class="card" style="margin-bottom: 1rem; padding: 1.1rem 1.4rem; border-left: 5px solid var(--primary-teal); background: #ffffff; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 0 2px 10px rgba(12, 54, 68, 0.05);">
         <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
@@ -733,6 +758,160 @@
     </div>
   </section>
   </div> <!-- /.shell -->
+
+  <!-- Comprehensive Lab Help & Rubric Modal -->
+  <div id="helpModal" class="help-modal-backdrop" style="display: none;" aria-hidden="true" role="dialog" aria-labelledby="helpModalTitle">
+    <div class="help-modal-card">
+      <div class="help-modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.4rem;">📖</span>
+          <div>
+            <h3 id="helpModalTitle" style="margin: 0; font-size: 1.2rem; color: #ffffff; font-weight: 700;">Physics of Sports Analytics: Complete Project Guide</h3>
+            <span style="font-size: 0.78rem; color: #d4ecf4;">Video Analysis Lab Rubric, Kinematic Formulas &amp; Step-by-Step Instructions</span>
+          </div>
+        </div>
+        <button id="btnCloseHelpModal" class="help-close-btn" aria-label="Close Help Guide">✕</button>
+      </div>
+
+      <!-- Help Nav Tabs -->
+      <div class="help-tabs-bar">
+        <button class="help-tab-btn active" data-help-tab="help-overview">🌟 Overview</button>
+        <button class="help-tab-btn" data-help-tab="help-step1">📏 Step 1: Scale &amp; Origin</button>
+        <button class="help-tab-btn" data-help-tab="help-step2">🎯 Step 2: Tracking</button>
+        <button class="help-tab-btn" data-help-tab="help-step3">📈 Step 3: Graphs &amp; Tangents</button>
+        <button class="help-tab-btn" data-help-tab="help-step4">🧮 Step 4: Calculations</button>
+        <button class="help-tab-btn" data-help-tab="help-step5">📊 Step 5: Presentation (.pptx)</button>
+        <button class="help-tab-btn" data-help-tab="help-rubric">🏆 Rubric &amp; Tips</button>
+      </div>
+
+      <!-- Help Content Body -->
+      <div class="help-modal-body">
+        <!-- Tab 1: Overview -->
+        <div id="help-overview" class="help-tab-panel active">
+          <h4>🎯 Project Objective &amp; Workflow</h4>
+          <p>
+            In this laboratory project, you act as a sports analytics biomechanist analyzing the two-dimensional projectile motion of a sports ball. You will track the projectile frame-by-frame, construct 6 kinematics graphs, use the <strong>tangent slope method</strong> to construct vertical velocity, verify theoretical kinematic models with percent differences, and export an 8-slide presentation deck.
+          </p>
+          <div class="help-callout">
+            <strong>The 5 Project Stages:</strong>
+            <ol style="margin: 0.4rem 0 0 1.2rem; line-height: 1.6;">
+              <li><strong>Step 1: Video &amp; Scale</strong> — Calibrate the coordinate origin \((0, 0)\) and real-world meter scale stick.</li>
+              <li><strong>Step 2: Track Motion</strong> — Step through frames and mark the projectile's center of mass with circular reticles.</li>
+              <li><strong>Step 3: 6-Graph Studio &amp; Tangents</strong> — Inspect the 6 kinematics curves and sample 10 tangent slopes along \(y(t)\) to construct \(v_y(t)\).</li>
+              <li><strong>Step 4: Guided Calculations</strong> — Compute launch speed \(v_0\), release angle \(\theta\), \(y_{\max}\), \(t_{\text{hang}}\), \(\Delta x\), and percent differences. Write a 5-sentence reflection.</li>
+              <li><strong>Step 5: Presentation &amp; Reports</strong> — Generate an 8-slide PowerPoint (.pptx) deck matching classroom grading rubrics.</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Tab 2: Step 1 Scale & Origin -->
+        <div id="help-step1" class="help-tab-panel">
+          <h4>📏 Step 1: Setting Scale &amp; Coordinate Origin</h4>
+          <p>Accurate kinematics depends entirely on correct spatial calibration.</p>
+          <ul>
+            <li><strong>Setting the Coordinate Origin (0, 0):</strong> Click <strong>Set Origin</strong> in the toolbar. Click anywhere on the video (typically the launch point or ground level directly below release) to place the axes. You can drag the origin point anytime.</li>
+            <li><strong>Setting the Scale Stick:</strong> Click <strong>Set Scale</strong>. Click and drag across a known reference length in the frame (such as the 1.00 m reference stick on the floor, a meter stick, or athlete's height).</li>
+            <li><strong>Calibrate Input:</strong> In the right sidebar under <em>Scale &amp; Calibration</em>, enter the known length in meters (e.g. <code>1.00</code>) and click <strong>Calibrate</strong>.</li>
+          </ul>
+        </div>
+
+        <!-- Tab 3: Step 2 Tracking -->
+        <div id="help-step2" class="help-tab-panel">
+          <h4>🎯 Step 2: Frame-by-Frame Motion Tracking</h4>
+          <p>Track the projectile throughout its airborne flight (from release until right before impact).</p>
+          <ul>
+            <li><strong>Select Tool:</strong> Click <strong>Add Points</strong> in the toolbar.</li>
+            <li><strong>Reticle Placement:</strong> Place the crosshair/circle directly at the center of the ball on each frame.</li>
+            <li><strong>Auto-Advancing:</strong> By default, each click advances the video by 2 frames. You can change this to 1 frame using the <em>Step</em> dropdown.</li>
+            <li><strong>Time Zero (\(t_0\)):</strong> After tracking, click <strong>Set \(t_0\) at First Pt</strong> so that the release frame corresponds to \(t = 0.000\text{ s}\).</li>
+          </ul>
+        </div>
+
+        <!-- Tab 4: Step 3 Graphs & Tangents -->
+        <div id="help-step3" class="help-tab-panel">
+          <h4>📈 Step 3: The 6 Kinematics Graphs &amp; Tangent Slope Method</h4>
+          <p>
+            Why does the rubric ask for <strong>10 tangent slopes</strong> on the vertical position curve?
+          </p>
+          <div class="help-callout">
+            <strong>The Physics of Tangent Lines:</strong>
+            <p style="margin: 0.25rem 0;">
+              By definition, instantaneous velocity is the derivative (slope) of the position-time curve:
+              \[v_y(t) = \frac{dy}{dt}\]
+              When you fit a quadratic curve \(y(t) = At^2 + Bt + C\) to your vertical position data, the tangent line touching the curve at time \(t\) has slope \(m = 2At + B\).
+            </p>
+            <p style="margin: 0.25rem 0;">
+              By sampling 10 points along the trajectory, recording their tangent slopes, and plotting those slopes versus time on Graph 3, you construct the vertical velocity graph \(v_y(t)\)!
+            </p>
+            <p style="margin: 0.25rem 0;">
+              The linear fit to these 10 tangent velocity points yields:
+              \[v_y(t) = a_y t + v_{0y}\]
+              The slope of this line directly reveals the vertical acceleration of gravity \(a_y\) (theoretically \(-9.80\text{ m/s}^2\)), while the y-intercept reveals the initial vertical speed \(v_{0y}\).
+            </p>
+          </div>
+          <h4>The 6 Required Project Graphs:</h4>
+          <ol style="margin-left: 1.2rem; line-height: 1.6;">
+            <li><strong>Graph 1: Vertical Position \(y(t)\)</strong> — Parabolic curve of best fit \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).</li>
+            <li><strong>Graph 2: Horizontal Position \(x(t)\)</strong> — Linear fit \(x(t) = v_{0x}t + x_0\) (slope = constant horizontal velocity).</li>
+            <li><strong>Graph 3: Vertical Velocity \(v_y(t)\)</strong> — Linear fit through the 10 tangent slopes (slope = \(a_y\)).</li>
+            <li><strong>Graph 4: Horizontal Velocity \(v_x(t)\)</strong> — Linear fit showing zero acceleration (\(a_x \approx 0\)).</li>
+            <li><strong>Graph 5: Vertical Acceleration \(a_y(t)\)</strong> — Horizontal constant line at \(a_y\) compared against standard \(g = -9.80\text{ m/s}^2\).</li>
+            <li><strong>Graph 6: Horizontal Acceleration \(a_x(t)\)</strong> — Horizontal constant line at \(a_x \approx 0.00\text{ m/s}^2\).</li>
+          </ol>
+        </div>
+
+        <!-- Tab 5: Step 4 Calculations -->
+        <div id="help-step4" class="help-tab-panel">
+          <h4>🧮 Step 4: Theoretical Calculations &amp; Percent Differences</h4>
+          <p>Using the coefficients from your curve fits, verify the theoretical models:</p>
+          <div class="help-callout">
+            <ul style="margin: 0.25rem 0 0 1.2rem; line-height: 1.7;">
+              <li><strong>Initial Speed:</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\)</li>
+              <li><strong>Launch Angle:</strong> \(\theta = \arctan\left(\frac{v_{0y}}{v_{0x}}\right)\)</li>
+              <li><strong>Calculated Hang Time:</strong> \(t_{\text{hang}} = \frac{-v_{0y} - \sqrt{v_{0y}^2 - 2a_y(y_{\text{final}} - y_0)}}{a_y}\)</li>
+              <li><strong>Calculated Range:</strong> \(\Delta x = v_{0x} \cdot t_{\text{hang}}\)</li>
+              <li><strong>Calculated Max Height:</strong> \(y_{\max} = y_0 - \frac{v_{0y}^2}{2a_y}\)</li>
+              <li><strong>Percent Difference Formula:</strong> \[\text{\% Diff} = \frac{|\text{Measured} - \text{Calculated}|}{\frac{\text{Measured} + \text{Calculated}}{2}} \times 100\%\]</li>
+            </ul>
+          </div>
+          <p><strong>Reflection Rubric:</strong> Write at least 5 complete sentences describing real-world applications in sports analytics (e.g. MLB Statcast exit velocity and launch angles, NBA shooting arcs, or soccer aerodynamics).</p>
+        </div>
+
+        <!-- Tab 6: Step 5 Presentation -->
+        <div id="help-step5" class="help-tab-panel">
+          <h4>📊 Step 5: PowerPoint Deck Format (8 Slides)</h4>
+          <p>The 1-click exporter generates a presentation aligned with the high school physics rubric:</p>
+          <ul>
+            <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Course, Honor Code pledge, and Video Trajectory snapshot.</li>
+            <li><strong>Slide 2:</strong> Vertical Position Graph \(y(t)\), quadratic general &amp; particular equations with units, and analysis notes.</li>
+            <li><strong>Slide 3:</strong> Vertical Velocity Graph \(v_y(t)\), linear equations with units, documentation of 10 tangent slopes.</li>
+            <li><strong>Slide 4:</strong> Vertical Acceleration Graph \(a_y(t)\), comparison with \(g = -9.80\text{ m/s}^2\), and percent difference.</li>
+            <li><strong>Slide 5:</strong> Horizontal Position Graph \(x(t)\), linear equations with units, and horizontal velocity analysis.</li>
+            <li><strong>Slide 6:</strong> Horizontal Velocity Graph \(v_x(t)\), verification of uniform velocity with negligible horizontal force.</li>
+            <li><strong>Slide 7:</strong> Horizontal Acceleration Graph \(a_x(t)\), comparison with \(0\text{ m/s}^2\).</li>
+            <li><strong>Slide 8:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
+          </ul>
+        </div>
+
+        <!-- Tab 7: Rubric & Pro Tips -->
+        <div id="help-rubric" class="help-tab-panel">
+          <h4>🏆 Scoring Rubric &amp; Pro Tips for High Marks</h4>
+          <div class="help-callout">
+            <ul style="margin: 0.25rem 0 0 1.2rem; line-height: 1.7;">
+              <li><strong>Explicit Units:</strong> Every particular equation MUST include units (e.g., \(\text{m/s}^2\), \(\text{m/s}\), \(\text{m}\)). Raw numbers without units lose rubric points.</li>
+              <li><strong>Tangents Visualized:</strong> Verify that 10 tangent slopes are recorded. Notice how the tangent line slope becomes zero at the apex of flight.</li>
+              <li><strong>Low Percent Difference:</strong> Careful calibration of the 1.00 m scale stick and consistent reticle placement at the ball's center keep percent differences under 5%.</li>
+              <li><strong>Session Saving:</strong> Click <strong>💾 Save Lab Progress</strong> anytime to save a JSON file so you can resume your lab later on any computer.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-modal-footer">
+        <button id="btnModalCloseDone" class="btn btn-amber">Close Guide</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Status Bar Footer -->
   <footer class="status-bar">

@@ -27,9 +27,8 @@ const state = {
   markerType: 'circle',
   markerRadius: 14,
 
-  // Motion component filter & linearization
+  // Motion component filter
   motionFilter: 'both',
-  isLinearized: false,
   timeOffset: 0,
 
   // Calibration & Transform
@@ -144,7 +143,6 @@ const chkShowOrigin = document.getElementById('chkShowOrigin');
 const markerTypeSelect = document.getElementById('markerTypeSelect');
 const markerSizeSelect = document.getElementById('markerSizeSelect');
 const motionComponentSelect = document.getElementById('motionComponentSelect');
-const btnToggleLinearize = document.getElementById('btnToggleLinearize');
 const posChartTitle = document.getElementById('posChartTitle');
 const velChartTitle = document.getElementById('velChartTitle');
 const toolTrack = document.getElementById('toolTrack');
@@ -607,17 +605,35 @@ function updateStepView(stepNum) {
 
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
+  const guidanceTitle = document.getElementById('guidanceTitle');
+  const guidanceText = document.getElementById('guidanceText');
 
   if (stepNum === 1) {
     setActiveTool('scale');
     // Open Scale & Calibration tab in sidebar so controls are directly visible!
     tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-calibration'));
     tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-calibration'));
+    if (guidanceTitle) guidanceTitle.innerHTML = 'Step 1: Calibration &amp; Coordinate Setup';
+    if (guidanceText) {
+      guidanceText.innerHTML = `
+        1. Select <strong>Set Origin</strong> and click on the ground or projectile release point.<br>
+        2. Select <strong>Set Scale</strong> and drag across the amber 1.00 m reference stick on the floor.<br>
+        3. Verify the scale readout in meters before advancing to Step 2.
+      `;
+    }
     updateStatus('Step 1: Set coordinate origin and drag amber scale stick across the 1.00 m reference.');
   } else if (stepNum === 2) {
     setActiveTool('track');
     tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-graphs'));
     tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-graphs'));
+    if (guidanceTitle) guidanceTitle.innerHTML = 'Step 2: Frame-by-Frame Motion Tracking';
+    if (guidanceText) {
+      guidanceText.innerHTML = `
+        1. Select <strong>Add Points</strong> in the toolbar.<br>
+        2. Click directly on the projectile's center of mass on each frame (video auto-advances).<br>
+        3. When finished tracking, click <strong>Set t₀ at First Pt</strong> in the sidebar, then proceed to Step 3.
+      `;
+    }
     updateStatus('Step 2: Step through frames and click projectile center-of-mass to track trajectory.');
   } else if (stepNum === 3) {
     updateStatus('Step 3: Kinematics Studio - Verify curves of best fit and sample 10 tangent slopes.');
@@ -1302,21 +1318,24 @@ function autoFitAllGraphs() {
   const xPts = pts.map(p => ({ x: p.time, y: p.x }));
   state.fitResults.xPos = linearRegression(xPts);
 
-  // 3. yVel: Linear Fit vy = mt + b
-  const vyPts = pts.map(p => ({ x: p.time, y: p.vy }));
-  state.fitResults.yVel = linearRegression(vyPts);
+  // 3. Ensure 10 tangent slopes are sampled from the quadratic position curve
+  if (!state.tangentPoints || state.tangentPoints.length < 2) {
+    autoSample10Tangents(true);
+  } else {
+    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+  }
 
   // 4. xVel: Linear Fit vx = mt + b
   const vxPts = pts.map(p => ({ x: p.time, y: p.vx }));
   state.fitResults.xVel = linearRegression(vxPts);
 
-  // 5. yAcc: Mean vertical acceleration
-  const meanAy = pts.reduce((acc, p) => acc + p.ay, 0) / pts.length;
-  state.fitResults.yAcc = { mean: meanAy, ref: -9.8 };
+  // 5. yAcc: Vertical acceleration from velocity fit slope
+  const ayVal = state.fitResults.yVel ? state.fitResults.yVel.slope : (2 * state.fitResults.yPos.A);
+  state.fitResults.yAcc = { mean: ayVal, ref: -9.80 };
 
-  // 6. xAcc: Mean horizontal acceleration
-  const meanAx = pts.reduce((acc, p) => acc + p.ax, 0) / pts.length;
-  state.fitResults.xAcc = { mean: meanAx, ref: 0.0 };
+  // 6. xAcc: Horizontal acceleration from horizontal velocity slope
+  const axVal = state.fitResults.xVel ? state.fitResults.xVel.slope : 0.0;
+  state.fitResults.xAcc = { mean: axVal, ref: 0.00 };
 
   renderStudioGraph(state.activeGraphTab);
   updateStatus('Auto-fitted all 6 kinematic graphs successfully with equations!');
@@ -1375,18 +1394,39 @@ function renderStudioGraph(graphType) {
     particularEq = `\\[y(t) = (${fit ? fit.A.toFixed(3) : '-4.900'}\\text{ m/s}^2)t^2 + (${v0y.toFixed(3)}\\text{ m/s})t + (${y0.toFixed(3)}\\text{ m})\\]`;
     yAxisLabel = 'Vertical Position y (m)';
 
-    // Fit line points
+    // 1. Quadratic fit line points
     const fitLine = [];
-    const steps = 40;
+    const steps = 60;
     for (let i = 0; i <= steps; i++) {
       const t = tMin + (tMax - tMin) * (i / steps);
       const yFit = fit ? (fit.A * t * t + fit.B * t + fit.C) : (y0 + v0y * t + 0.5 * ay * t * t);
       fitLine.push({ x: t, y: yFit });
     }
 
+    // 2. Active Tangent Line at state.activeTangentTime
+    const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime || tMin));
+    const y0_tan = fit ? (fit.A * t0 * t0 + fit.B * t0 + fit.C) : (y0 + v0y * t0 + 0.5 * ay * t0 * t0);
+    const slope_tan = fit ? (2 * fit.A * t0 + fit.B) : (v0y + ay * t0);
+    const span = Math.max(0.1, (tMax - tMin) * 0.22);
+    const tStart = Math.max(0, t0 - span);
+    const tEnd = t0 + span;
+    const tangentLineData = [
+      { x: tStart, y: y0_tan + slope_tan * (tStart - t0) },
+      { x: tEnd, y: y0_tan + slope_tan * (tEnd - t0) }
+    ];
+
+    // 3. Recorded tangent touchpoints along the trajectory
+    const touchpoints = (state.tangentPoints || []).map(p => ({
+      x: p.time,
+      y: fit ? (fit.A * p.time * p.time + fit.B * p.time + fit.C) : (y0 + v0y * p.time + 0.5 * ay * p.time * p.time)
+    }));
+
     chartData.datasets = [
       { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
-      { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false }
+      { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false },
+      { label: `Active Tangent (Slope dy/dt = ${slope_tan.toFixed(2)} m/s)`, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
+      { label: 'Active Touchpoint', data: [{ x: t0, y: y0_tan }], backgroundColor: '#0f7e9b', borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 10 },
+      { label: 'Sampled Tangents (10 Points)', data: touchpoints, backgroundColor: '#0284c7', borderColor: '#0369a1', pointRadius: 6, pointStyle: 'rectRot' }
     ];
   } else if (graphType === 'x-pos') {
     title = '2. Horizontal Position vs. Time [x(t)]';
@@ -1409,8 +1449,17 @@ function renderStudioGraph(graphType) {
       { label: 'Linear Fit (v₀ₓ)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'y-vel') {
-    title = '3. Vertical Velocity vs. Time [vy(t)] (From Tangent Slopes)';
-    const fit = state.fitResults.yVel;
+    title = '3. Vertical Velocity vs. Time [vy(t)] (From 10 Tangent Slopes)';
+
+    // Ensure 10 tangent points are sampled if not already done
+    if (!state.tangentPoints || state.tangentPoints.length < 2) {
+      autoSample10Tangents(true);
+    }
+
+    const linearData = state.tangentPoints.map(p => ({ x: p.time, y: p.vy }));
+    const fit = linearRegression(linearData);
+    state.fitResults.yVel = fit;
+
     const ay = fit ? fit.slope : -9.8;
     const v0y = fit ? fit.intercept : 0;
     r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : '';
@@ -1425,9 +1474,8 @@ function renderStudioGraph(graphType) {
     ];
 
     chartData.datasets = [
-      { label: 'Numerical vy', data: pts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#cbd5e1', borderColor: '#cbd5e1', pointRadius: 3.5 },
-      { label: '10 Tangent Points (Rubric)', data: state.tangentPoints.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 6, pointStyle: 'rectRot' },
-      { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false }
+      { label: '10 Tangent Velocities (dy/dt)', data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
+      { label: `Linear Fit (Slope ay = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'x-vel') {
     title = '4. Horizontal Velocity vs. Time [vx(t)]';
@@ -1561,24 +1609,32 @@ function updateTangentTool(sliderVal) {
   const t = tMin + (tMax - tMin) * (sliderVal / 100);
   state.activeTangentTime = t;
 
-  const fit = state.fitResults.yPos;
+  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
   // Instantaneous slope dy/dt = 2A*t + B
   const slope = fit ? (2 * fit.A * t + fit.B) : 0;
 
   if (tangentTimeDisplay) tangentTimeDisplay.textContent = `${t.toFixed(3)} s`;
   if (tangentSlopeDisplay) tangentSlopeDisplay.textContent = `${slope.toFixed(3)} m/s`;
+
+  if (state.activeGraphTab === 'y-pos') {
+    renderStudioGraph('y-pos');
+  }
 }
 
 function recordTangentPoint() {
   const pts = state.series[state.activeSeries];
   if (pts.length < 3) return;
-  const t = state.activeTangentTime;
-  const fit = state.fitResults.yPos;
+  const t = state.activeTangentTime || pts[0].time;
+  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
   const slope = fit ? (2 * fit.A * t + fit.B) : 0;
 
   // Add to tangentPoints
   state.tangentPoints.push({ time: t, vy: slope });
   state.tangentPoints.sort((a, b) => a.time - b.time);
+
+  if (state.tangentPoints.length >= 2) {
+    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+  }
 
   if (tangentPointCountBadge) {
     tangentPointCountBadge.textContent = `Sampled: ${state.tangentPoints.length} / 10 Tangent Points`;
@@ -1592,10 +1648,10 @@ function recordTangentPoint() {
   updateStatus(`Recorded tangent slope: vy = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s`);
 }
 
-function autoSample10Tangents() {
+function autoSample10Tangents(isSilent = false) {
   const pts = state.series[state.activeSeries];
   if (pts.length < 3) {
-    alert('Please track at least 3 points first!');
+    if (!isSilent) alert('Please track at least 3 points first!');
     return;
   }
   const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
@@ -1612,14 +1668,19 @@ function autoSample10Tangents() {
     state.tangentPoints.push({ time: t, vy: slope });
   }
 
+  // Linear fit through the 10 tangent slopes
+  state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+
   if (tangentPointCountBadge) {
     tangentPointCountBadge.textContent = `Sampled: 10 / 10 Tangent Points ✓`;
     tangentPointCountBadge.style.background = '#e6f8ea';
     tangentPointCountBadge.style.color = '#1a7f37';
   }
 
-  renderStudioGraph('y-vel');
-  updateStatus('Auto-sampled 10 verified tangent slopes across the trajectory!');
+  if (!isSilent) {
+    renderStudioGraph(state.activeGraphTab || 'y-vel');
+    updateStatus('Auto-sampled 10 verified tangent slopes across the trajectory!');
+  }
 }
 
 // ============================================================================
@@ -1937,7 +1998,8 @@ function generateChartImageData(graphType) {
       }
     };
   } else if (graphType === 'y-vel') {
-    const fit = state.fitResults.yVel;
+    const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
+    const fit = state.fitResults.yVel || linearRegression(tangPts.map(p => ({ x: p.time, y: p.vy })));
     const fitLine = [
       { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
       { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
@@ -1946,8 +2008,7 @@ function generateChartImageData(graphType) {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Numerical vy', data: pts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#94a3b8', borderColor: '#94a3b8', pointRadius: 4 },
-          { label: '10 Tangent Points (Rubric)', data: state.tangentPoints.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
+          { label: '10 Tangent Velocities (dy/dt)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
           { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
@@ -2421,6 +2482,117 @@ function initEventListeners() {
   if (toolTrack) toolTrack.addEventListener('click', () => setActiveTool('track'));
   if (toolScale) toolScale.addEventListener('click', () => setActiveTool('scale'));
   if (toolOrigin) toolOrigin.addEventListener('click', () => setActiveTool('origin'));
+
+  // Visibility toggles
+  if (chkShowPoints) {
+    chkShowPoints.addEventListener('change', () => {
+      state.showPoints = chkShowPoints.checked;
+      drawOverlay();
+    });
+  }
+  if (chkShowVectors) {
+    chkShowVectors.addEventListener('change', () => {
+      state.showVectors = chkShowVectors.checked;
+      drawOverlay();
+    });
+  }
+  if (chkShowScale) {
+    chkShowScale.addEventListener('change', () => {
+      state.showScale = chkShowScale.checked;
+      drawOverlay();
+    });
+  }
+  if (chkShowOrigin) {
+    chkShowOrigin.addEventListener('change', () => {
+      state.showOrigin = chkShowOrigin.checked;
+      drawOverlay();
+    });
+  }
+  if (markerTypeSelect) {
+    markerTypeSelect.addEventListener('change', () => {
+      state.markerType = markerTypeSelect.value;
+      drawOverlay();
+    });
+  }
+  if (markerSizeSelect) {
+    markerSizeSelect.addEventListener('change', () => {
+      state.markerRadius = parseInt(markerSizeSelect.value, 10);
+      drawOverlay();
+    });
+  }
+  if (motionComponentSelect) {
+    motionComponentSelect.addEventListener('change', () => {
+      state.motionFilter = motionComponentSelect.value;
+      updateCharts();
+    });
+  }
+
+  // Lab Guide & Rubric Modal
+  const helpModal = document.getElementById('helpModal');
+  const btnLabHelp = document.getElementById('btnLabHelp');
+  const btnCloseHelpModal = document.getElementById('btnCloseHelpModal');
+  const btnModalCloseDone = document.getElementById('btnModalCloseDone');
+  const helpTriggers = document.querySelectorAll('.btn-help-trigger');
+
+  function openHelpModal(tabId) {
+    if (!helpModal) return;
+    helpModal.style.display = 'flex';
+    helpModal.setAttribute('aria-hidden', 'false');
+    if (tabId) {
+      switchHelpTab(tabId);
+    }
+    if (window.renderMathInElement) {
+      renderMathInElement(helpModal, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '$', right: '$', display: false }
+        ]
+      });
+    }
+  }
+
+  function closeHelpModal() {
+    if (!helpModal) return;
+    helpModal.style.display = 'none';
+    helpModal.setAttribute('aria-hidden', 'true');
+  }
+
+  function switchHelpTab(tabId) {
+    const tabBtns = document.querySelectorAll('.help-tab-btn');
+    const panels = document.querySelectorAll('.help-tab-panel');
+    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.helpTab === tabId));
+    panels.forEach(p => p.classList.toggle('active', p.id === tabId));
+  }
+
+  if (btnLabHelp) btnLabHelp.addEventListener('click', () => openHelpModal('help-overview'));
+  helpTriggers.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stepTabMap = {
+        1: 'help-step1',
+        2: 'help-step2',
+        3: 'help-step3',
+        4: 'help-step4',
+        5: 'help-step5'
+      };
+      openHelpModal(stepTabMap[state.currentStep] || 'help-overview');
+    });
+  });
+
+  if (btnCloseHelpModal) btnCloseHelpModal.addEventListener('click', closeHelpModal);
+  if (btnModalCloseDone) btnModalCloseDone.addEventListener('click', closeHelpModal);
+  if (helpModal) {
+    helpModal.addEventListener('click', e => {
+      if (e.target === helpModal) closeHelpModal();
+    });
+  }
+
+  document.querySelectorAll('.help-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchHelpTab(btn.dataset.helpTab);
+    });
+  });
 
   // Video File Input
   if (videoFileInput) {
