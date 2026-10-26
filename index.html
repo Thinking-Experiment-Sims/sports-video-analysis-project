@@ -53,7 +53,7 @@
       </p>
     </header>
 
-  <!-- Project Progress Stepper & Student Profile -->
+  <!-- Project Progress Stepper -->
   <div class="project-stepper-wrap">
     <nav class="project-stepper" aria-label="Project Lab Workflow">
       <button class="step-btn active" id="stepBtn1" data-step="1">
@@ -72,27 +72,6 @@
         <span class="step-num">5</span> Presentation &amp; Reports
       </button>
     </nav>
-
-    <div class="student-meta-bar">
-      <label for="studentNameInput">Student:</label>
-      <input type="text" id="studentNameInput" class="input-control" placeholder="Enter student name" style="width: 150px;">
-      
-      <label for="teacherSelect">Teacher:</label>
-      <select id="teacherSelect" class="input-control" style="width: 120px;">
-        <option value="Mr. Lopez">Mr. Lopez</option>
-        <option value="Ms. Cross">Ms. Cross</option>
-        <option value="Dr. Robinson">Dr. Robinson</option>
-        <option value="Physics Teacher">Physics Teacher</option>
-      </select>
-
-      <button id="btnSaveSession" class="btn" title="Save your work session to a JSON file" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">
-        💾 Save Lab
-      </button>
-      <button id="btnLoadSession" class="btn" title="Resume your work from a JSON file" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">
-        📂 Load Lab
-      </button>
-      <input type="file" id="loadSessionInput" accept=".json" style="display:none;">
-    </div>
   </div>
 
   <!-- Stage 1 & 2: Video Analysis Workspace Stage -->
@@ -674,6 +653,36 @@
   <!-- Stage 5: Presentation & Reports Stage -->
   <section id="stepView5" class="step-view" style="padding: 1.25rem 1.5rem; max-width: 1100px; margin: 0 auto;">
     <div class="presentation-stage">
+      <!-- Lab Submission & Student Profile Bar -->
+      <div class="card" style="margin-bottom: 1rem; padding: 1.1rem 1.4rem; border-left: 5px solid var(--primary-teal); background: #ffffff; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 0 2px 10px rgba(12, 54, 68, 0.05);">
+        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <label for="studentNameInput" style="font-weight: 700; font-size: 0.9rem; color: var(--primary-teal);">Student:</label>
+            <input type="text" id="studentNameInput" class="input-control" placeholder="Enter student name" style="width: 220px; font-weight: 500;">
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <label for="teacherSelect" style="font-weight: 700; font-size: 0.9rem; color: var(--primary-teal);">Teacher:</label>
+            <select id="teacherSelect" class="input-control" style="width: 150px; font-weight: 500;">
+              <option value="Mr. Lopez">Mr. Lopez</option>
+              <option value="Ms. Cross">Ms. Cross</option>
+              <option value="Dr. Robinson">Dr. Robinson</option>
+              <option value="Physics Teacher">Physics Teacher</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button id="btnSaveSession" class="btn" title="Save your work session to a JSON file">
+            💾 Save Lab Progress
+          </button>
+          <button id="btnLoadSession" class="btn" title="Resume your work from a JSON file">
+            📂 Load Lab Progress
+          </button>
+          <input type="file" id="loadSessionInput" accept=".json" style="display:none;">
+        </div>
+      </div>
+
       <!-- Exporter Control Bar -->
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
         <div>

@@ -2537,6 +2537,18 @@ function initEventListeners() {
     });
   });
 
+  // Student & Teacher Inputs update preview in real-time
+  if (studentNameInput) {
+    studentNameInput.addEventListener('input', () => {
+      if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
+    });
+  }
+  if (teacherSelect) {
+    teacherSelect.addEventListener('change', () => {
+      if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
+    });
+  }
+
   // Session Save/Load
   if (btnSaveSession) btnSaveSession.addEventListener('click', saveSessionJSON);
   if (btnLoadSession && loadSessionInput) {

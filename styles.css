@@ -747,10 +747,10 @@ body {
 .project-stepper-wrap {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0.6rem 1.5rem;
+  padding: 0.65rem 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
   overflow-x: auto;
 }
