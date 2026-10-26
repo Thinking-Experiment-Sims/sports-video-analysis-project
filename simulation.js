@@ -230,6 +230,10 @@ let gridCharts = {};
 function init() {
   initEventListeners();
   initCharts();
+  if (dropzoneOverlay) {
+    dropzoneOverlay.classList.add('hidden');
+    dropzoneOverlay.style.display = 'none';
+  }
   initSyntheticExperiment('projectile');
   resizeCanvas();
   renderSyntheticFrame(0);
@@ -271,30 +275,36 @@ function initSyntheticExperiment(type = 'projectile') {
   state.fps = 60;
   if (fpsInput) fpsInput.value = state.fps;
 
-  const w = 720;
-  const h = 480;
+  if (video) {
+    video.style.display = 'none';
+    video.src = '';
+  }
+
+  resizeCanvas();
+  const w = overlayCanvas.width || 860;
+  const h = overlayCanvas.height || 520;
   state.syntheticCanvas.width = w;
   state.syntheticCanvas.height = h;
   state.syntheticCtx = state.syntheticCanvas.getContext('2d');
 
   if (type === 'projectile') {
-    state.origin = { x: 80, y: 410 };
-    state.pixelsPerMeter = 140;
+    state.origin = { x: 100, y: Math.round(h * 0.78) };
+    state.pixelsPerMeter = Math.round(w * 0.17);
     state.scaleStick = {
-      start: { x: 80, y: 430 },
-      end: { x: 220, y: 430 },
+      start: { x: 100, y: Math.round(h * 0.86) },
+      end: { x: 100 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
     };
-    updateStatus('Loaded 2D Projectile Motion. Click object to place tracking points!');
+    updateStatus('Loaded 2D Projectile Motion. Click Set Origin or Set Scale to adjust calibration, or click Add Points to track!');
   } else if (type === 'basketball') {
     state.duration = 2.0;
-    state.origin = { x: 90, y: 390 };
-    state.pixelsPerMeter = 110;
+    state.origin = { x: 110, y: Math.round(h * 0.76) };
+    state.pixelsPerMeter = Math.round(w * 0.13);
     state.scaleStick = {
-      start: { x: 90, y: 410 },
-      end: { x: 200, y: 410 },
+      start: { x: 110, y: Math.round(h * 0.86) },
+      end: { x: 110 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
@@ -302,11 +312,11 @@ function initSyntheticExperiment(type = 'projectile') {
     updateStatus('Loaded Basketball Arc (3-Pt Shot). Calibrate scale and track trajectory!');
   } else if (type === 'soccer') {
     state.duration = 2.2;
-    state.origin = { x: 70, y: 410 };
-    state.pixelsPerMeter = 90;
+    state.origin = { x: 90, y: Math.round(h * 0.78) };
+    state.pixelsPerMeter = Math.round(w * 0.11);
     state.scaleStick = {
-      start: { x: 70, y: 430 },
-      end: { x: 160, y: 430 },
+      start: { x: 90, y: Math.round(h * 0.86) },
+      end: { x: 90 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
@@ -314,11 +324,11 @@ function initSyntheticExperiment(type = 'projectile') {
     updateStatus('Loaded Soccer Chip Kick. Track parabolic flight path!');
   } else if (type === 'freefall') {
     state.duration = 1.2;
-    state.origin = { x: 360, y: 60 };
-    state.pixelsPerMeter = 180;
+    state.origin = { x: Math.round(w * 0.5), y: 70 };
+    state.pixelsPerMeter = Math.round(h * 0.36);
     state.scaleStick = {
-      start: { x: 260, y: 60 },
-      end: { x: 260, y: 240 },
+      start: { x: Math.round(w * 0.5) - 90, y: 70 },
+      end: { x: Math.round(w * 0.5) - 90, y: 70 + state.pixelsPerMeter },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
@@ -326,11 +336,11 @@ function initSyntheticExperiment(type = 'projectile') {
     updateStatus('Loaded Free Fall Lab (g = 9.8 m/s²). Drop height = 2.0 m.');
   } else if (type === 'pendulum') {
     state.duration = 3.0;
-    state.origin = { x: 360, y: 80 };
-    state.pixelsPerMeter = 150;
+    state.origin = { x: Math.round(w * 0.5), y: 80 };
+    state.pixelsPerMeter = Math.round(h * 0.32);
     state.scaleStick = {
-      start: { x: 360, y: 80 },
-      end: { x: 510, y: 80 },
+      start: { x: Math.round(w * 0.5), y: 80 },
+      end: { x: Math.round(w * 0.5) + state.pixelsPerMeter, y: 80 },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
@@ -338,11 +348,11 @@ function initSyntheticExperiment(type = 'projectile') {
     updateStatus('Loaded Simple Harmonic Pendulum.');
   } else if (type === 'cart') {
     state.duration = 2.5;
-    state.origin = { x: 60, y: 350 };
-    state.pixelsPerMeter = 160;
+    state.origin = { x: 80, y: Math.round(h * 0.70) };
+    state.pixelsPerMeter = Math.round(w * 0.18);
     state.scaleStick = {
-      start: { x: 60, y: 370 },
-      end: { x: 220, y: 370 },
+      start: { x: 80, y: Math.round(h * 0.82) },
+      end: { x: 80 + state.pixelsPerMeter, y: Math.round(h * 0.82) },
       lengthMeters: 1.0,
       isDragging: false,
       dragPoint: null
@@ -358,6 +368,7 @@ function initSyntheticExperiment(type = 'projectile') {
     timeScrubber.value = 0;
   }
   updateTimeAndFrame(0);
+  drawOverlay();
 }
 
 function renderSyntheticFrame(t) {
@@ -373,7 +384,7 @@ function renderSyntheticFrame(t) {
   // Background Grid
   ctxS.strokeStyle = '#e2e8f0';
   ctxS.lineWidth = 1;
-  const gridStep = state.pixelsPerMeter / 2;
+  const gridStep = Math.max(30, state.pixelsPerMeter / 2);
   for (let x = 0; x < w; x += gridStep) {
     ctxS.beginPath();
     ctxS.moveTo(x, 0);
@@ -388,37 +399,43 @@ function renderSyntheticFrame(t) {
   }
 
   // Floor / Turf
+  const floorY = Math.round(h * 0.80);
   if (state.syntheticType === 'soccer') {
     ctxS.fillStyle = '#e8f5e9'; // Turf light green
-    ctxS.fillRect(0, 420, w, 60);
+    ctxS.fillRect(0, floorY, w, h - floorY);
     ctxS.strokeStyle = '#81c784';
   } else if (state.syntheticType === 'basketball') {
     ctxS.fillStyle = '#fff3e0'; // Hardwood court
-    ctxS.fillRect(0, 420, w, 60);
+    ctxS.fillRect(0, floorY, w, h - floorY);
     ctxS.strokeStyle = '#ffb74d';
   } else {
     ctxS.fillStyle = '#e2edf3';
-    ctxS.fillRect(0, 420, w, 60);
+    ctxS.fillRect(0, floorY, w, h - floorY);
     ctxS.strokeStyle = '#a9c4cf';
   }
-  ctxS.lineWidth = 2;
+  ctxS.lineWidth = 2.5;
   ctxS.beginPath();
-  ctxS.moveTo(0, 420);
-  ctxS.lineTo(w, 420);
+  ctxS.moveTo(0, floorY);
+  ctxS.lineTo(w, floorY);
   ctxS.stroke();
 
   // 1.00 Meter Calibration Stick
+  const stickX = state.origin ? Math.min(state.origin.x, w - state.pixelsPerMeter - 40) : 100;
+  const stickY = Math.round(h * 0.86);
+  const stickW = state.pixelsPerMeter;
   ctxS.fillStyle = '#ffecb3';
   ctxS.strokeStyle = '#d67b19';
-  ctxS.lineWidth = 1.5;
-  const stickX = 80;
-  const stickY = 435;
-  const stickW = state.pixelsPerMeter;
-  ctxS.fillRect(stickX, stickY, stickW, 14);
-  ctxS.strokeRect(stickX, stickY, stickW, 14);
+  ctxS.lineWidth = 2;
+  ctxS.fillRect(stickX, stickY, stickW, 18);
+  ctxS.strokeRect(stickX, stickY, stickW, 18);
+  // Calibration endcap tick marks
+  ctxS.beginPath();
+  ctxS.moveTo(stickX, stickY - 4); ctxS.lineTo(stickX, stickY + 22);
+  ctxS.moveTo(stickX + stickW, stickY - 4); ctxS.lineTo(stickX + stickW, stickY + 22);
+  ctxS.stroke();
   ctxS.fillStyle = '#123140';
-  ctxS.font = 'bold 9px monospace';
-  ctxS.fillText('1.00 METER REFERENCE', stickX + 14, stickY + 11);
+  ctxS.font = 'bold 10px monospace';
+  ctxS.fillText('1.00 METER REFERENCE', stickX + 10, stickY + 13);
 
   // Simulation physics
   if (state.syntheticType === 'projectile') {
@@ -434,7 +451,7 @@ function renderSyntheticFrame(t) {
     const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
     const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
 
-    drawSportsBall(ctxS, ballX, ballY, 11, 'baseball');
+    drawSportsBall(ctxS, ballX, ballY, 14, 'baseball');
   } else if (state.syntheticType === 'basketball') {
     const theta = 62 * (Math.PI / 180);
     const v0 = 5.6;
@@ -448,14 +465,23 @@ function renderSyntheticFrame(t) {
     const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
     const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
 
-    // Draw Basketball Hoop
+    // Draw Basketball Hoop & Backboard
+    const hoopX = Math.round(w * 0.80);
+    const hoopY = Math.round(h * 0.46);
     ctxS.strokeStyle = '#c53030';
     ctxS.lineWidth = 4;
-    ctxS.strokeRect(620, 160, 4, 180);
+    ctxS.strokeRect(hoopX + 46, hoopY - 80, 5, 200);
     ctxS.fillStyle = '#d67b19';
-    ctxS.fillRect(575, 220, 45, 6);
+    ctxS.fillRect(hoopX, hoopY, 46, 8);
+    // Net
+    ctxS.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctxS.lineWidth = 1.5;
+    ctxS.beginPath();
+    ctxS.moveTo(hoopX, hoopY + 8); ctxS.lineTo(hoopX + 12, hoopY + 38);
+    ctxS.moveTo(hoopX + 46, hoopY + 8); ctxS.lineTo(hoopX + 34, hoopY + 38);
+    ctxS.stroke();
 
-    drawSportsBall(ctxS, ballX, ballY, 13, 'basketball');
+    drawSportsBall(ctxS, ballX, ballY, 15, 'basketball');
   } else if (state.syntheticType === 'soccer') {
     const theta = 48 * (Math.PI / 180);
     const v0 = 6.2;
@@ -469,7 +495,7 @@ function renderSyntheticFrame(t) {
     const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
     const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
 
-    drawSportsBall(ctxS, ballX, ballY, 12, 'soccer');
+    drawSportsBall(ctxS, ballX, ballY, 14, 'soccer');
   } else if (state.syntheticType === 'freefall') {
     const g = 9.8;
     const tDrop = Math.sqrt((2 * 1.8) / g);
@@ -478,7 +504,7 @@ function renderSyntheticFrame(t) {
     const ballX = state.origin.x;
     const ballY = state.origin.y + yMeters * state.pixelsPerMeter;
 
-    drawSportsBall(ctxS, ballX, ballY, 12, 'baseball');
+    drawSportsBall(ctxS, ballX, ballY, 14, 'baseball');
   } else if (state.syntheticType === 'pendulum') {
     const L = 1.5;
     const theta0 = 0.45;
@@ -489,21 +515,21 @@ function renderSyntheticFrame(t) {
     const bobY = state.origin.y + L * Math.cos(theta) * state.pixelsPerMeter;
 
     ctxS.strokeStyle = '#4b6570';
-    ctxS.lineWidth = 1.5;
+    ctxS.lineWidth = 2;
     ctxS.beginPath();
     ctxS.moveTo(state.origin.x, state.origin.y);
     ctxS.lineTo(bobX, bobY);
     ctxS.stroke();
 
-    drawSportsBall(ctxS, bobX, bobY, 14, 'metallic');
+    drawSportsBall(ctxS, bobX, bobY, 15, 'metallic');
   } else if (state.syntheticType === 'cart') {
     const xCart = state.origin.x + (1.2 * t) * state.pixelsPerMeter;
     ctxS.fillStyle = '#0f7e9b';
-    ctxS.fillRect(xCart - 25, 400, 50, 20);
+    ctxS.fillRect(xCart - 35, floorY - 24, 70, 24);
     ctxS.fillStyle = '#123140';
     ctxS.beginPath();
-    ctxS.arc(xCart - 15, 420, 6, 0, Math.PI * 2);
-    ctxS.arc(xCart + 15, 420, 6, 0, Math.PI * 2);
+    ctxS.arc(xCart - 20, floorY, 8, 0, Math.PI * 2);
+    ctxS.arc(xCart + 20, floorY, 8, 0, Math.PI * 2);
     ctxS.fill();
   }
 }
@@ -579,11 +605,19 @@ function updateStepView(stepNum) {
   if (stepView4) stepView4.style.display = (stepNum === 4) ? 'block' : 'none';
   if (stepView5) stepView5.style.display = (stepNum === 5) ? 'block' : 'none';
 
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+
   if (stepNum === 1) {
     setActiveTool('scale');
-    updateStatus('Step 1: Set coordinate origin and drag amber scale stick across 1 meter reference.');
+    // Open Scale & Calibration tab in sidebar so controls are directly visible!
+    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-calibration'));
+    tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-calibration'));
+    updateStatus('Step 1: Set coordinate origin and drag amber scale stick across the 1.00 m reference.');
   } else if (stepNum === 2) {
     setActiveTool('track');
+    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-graphs'));
+    tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-graphs'));
     updateStatus('Step 2: Step through frames and click projectile center-of-mass to track trajectory.');
   } else if (stepNum === 3) {
     updateStatus('Step 3: Kinematics Studio - Verify curves of best fit and sample 10 tangent slopes.');
@@ -618,10 +652,13 @@ function setActiveTool(tool) {
 
   if (tool === 'track' && toolTrack) {
     toolTrack.classList.add('active', 'btn-amber');
+    if (overlayCanvas) overlayCanvas.style.cursor = 'crosshair';
   } else if (tool === 'scale' && toolScale) {
     toolScale.classList.add('active', 'btn-amber');
+    if (overlayCanvas) overlayCanvas.style.cursor = 'crosshair';
   } else if (tool === 'origin' && toolOrigin) {
     toolOrigin.classList.add('active', 'btn-amber');
+    if (overlayCanvas) overlayCanvas.style.cursor = 'move';
   }
   drawOverlay();
 }
@@ -795,8 +832,16 @@ function setInitialTimeAtFirstPoint() {
 function resizeCanvas() {
   if (!overlayCanvas || !viewportContainer) return;
   const rect = viewportContainer.getBoundingClientRect();
-  overlayCanvas.width = rect.width || 720;
-  overlayCanvas.height = rect.height || 480;
+  const w = Math.round(rect.width) || 860;
+  const h = Math.round(rect.height) || 520;
+  overlayCanvas.width = w;
+  overlayCanvas.height = h;
+
+  if (state.isSynthetic && state.syntheticCanvas) {
+    state.syntheticCanvas.width = w;
+    state.syntheticCanvas.height = h;
+    state.syntheticCtx = state.syntheticCanvas.getContext('2d');
+  }
 }
 
 function drawOverlay() {
@@ -823,30 +868,44 @@ function drawAxes() {
 
   // X Axis (Teal)
   ctx.strokeStyle = '#0f7e9b';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(-40, 0);
-  ctx.lineTo(120, 0);
+  ctx.moveTo(-50, 0);
+  ctx.lineTo(150, 0);
   ctx.stroke();
 
   // Y Axis (Amber)
   ctx.strokeStyle = '#d67b19';
   ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.lineTo(0, -120);
+  ctx.moveTo(0, 50);
+  ctx.lineTo(0, -150);
   ctx.stroke();
 
-  // Origin point
-  ctx.fillStyle = '#123140';
+  // Origin point handle
+  ctx.fillStyle = state.activeTool === 'origin' ? '#d67b19' : '#0f7e9b';
   ctx.beginPath();
-  ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+  ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Target reticle ring around origin when origin tool is active
+  if (state.activeTool === 'origin') {
+    ctx.strokeStyle = 'rgba(214, 123, 25, 0.65)';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   ctx.fillStyle = '#0f7e9b';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillText('+x', 125, 4);
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('+x', 156, 4);
   ctx.fillStyle = '#d67b19';
-  ctx.fillText('+y', -8, -125);
+  ctx.fillText('+y', -10, -156);
 
   ctx.restore();
 }
@@ -857,7 +916,7 @@ function drawScaleStick() {
 
   ctx.save();
   ctx.strokeStyle = '#d67b19';
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(s.x, s.y);
   ctx.lineTo(e.x, e.y);
@@ -867,18 +926,32 @@ function drawScaleStick() {
   [s, e].forEach(p => {
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#d67b19';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 8.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+
+    ctx.fillStyle = '#d67b19';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
   });
 
   const midX = (s.x + e.x) / 2;
   const midY = (s.y + e.y) / 2;
-  ctx.fillStyle = '#123140';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(`${state.scaleStick.lengthMeters.toFixed(2)} m`, midX + 6, midY - 6);
+  const label = `${state.scaleStick.lengthMeters.toFixed(2)} m`;
+  ctx.font = 'bold 12px sans-serif';
+  const textW = ctx.measureText(label).width;
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fillRect(midX - textW / 2 - 5, midY - 21, textW + 10, 17);
+  ctx.strokeStyle = '#c8dbe3';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(midX - textW / 2 - 5, midY - 21, textW + 10, 17);
+
+  ctx.fillStyle = '#0f7e9b';
+  ctx.fillText(label, midX - textW / 2, midY - 8);
 
   ctx.restore();
 }
@@ -2357,6 +2430,7 @@ function initEventListeners() {
       state.isSynthetic = false;
       const url = URL.createObjectURL(file);
       video.src = url;
+      video.style.display = 'block';
       video.onloadedmetadata = () => {
         state.duration = video.duration;
         if (timeScrubber) {
@@ -2366,7 +2440,10 @@ function initEventListeners() {
         }
         resizeCanvas();
         updateTimeAndFrame(0);
-        if (dropzoneOverlay) dropzoneOverlay.style.display = 'none';
+        if (dropzoneOverlay) {
+          dropzoneOverlay.classList.add('hidden');
+          dropzoneOverlay.style.display = 'none';
+        }
         updateStatus(`Loaded video: ${file.name} (${video.duration.toFixed(2)}s)`);
       };
     });
@@ -2377,13 +2454,19 @@ function initEventListeners() {
     btn.addEventListener('click', () => {
       const preset = btn.dataset.preset;
       initSyntheticExperiment(preset);
-      if (dropzoneOverlay) dropzoneOverlay.style.display = 'none';
+      if (dropzoneOverlay) {
+        dropzoneOverlay.classList.add('hidden');
+        dropzoneOverlay.style.display = 'none';
+      }
     });
   });
 
   if (btnSampleSelect) {
     btnSampleSelect.addEventListener('click', () => {
-      if (dropzoneOverlay) dropzoneOverlay.style.display = 'flex';
+      if (dropzoneOverlay) {
+        dropzoneOverlay.classList.remove('hidden');
+        dropzoneOverlay.style.display = 'flex';
+      }
     });
   }
 
@@ -2406,53 +2489,123 @@ function initEventListeners() {
 
     overlayCanvas.addEventListener('mousedown', e => {
       const rect = overlayCanvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const scaleX = overlayCanvas.width / rect.width;
+      const scaleY = overlayCanvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
 
       if (state.activeTool === 'track') {
         addTrackPoint(x, y);
       } else if (state.activeTool === 'scale') {
         const dStart = Math.hypot(x - state.scaleStick.start.x, y - state.scaleStick.start.y);
         const dEnd = Math.hypot(x - state.scaleStick.end.x, y - state.scaleStick.end.y);
-        if (dStart < 15) {
+        if (dStart < 25) {
           isDragging = true;
           dragTarget = 'scaleStart';
-        } else if (dEnd < 15) {
+        } else if (dEnd < 25) {
           isDragging = true;
           dragTarget = 'scaleEnd';
+        } else {
+          // Drag out a brand new scale line from clicked point!
+          isDragging = true;
+          dragTarget = 'scaleEnd';
+          state.scaleStick.start = { x, y };
+          state.scaleStick.end = { x, y };
+          drawOverlay();
         }
       } else if (state.activeTool === 'origin') {
-        const dOrigin = Math.hypot(x - state.origin.x, y - state.origin.y);
-        if (dOrigin < 20) {
-          isDragging = true;
-          dragTarget = 'origin';
-        }
+        // Click anywhere to immediately place and drag coordinate origin
+        isDragging = true;
+        dragTarget = 'origin';
+        state.origin = { x, y };
+        recalculateKinematics();
+        updateTable();
+        updateCharts();
+        drawOverlay();
+        updateStatus(`Coordinate origin placed at (${Math.round(x)}, ${Math.round(y)} px).`);
       }
     });
 
     window.addEventListener('mousemove', e => {
+      // Reticle preview hover when tracking
+      if (state.activeTool === 'track' && reticlePreview && !isDragging) {
+        const rect = overlayCanvas.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          const r = parseInt(markerSizeSelect ? markerSizeSelect.value : 14, 10);
+          reticlePreview.style.display = 'block';
+          reticlePreview.style.width = (r * 2) + 'px';
+          reticlePreview.style.height = (r * 2) + 'px';
+          reticlePreview.style.left = (e.clientX - rect.left) + 'px';
+          reticlePreview.style.top = (e.clientY - rect.top) + 'px';
+        } else {
+          reticlePreview.style.display = 'none';
+        }
+      } else if (reticlePreview && !isDragging) {
+        reticlePreview.style.display = 'none';
+      }
+
       if (!isDragging) return;
       const rect = overlayCanvas.getBoundingClientRect();
-      const x = Math.max(0, Math.min(overlayCanvas.width, e.clientX - rect.left));
-      const y = Math.max(0, Math.min(overlayCanvas.height, e.clientY - rect.top));
+      const scaleX = overlayCanvas.width / rect.width;
+      const scaleY = overlayCanvas.height / rect.height;
+      const x = Math.max(0, Math.min(overlayCanvas.width, (e.clientX - rect.left) * scaleX));
+      const y = Math.max(0, Math.min(overlayCanvas.height, (e.clientY - rect.top) * scaleY));
 
       if (dragTarget === 'scaleStart') {
         state.scaleStick.start = { x, y };
         updateScaleReadout();
+        recalculateKinematics();
+        updateTable();
+        updateCharts();
       } else if (dragTarget === 'scaleEnd') {
         state.scaleStick.end = { x, y };
         updateScaleReadout();
+        recalculateKinematics();
+        updateTable();
+        updateCharts();
       } else if (dragTarget === 'origin') {
         state.origin = { x, y };
+        recalculateKinematics();
+        updateTable();
+        updateCharts();
       }
       drawOverlay();
     });
 
     window.addEventListener('mouseup', () => {
+      if (isDragging && dragTarget === 'scaleEnd') {
+        const pxLen = Math.hypot(state.scaleStick.end.x - state.scaleStick.start.x, state.scaleStick.end.y - state.scaleStick.start.y);
+        if (pxLen > 5) {
+          updateScaleReadout();
+          recalculateKinematics();
+          updateTable();
+          updateCharts();
+          updateStatus(`Calibrated scale: ${pxLen.toFixed(1)} px = ${state.scaleStick.lengthMeters.toFixed(2)} m (${state.pixelsPerMeter.toFixed(1)} px/m).`);
+        }
+      } else if (isDragging && dragTarget === 'origin') {
+        updateStatus(`Origin calibrated at (${Math.round(state.origin.x)}, ${Math.round(state.origin.y)} px).`);
+      }
       isDragging = false;
       dragTarget = null;
     });
+
+    overlayCanvas.addEventListener('mouseleave', () => {
+      if (reticlePreview) reticlePreview.style.display = 'none';
+    });
   }
+
+  // Sidebar Tabs (Graphs, Linearization, Table, Calibration)
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      const target = document.getElementById(btn.dataset.tab);
+      if (target) target.classList.add('active');
+    });
+  });
 
   // Scale calibration inputs
   if (btnApplyScale) {
