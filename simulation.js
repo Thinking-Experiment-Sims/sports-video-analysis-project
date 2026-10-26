@@ -1687,6 +1687,193 @@ function updateReflectionCounter() {
 // ============================================================================
 // Step 5: Presentation Deck Preview & 1-Click PPTX Exporter
 // ============================================================================
+
+// High-Resolution Offscreen Chart Image Generator (independent of DOM visibility)
+function generateChartImageData(graphType) {
+  const pts = state.series[state.activeSeries];
+  if (!pts || pts.length < 2) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1000;
+  canvas.height = 650;
+  const ctx = canvas.getContext('2d');
+
+  // Solid white background for PowerPoint clarity
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const tMin = pts[0].time;
+  const tMax = pts[pts.length - 1].time;
+  let chartConfig = null;
+
+  if (graphType === 'y-pos') {
+    const fit = state.fitResults.yPos;
+    const y0 = fit ? fit.C : pts[0].y;
+    const v0y = fit ? fit.B : 0;
+    const ay = fit ? 2 * fit.A : -9.8;
+
+    const fitLine = [];
+    const steps = 40;
+    for (let i = 0; i <= steps; i++) {
+      const t = tMin + (tMax - tMin) * (i / steps);
+      const yFit = fit ? (fit.A * t * t + fit.B * t + fit.C) : (y0 + v0y * t + 0.5 * ay * t * t);
+      fitLine.push({ x: t, y: yFit });
+    }
+
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 6 },
+          { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 3.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Vertical Position y (m)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  } else if (graphType === 'x-pos') {
+    const fit = state.fitResults.xPos;
+    const fitLine = [
+      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
+      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+    ];
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Measured x (m)', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 6 },
+          { label: 'Linear Fit (v₀ₓ)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Horizontal Position x (m)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  } else if (graphType === 'y-vel') {
+    const fit = state.fitResults.yVel;
+    const fitLine = [
+      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
+      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+    ];
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Numerical vy', data: pts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#94a3b8', borderColor: '#94a3b8', pointRadius: 4 },
+          { label: '10 Tangent Points (Rubric)', data: state.tangentPoints.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
+          { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Vertical Velocity vy (m/s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  } else if (graphType === 'x-vel') {
+    const fit = state.fitResults.xVel;
+    const fitLine = [
+      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
+      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+    ];
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Measured vx (m/s)', data: pts.map(p => ({ x: p.time, y: p.vx })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 6 },
+          { label: 'Linear Fit (Slope ≈ 0)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Horizontal Velocity vx (m/s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  } else if (graphType === 'y-acc') {
+    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.8;
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Instantaneous ay', data: pts.map(p => ({ x: p.time, y: p.ay })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
+          { label: 'Mean ay Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#b06210', borderWidth: 3.5, pointRadius: 0, fill: false },
+          { label: 'Reference g (-9.8 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#94a3b8', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Vertical Acceleration ay (m/s²)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  } else if (graphType === 'x-acc') {
+    const meanAx = state.fitResults.xAcc ? state.fitResults.xAcc.mean : 0.0;
+    chartConfig = {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Instantaneous ax', data: pts.map(p => ({ x: p.time, y: p.ax })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 5 },
+          { label: 'Mean ax Fit', data: [{ x: tMin, y: meanAx }, { x: tMax, y: meanAx }], type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        animation: false,
+        responsive: false,
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
+          y: { title: { display: true, text: 'Horizontal Acceleration ax (m/s²)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+        }
+      }
+    };
+  }
+
+  if (!chartConfig) return null;
+  const tempChart = new Chart(ctx, chartConfig);
+  tempChart.render();
+  const dataUrl = canvas.toDataURL('image/png');
+  tempChart.destroy();
+  return dataUrl;
+}
+
 function renderSlideDeckPreview(slideIdx) {
   state.currentSlideIdx = slideIdx;
 
@@ -1703,17 +1890,29 @@ function renderSlideDeckPreview(slideIdx) {
   let slideHTML = '';
   if (slideIdx === 1) {
     if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 8: Title & Honor Code';
+    let videoPreviewImg = '';
+    if (overlayCanvas) {
+      try {
+        const snap = overlayCanvas.toDataURL('image/png');
+        videoPreviewImg = `<img src="${snap}" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">`;
+      } catch (e) {}
+    }
     slideHTML = `
-      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-        <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f7e9b; margin: 0 0 0.5rem 0;">Physics of Sports Analytics</h1>
-        <h3 style="font-size: 1.25rem; font-weight: 500; color: #4b6570; margin: 0 0 1.5rem 0;">Video Analysis of Projectile Motion</h3>
-        <div style="font-size: 1rem; color: #123140; margin-bottom: 2rem; line-height: 1.6;">
-          <strong>Student Name:</strong> ${sName}<br>
-          <strong>Teacher:</strong> ${tName}<br>
-          <strong>Course:</strong> High School Physics
+      <div style="flex: 1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center;">
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+          <h1 style="font-size: 2.1rem; font-weight: 800; color: #0f7e9b; margin: 0 0 0.4rem 0;">Physics of Sports Analytics</h1>
+          <h3 style="font-size: 1.2rem; font-weight: 500; color: #4b6570; margin: 0 0 1.25rem 0;">Video Analysis of Projectile Motion</h3>
+          <div style="font-size: 0.95rem; color: #123140; margin-bottom: 1.5rem; line-height: 1.6;">
+            <strong>Student Name:</strong> ${sName}<br>
+            <strong>Teacher:</strong> ${tName}<br>
+            <strong>Course:</strong> High School Physics
+          </div>
+          <div style="background: #e6f4f8; border-left: 4px solid #0f7e9b; padding: 0.75rem 1rem; border-radius: 4px; font-style: italic; font-size: 0.85rem; color: #095f76;">
+            "On my honor, I have neither given nor received unauthorized aid on this assignment."
+          </div>
         </div>
-        <div style="background: #e6f4f8; border-left: 4px solid #0f7e9b; padding: 0.75rem 1rem; border-radius: 4px; font-style: italic; font-size: 0.88rem; color: #095f76;">
-          "On my honor, I have neither given nor received unauthorized aid on this assignment."
+        <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: center; min-height: 260px;">
+          ${videoPreviewImg || '<span style="color: #7a94a0; font-size: 0.85rem;">[Video Tracking Preview Snapshot]</span>'}
         </div>
       </div>
     `;
@@ -1730,36 +1929,42 @@ function renderSlideDeckPreview(slideIdx) {
 
     const slideInfo = {
       2: {
+        graphType: 'y-pos',
         title: 'Vertical Position Graph [y(t)]',
         gen: 'y(t) = ½·ay·t² + v₀y·t + y₀',
         part: `y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)`,
-        notes: `• Quadratic fit confirms constant downward acceleration.<br>• Extracted parameters: y₀ = ${cVals.y0.toFixed(3)} m, v₀y = ${cVals.vy0.toFixed(3)} m/s, ay = ${cVals.ay.toFixed(3)} m/s².`
+        notes: `• Quadratic fit confirms constant downward acceleration.<br>• y₀ = ${cVals.y0.toFixed(3)} m<br>• v₀y = ${cVals.vy0.toFixed(3)} m/s<br>• ay = ${cVals.ay.toFixed(3)} m/s²`
       },
       3: {
+        graphType: 'y-vel',
         title: 'Vertical Velocity Graph [vy(t)]',
         gen: 'vy(t) = ay·t + v₀y',
         part: `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
-        notes: `• Includes 10 points derived directly from tangent slopes (dy/dt).<br>• Slope of best fit line represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• y-intercept represents initial vertical launch velocity: v₀y = ${cVals.vy0.toFixed(3)} m/s.`
+        notes: `• Includes 10 points derived directly from tangent slopes (dy/dt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`
       },
       4: {
+        graphType: 'y-acc',
         title: 'Vertical Acceleration Graph [ay(t)]',
         gen: 'ay(t) = constant',
         part: `ay(t) = ${cVals.ay.toFixed(3)} m/s² (Standard g = -9.80 m/s²)`,
         notes: `• Measured vertical acceleration: ${cVals.ay.toFixed(3)} m/s².<br>• Reference acceleration of free fall: -9.80 m/s².<br>• Percent Difference: ${cVals.ayPctDiff.toFixed(2)}%.`
       },
       5: {
+        graphType: 'x-pos',
         title: 'Horizontal Position Graph [x(t)]',
         gen: 'x(t) = v₀x·t + x₀',
         part: `x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)`,
-        notes: `• Linear fit confirms constant horizontal velocity (Newton's 1st Law).<br>• Slope indicates initial horizontal velocity: v₀x = ${cVals.vx0.toFixed(3)} m/s.<br>• Initial position: x₀ = ${cVals.x0.toFixed(3)} m.`
+        notes: `• Linear fit demonstrates uniform motion in horizontal axis.<br>• Slope indicates initial horizontal velocity: v₀x = ${cVals.vx0.toFixed(3)} m/s.<br>• Initial position: x₀ = ${cVals.x0.toFixed(3)} m.`
       },
       6: {
+        graphType: 'x-vel',
         title: 'Horizontal Velocity Graph [vx(t)]',
         gen: 'vx(t) = v₀x',
         part: `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
         notes: `• Velocity remains essentially constant throughout flight.<br>• Measured horizontal acceleration: ax = ${cVals.ax.toFixed(3)} m/s².<br>• Negligible air resistance allows ideal projectile modeling.`
       },
       7: {
+        graphType: 'x-acc',
         title: 'Horizontal Acceleration Graph [ax(t)]',
         gen: 'ax(t) = 0 m/s²',
         part: `ax(t) = ${cVals.ax.toFixed(3)} m/s²`,
@@ -1768,24 +1973,22 @@ function renderSlideDeckPreview(slideIdx) {
     };
 
     const sData = slideInfo[slideIdx];
+    const chartImg = generateChartImageData(sData.graphType);
+
     slideHTML = `
-      <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;">
+      <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; align-items: center;">
         <div>
-          <h2 style="font-size: 1.6rem; font-weight: 700; color: #0f7e9b; margin: 0 0 1rem 0;">${sData.title}</h2>
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.85rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.45rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.85rem 0;">${sData.title}</h2>
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
             <div style="font-size: 0.72rem; font-weight: 700; color: #7a94a0; text-transform: uppercase;">General Equation:</div>
-            <div style="font-size: 0.95rem; font-weight: 600; color: #123140; margin: 0.2rem 0 0.6rem 0;">${sData.gen}</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: #123140; margin: 0.2rem 0 0.5rem 0;">${sData.gen}</div>
             <div style="font-size: 0.72rem; font-weight: 700; color: #7a94a0; text-transform: uppercase;">Particular Equation (with Units):</div>
             <div style="font-size: 0.95rem; font-weight: 600; color: #0f7e9b; margin-top: 0.2rem;">${sData.part}</div>
           </div>
-          <div style="font-size: 0.88rem; color: #4b6570; line-height: 1.6;">${sData.notes}</div>
+          <div style="font-size: 0.85rem; color: #4b6570; line-height: 1.55;">${sData.notes}</div>
         </div>
-        <div style="background: #ffffff; border: 1px solid #c8dbe3; border-radius: 8px; height: 100%; min-height: 260px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-          <div style="text-align: center; color: #7a94a0; padding: 1.5rem;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0f7e9b" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <div style="font-size: 0.88rem; font-weight: 600; color: #0f7e9b; margin-top: 0.5rem;">[Embedded High-Res Graph]</div>
-            <small style="color: #4b6570;">Rendered directly into the exported .pptx presentation</small>
-          </div>
+        <div style="background: #ffffff; border: 1px solid #c8dbe3; border-radius: 8px; padding: 0.4rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          ${chartImg ? `<img src="${chartImg}" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 4px;">` : '<span style="color: #7a94a0;">[Graph Image]</span>'}
         </div>
       </div>
     `;
@@ -1794,8 +1997,8 @@ function renderSlideDeckPreview(slideIdx) {
     const refTxt = state.reflectionText || 'In sports analytics, high-speed camera tracking and kinematic modeling are revolutionizing how coaches and athletes assess athletic performance. For example, MLB Statcast uses video tracking to compute release angles, spin rates, and exit velocities of batted balls to predict projectile trajectories. Similarly, NBA shooting coaches analyze shot arcs and apex heights to optimize 3-point accuracy and release consistency. By isolating horizontal and vertical kinematics, biomechanists can identify flaws in technique and design personalized training interventions.';
     slideHTML = `
       <div style="flex: 1; display: flex; flex-direction: column;">
-        <h2 style="font-size: 1.8rem; font-weight: 700; color: #0f7e9b; margin: 0 0 1rem 0;">Real-World Reflection</h2>
-        <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1.5rem; flex: 1; font-size: 1rem; color: #123140; line-height: 1.7;">
+        <h2 style="font-size: 1.7rem; font-weight: 700; color: #0f7e9b; margin: 0 0 1rem 0;">Real-World Reflection</h2>
+        <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1.5rem; flex: 1; font-size: 0.98rem; color: #123140; line-height: 1.7;">
           ${refTxt}
         </div>
       </div>
@@ -1805,14 +2008,14 @@ function renderSlideDeckPreview(slideIdx) {
   slideViewport.innerHTML = slideHTML;
 }
 
-// 1-Click PPTX Generator
+// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images)
 async function exportPresentationPPTX() {
   if (typeof PptxGenJS === 'undefined') {
     alert('PptxGenJS library is still loading. Please try again in a moment.');
     return;
   }
 
-  updateStatus('Generating rubric-aligned 8-slide PowerPoint presentation...');
+  updateStatus('Generating rubric-aligned 8-slide PowerPoint presentation with embedded graphs...');
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
 
@@ -1820,27 +2023,37 @@ async function exportPresentationPPTX() {
   const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
   const cVals = state.calcValues;
 
-  // Slide 1: Title Slide
+  // Slide 1: Title Slide (with Video Snapshot on right)
   const s1 = pptx.addSlide();
   s1.addText('Physics of Sports Analytics', {
-    x: 0.8, y: 1.5, w: 10.0, h: 0.9,
-    fontSize: 34, bold: true, color: '0F7E9B', fontFace: 'Arial'
+    x: 0.8, y: 1.4, w: 5.6, h: 0.9,
+    fontSize: 32, bold: true, color: '0F7E9B', fontFace: 'Arial'
   });
   s1.addText('Video Analysis of Projectile Motion', {
-    x: 0.8, y: 2.4, w: 10.0, h: 0.5,
-    fontSize: 20, color: '4B6570', fontFace: 'Arial'
+    x: 0.8, y: 2.3, w: 5.6, h: 0.5,
+    fontSize: 18, color: '4B6570', fontFace: 'Arial'
   });
   s1.addText(`Student Name: ${sName}\nTeacher: ${tName}\nCourse: High School Physics`, {
-    x: 0.8, y: 3.4, w: 6.0, h: 1.2,
-    fontSize: 16, color: '123140', fontFace: 'Arial', lineSpacing: 22
+    x: 0.8, y: 3.2, w: 5.6, h: 1.3,
+    fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 22
   });
   s1.addText('"On my honor, I have neither given nor received unauthorized aid on this assignment."', {
     x: 0.8, y: 5.8, w: 11.5, h: 0.6,
     fontSize: 13, italic: true, color: '0F7E9B', fontFace: 'Arial'
   });
 
-  // Helper to add Graph Slides (2-7)
-  const addGraphSlide = (title, genEq, partEq, notesText, chartCanvas) => {
+  // Embed video overlay screenshot on Slide 1
+  if (overlayCanvas) {
+    try {
+      const snap = overlayCanvas.toDataURL('image/png');
+      s1.addImage({ data: snap, x: 6.6, y: 1.2, w: 5.8, h: 4.4 });
+    } catch (e) {
+      console.warn('Video snapshot error:', e);
+    }
+  }
+
+  // Helper to add Graph Slides (2-7) with offscreen-rendered high-res images
+  const addGraphSlide = (title, genEq, partEq, notesText, graphType) => {
     const slide = pptx.addSlide();
     slide.addText(title, {
       x: 0.8, y: 0.6, w: 11.5, h: 0.6,
@@ -1848,76 +2061,71 @@ async function exportPresentationPPTX() {
     });
 
     slide.addText(`GENERAL EQUATION:\n${genEq}\n\nPARTICULAR EQUATION:\n${partEq}\n\nANALYSIS:\n${notesText}`, {
-      x: 0.8, y: 1.5, w: 5.5, h: 5.2,
+      x: 0.8, y: 1.3, w: 5.4, h: 5.3,
       fontSize: 13, color: '123140', fontFace: 'Arial', lineSpacing: 20
     });
 
-    if (chartCanvas) {
-      try {
-        const imgData = chartCanvas.toDataURL('image/png');
-        slide.addImage({ data: imgData, x: 6.6, y: 1.5, w: 5.8, h: 4.8 });
-      } catch (e) {
-        console.warn('Canvas export issue:', e);
-      }
+    const chartImg = generateChartImageData(graphType);
+    if (chartImg) {
+      slide.addImage({ data: chartImg, x: 6.5, y: 1.2, w: 6.0, h: 5.2 });
     }
   };
 
-  // Generate charts for each slide if needed
-  renderStudioGraph('y-pos');
+  // Slide 2: Vertical Position Graph
   addGraphSlide(
     'Vertical Position Graph',
     'y(t) = ½·ay·t² + v₀y·t + y₀',
     `y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)`,
     `• Quadratic curve of best fit confirms acceleration.\n• y₀ = ${cVals.y0.toFixed(3)} m\n• v₀y = ${cVals.vy0.toFixed(3)} m/s\n• ay = ${cVals.ay.toFixed(3)} m/s²`,
-    activeGraphCanvas
+    'y-pos'
   );
 
-  renderStudioGraph('y-vel');
+  // Slide 3: Vertical Velocity Graph (with 10 tangent slopes explicitly documented)
   addGraphSlide(
     'Vertical Velocity Graph',
     'vy(t) = ay·t + v₀y',
     `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
     `• Velocity values constructed from 10 tangent slopes along y(t).\n• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².\n• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`,
-    activeGraphCanvas
+    'y-vel'
   );
 
-  renderStudioGraph('y-acc');
+  // Slide 4: Vertical Acceleration Graph
   addGraphSlide(
     'Vertical Acceleration Graph',
     'ay(t) = constant',
     `ay(t) = ${cVals.ay.toFixed(3)} m/s² (Ref g = -9.80 m/s²)`,
     `• Experimental vertical acceleration: ${cVals.ay.toFixed(3)} m/s².\n• Free fall standard: -9.80 m/s².\n• Percent Difference: ${cVals.ayPctDiff.toFixed(2)}%.`,
-    activeGraphCanvas
+    'y-acc'
   );
 
-  renderStudioGraph('x-pos');
+  // Slide 5: Horizontal Position Graph
   addGraphSlide(
     'Horizontal Position Graph',
     'x(t) = v₀x·t + x₀',
     `x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)`,
     `• Linear fit demonstrates uniform motion in horizontal axis.\n• Initial velocity: v₀x = ${cVals.vx0.toFixed(3)} m/s.\n• Initial position: x₀ = ${cVals.x0.toFixed(3)} m.`,
-    activeGraphCanvas
+    'x-pos'
   );
 
-  renderStudioGraph('x-vel');
+  // Slide 6: Horizontal Velocity Graph
   addGraphSlide(
     'Horizontal Velocity Graph',
     'vx(t) = v₀x',
     `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
     `• Slope ≈ 0 confirms absence of horizontal net force.\n• Mean velocity: vx = ${cVals.vx0.toFixed(3)} m/s.`,
-    activeGraphCanvas
+    'x-vel'
   );
 
-  renderStudioGraph('x-acc');
+  // Slide 7: Horizontal Acceleration Graph
   addGraphSlide(
     'Horizontal Acceleration Graph',
     'ax(t) = 0 m/s²',
     `ax(t) = ${cVals.ax.toFixed(3)} m/s²`,
     `• Consistent with Newton's First Law.\n• Measured horizontal acceleration |ax - 0| = ${cVals.axDiff.toFixed(3)} m/s².`,
-    activeGraphCanvas
+    'x-acc'
   );
 
-  // Slide 8: Reflection
+  // Slide 8: Real World Reflection
   const s8 = pptx.addSlide();
   s8.addText('Real World Reflection', {
     x: 0.8, y: 0.6, w: 11.5, h: 0.6,
@@ -1925,13 +2133,13 @@ async function exportPresentationPPTX() {
   });
   const refText = state.reflectionText || 'In sports analytics, projectile video analysis enables coaches to dissect athlete kinematics and optimize technique. For example, in baseball and basketball, camera tracking systems analyze launch angles, exit velocities, and release heights. Understanding independent horizontal and vertical kinematics allows athletes to maximize range or arc consistency while minimizing injury risks.';
   s8.addText(refText, {
-    x: 0.8, y: 1.5, w: 11.5, h: 5.0,
+    x: 0.8, y: 1.4, w: 11.5, h: 5.2,
     fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 24
   });
 
   const fileName = `Physics_of_Sports_Analytics_${sName.replace(/\s+/g, '_')}.pptx`;
   await pptx.writeFile({ fileName });
-  updateStatus(`Downloaded complete 8-slide presentation: ${fileName}`);
+  updateStatus(`Downloaded complete 8-slide presentation with embedded graphs: ${fileName}`);
 }
 
 function copyFormData() {

@@ -19,29 +19,39 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
 </head>
-<body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="brand-group">
-      <span class="brand-badge">PhysicsKit</span>
-      <h1 class="brand-title">MotionTracker <span class="brand-subtitle">Sports Analytics &amp; Video Lab</span></h1>
-    </div>
-    <div class="header-actions">
-      <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics or sports experiment">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Sports Presets
-      </button>
-      <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        Open Video
-      </label>
-      <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
-      <button id="btnExportCSV" class="btn" title="Export tracked data to CSV">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Export CSV
-      </button>
-    </div>
-  </header>
+<body data-theme="light">
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <div class="shell">
+    <!-- ===== HERO HEADER ===== -->
+    <header class="hero" role="banner">
+      <div class="hero-top">
+        <div class="hero-badges">
+          <a href="https://thinking-experiment-sims.github.io/interactive-physics/" class="brand-badge" title="Return to Physics Simulations Hub">← The Thinking Experiment</a>
+          <span class="lab-badge">🎯 Sports Analytics Video Lab</span>
+        </div>
+        <div class="header-actions">
+          <button id="btnSampleSelect" class="btn" title="Choose a pre-recorded physics or sports experiment">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            Sports Presets
+          </button>
+          <label for="videoFileInput" class="btn btn-primary" title="Open any video file from your computer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Open Video
+          </label>
+          <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime" style="display:none;">
+          <button id="btnExportCSV" class="btn" title="Export tracked data to CSV">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+      <p class="kicker">The Thinking Experiment &bull; PhysicsKit</p>
+      <h1>Physics of Sports Analytics: Video Project</h1>
+      <p class="subtitle">
+        Complete interactive laboratory for projectile motion video analysis. Calibrate camera scale in meters, track projectile motion frame-by-frame, construct 6 kinematic curves with 10-point tangent slope sampling, verify theoretical models with percent differences, and export an 8-slide PowerPoint (.pptx) presentation.
+      </p>
+    </header>
 
   <!-- Project Progress Stepper & Student Profile -->
   <div class="project-stepper-wrap">
@@ -713,6 +723,7 @@
       </div>
     </div>
   </section>
+  </div> <!-- /.shell -->
 
   <!-- Status Bar Footer -->
   <footer class="status-bar">
