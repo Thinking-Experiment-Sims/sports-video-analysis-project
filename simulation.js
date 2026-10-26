@@ -207,6 +207,63 @@ const lblConsistencyCheck = document.getElementById('lblConsistencyCheck');
 const reflectionText = document.getElementById('reflectionText');
 const sentenceBadge = document.getElementById('sentenceBadge');
 
+// Master Kinematic Comparison Table Elements
+const tblMeasAy = document.getElementById('tblMeasAy');
+const tblInpAy = document.getElementById('tblInpAy');
+const tblDiffAy = document.getElementById('tblDiffAy');
+const badgeAyCompare = document.getElementById('badgeAyCompare');
+
+const tblMeasAx = document.getElementById('tblMeasAx');
+const tblInpAx = document.getElementById('tblInpAx');
+const tblDiffAx = document.getElementById('tblDiffAx');
+const badgeAxCompare = document.getElementById('badgeAxCompare');
+
+const tblMeasHang = document.getElementById('tblMeasHang');
+const tblInpHang = document.getElementById('tblInpHang');
+const tblDiffHang = document.getElementById('tblDiffHang');
+const badgeHangCompare = document.getElementById('badgeHangCompare');
+
+const tblMeasRange = document.getElementById('tblMeasRange');
+const tblInpRange = document.getElementById('tblInpRange');
+const tblDiffRange = document.getElementById('tblDiffRange');
+const badgeRangeCompare = document.getElementById('badgeRangeCompare');
+
+const tblMeasMaxH = document.getElementById('tblMeasMaxH');
+const tblInpMaxH = document.getElementById('tblInpMaxH');
+const tblDiffMaxH = document.getElementById('tblDiffMaxH');
+const badgeMaxHCompare = document.getElementById('badgeMaxHCompare');
+
+// Student Derivation Work Textareas
+const workMaxHeight = document.getElementById('workMaxHeight');
+const workHangTime = document.getElementById('workHangTime');
+const workRange = document.getElementById('workRange');
+const workVector = document.getElementById('workVector');
+
+// Grid Graph Badges & Equations Elements
+const gridBadgeYPos = document.getElementById('gridBadgeYPos');
+const gridGenYPos = document.getElementById('gridGenYPos');
+const gridPartYPos = document.getElementById('gridPartYPos');
+
+const gridBadgeXPos = document.getElementById('gridBadgeXPos');
+const gridGenXPos = document.getElementById('gridGenXPos');
+const gridPartXPos = document.getElementById('gridPartXPos');
+
+const gridBadgeYVel = document.getElementById('gridBadgeYVel');
+const gridGenYVel = document.getElementById('gridGenYVel');
+const gridPartYVel = document.getElementById('gridPartYVel');
+
+const gridBadgeXVel = document.getElementById('gridBadgeXVel');
+const gridGenXVel = document.getElementById('gridGenXVel');
+const gridPartXVel = document.getElementById('gridPartXVel');
+
+const gridBadgeYAcc = document.getElementById('gridBadgeYAcc');
+const gridGenYAcc = document.getElementById('gridGenYAcc');
+const gridPartYAcc = document.getElementById('gridPartYAcc');
+
+const gridBadgeXAcc = document.getElementById('gridBadgeXAcc');
+const gridGenXAcc = document.getElementById('gridGenXAcc');
+const gridPartXAcc = document.getElementById('gridPartXAcc');
+
 // Presentation Elements
 const btnDownloadPptx = document.getElementById('btnDownloadPptx');
 const btnPrintReport = document.getElementById('btnPrintReport');
@@ -1618,10 +1675,56 @@ function renderAllGridGraphs() {
   const pts = state.series[state.activeSeries];
   if (pts.length < 2) return;
 
+  if (!state.fitResults.yPos) autoFitAllGraphs();
+
   const tMin = pts[0].time;
   const tMax = pts[pts.length - 1].time;
-  const v0x = state.fitResults.xPos ? state.fitResults.xPos.slope : 0;
-  const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.80;
+  const fitY = state.fitResults.yPos;
+  const fitX = state.fitResults.xPos;
+  const fitYVel = state.fitResults.yVel;
+
+  const v0x = fitX ? fitX.slope : 0;
+  const x0 = fitX ? fitX.intercept : 0;
+  const ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.80);
+  const v0y = fitYVel ? fitYVel.intercept : (fitY ? fitY.B : 0);
+  const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : ay;
+
+  // Update Grid Card Header Badges & Footers with Equations & Units
+  if (gridBadgeYPos) gridBadgeYPos.textContent = fitY ? `R² = ${fitY.r2.toFixed(4)}` : 'Quadratic Parabola';
+  if (gridGenYPos) gridGenYPos.textContent = 'General: y(t) = ½aᵧt² + v₀ᵧt + y₀';
+  if (gridPartYPos && fitY) {
+    gridPartYPos.textContent = `Particular: y(t) = (${fitY.A >= 0 ? '+' : ''}${fitY.A.toFixed(3)} m/s²)t² + (${fitY.B.toFixed(3)} m/s)t + (${fitY.C.toFixed(3)} m)`;
+  }
+
+  if (gridBadgeXPos) gridBadgeXPos.textContent = fitX ? `R² = ${fitX.r2.toFixed(4)}` : 'Linear Fit';
+  if (gridGenXPos) gridGenXPos.textContent = 'General: x(t) = v₀ₓt + x₀';
+  if (gridPartXPos && fitX) {
+    gridPartXPos.textContent = `Particular: x(t) = (${v0x.toFixed(3)} m/s)t + (${x0.toFixed(3)} m)`;
+  }
+
+  if (gridBadgeYVel) gridBadgeYVel.textContent = fitYVel ? `R² = ${fitYVel.r2.toFixed(4)}` : '10 Tangent Slopes';
+  if (gridGenYVel) gridGenYVel.textContent = 'General: vᵧ(t) = aᵧt + v₀ᵧ';
+  if (gridPartYVel) {
+    gridPartYVel.textContent = `Particular: vᵧ(t) = (${ay.toFixed(3)} m/s²)t + (${v0y.toFixed(3)} m/s)`;
+  }
+
+  if (gridBadgeXVel) gridBadgeXVel.textContent = 'Uniform Motion';
+  if (gridGenXVel) gridGenXVel.textContent = 'General: vₓ(t) = v₀ₓ = constant';
+  if (gridPartXVel) {
+    gridPartXVel.textContent = `Particular: vₓ(t) = ${v0x.toFixed(3)} m/s (Slope aₓ = 0.000 m/s²)`;
+  }
+
+  if (gridBadgeYAcc) gridBadgeYAcc.textContent = 'Ref g = -9.80 m/s²';
+  if (gridGenYAcc) gridGenYAcc.textContent = 'General: aᵧ(t) = aᵧ = constant';
+  if (gridPartYAcc) {
+    gridPartYAcc.textContent = `Particular: aᵧ(t) = ${meanAy.toFixed(3)} m/s² (Ref g = -9.80 m/s²)`;
+  }
+
+  if (gridBadgeXAcc) gridBadgeXAcc.textContent = 'Ref aₓ = 0.00 m/s²';
+  if (gridGenXAcc) gridGenXAcc.textContent = 'General: aₓ(t) = 0 m/s²';
+  if (gridPartXAcc) {
+    gridPartXAcc.textContent = 'Particular: aₓ(t) = 0.000 m/s² (Zero horizontal forces)';
+  }
 
   configs.forEach(cfg => {
     const canvas = document.getElementById(cfg.id);
@@ -1634,16 +1737,40 @@ function renderAllGridGraphs() {
     let sugMax = 5;
 
     if (cfg.type === 'y-pos') {
-      datasets = [{ label: 'y(t)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      const fitLineY = [];
+      const steps = 40;
+      for (let i = 0; i <= steps; i++) {
+        const t = tMin + (tMax - tMin) * (i / steps);
+        const yVal = fitY ? (fitY.A * t * t + fitY.B * t + fitY.C) : pts[0].y;
+        fitLineY.push({ x: t, y: yVal });
+      }
+      datasets = [
+        { label: 'Measured y', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 3 },
+        { label: 'Quadratic Fit', data: fitLineY, type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
+      ];
       sugMin = 0;
       sugMax = Math.max(1, ...pts.map(p => p.y)) * 1.25;
     } else if (cfg.type === 'x-pos') {
-      datasets = [{ label: 'x(t)', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      const fitLineX = [
+        { x: tMin, y: fitX ? fitX.slope * tMin + fitX.intercept : pts[0].x },
+        { x: tMax, y: fitX ? fitX.slope * tMax + fitX.intercept : pts[pts.length - 1].x }
+      ];
+      datasets = [
+        { label: 'Measured x', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 3 },
+        { label: 'Linear Fit', data: fitLineX, type: 'line', borderColor: '#095f76', borderWidth: 2, pointRadius: 0, fill: false }
+      ];
       sugMin = 0;
       sugMax = Math.max(1, ...pts.map(p => p.x)) * 1.2;
     } else if (cfg.type === 'y-vel') {
       const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
-      datasets = [{ label: 'vy(t)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      const fitLineYVel = [
+        { x: tMin, y: ay * tMin + v0y },
+        { x: tMax, y: ay * tMax + v0y }
+      ];
+      datasets = [
+        { label: '10 Tangents', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5, pointStyle: 'rectRot' },
+        { label: 'Linear Fit', data: fitLineYVel, type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false }
+      ];
       sugMin = -8;
       sugMax = 8;
     } else if (cfg.type === 'x-vel') {
@@ -1652,7 +1779,10 @@ function renderAllGridGraphs() {
         const t = tMin + (tMax - tMin) * (i / 11);
         vxSamples.push({ x: t, y: v0x });
       }
-      datasets = [{ label: 'vx(t)', data: vxSamples, backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      datasets = [
+        { label: 'Sampled Slopes', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5, pointStyle: 'rectRot' },
+        { label: 'Constant Fit', data: [{ x: tMin, y: v0x }, { x: tMax, y: v0x }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2, pointRadius: 0, fill: false }
+      ];
       sugMin = 0;
       sugMax = Math.max(3.5, v0x * 1.4);
     } else if (cfg.type === 'y-acc') {
@@ -1661,7 +1791,11 @@ function renderAllGridGraphs() {
         const t = tMin + (tMax - tMin) * (i / 11);
         aySamples.push({ x: t, y: meanAy });
       }
-      datasets = [{ label: 'ay(t)', data: aySamples, backgroundColor: '#d67b19', pointRadius: 3 }];
+      datasets = [
+        { label: 'dvᵧ/dt', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5 },
+        { label: 'Acc Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false },
+        { label: 'Ref g (-9.80)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false }
+      ];
       sugMin = -14;
       sugMax = 2;
     } else if (cfg.type === 'x-acc') {
@@ -1670,7 +1804,10 @@ function renderAllGridGraphs() {
         const t = tMin + (tMax - tMin) * (i / 11);
         axSamples.push({ x: t, y: 0.0 });
       }
-      datasets = [{ label: 'ax(t)', data: axSamples, backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      datasets = [
+        { label: 'dvₓ/dt', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5 },
+        { label: 'Zero Fit', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2, pointRadius: 0, fill: false }
+      ];
       sugMin = -2;
       sugMax = 2;
     }
@@ -1859,6 +1996,7 @@ function checkAndVerifyCalculations() {
 
   const fitY = state.fitResults.yPos;
   const fitX = state.fitResults.xPos;
+  const fitYVel = state.fitResults.yVel;
 
   // Expected model values from curve fits
   const exp_x0 = fitX ? fitX.intercept : pts[0].x;
@@ -1867,7 +2005,72 @@ function checkAndVerifyCalculations() {
 
   const exp_y0 = fitY ? fitY.C : pts[0].y;
   const exp_vy0 = fitY ? fitY.B : 0.0;
-  const exp_ay = fitY ? 2 * fitY.A : -9.8;
+  const exp_ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.8);
+
+  // Graph / Video Measured Values
+  const measAy = exp_ay;
+  const measAx = 0.0;
+  const measHang = pts[pts.length - 1].time - pts[0].time;
+  const measRange = pts[pts.length - 1].x - pts[0].x;
+  const measMaxH = Math.max(...pts.map(p => p.y));
+
+  // Populate Master Kinematic Comparison Table Measured Column
+  if (tblMeasAy) tblMeasAy.textContent = `${measAy.toFixed(3)} m/s²`;
+  if (tblMeasAx) tblMeasAx.textContent = `${measAx.toFixed(3)} m/s²`;
+  if (tblMeasHang) tblMeasHang.textContent = `${measHang.toFixed(3)} s`;
+  if (tblMeasRange) tblMeasRange.textContent = `${measRange.toFixed(3)} m`;
+  if (tblMeasMaxH) tblMeasMaxH.textContent = `${measMaxH.toFixed(3)} m`;
+
+  // Auto-fill measured inputs in problem cards if empty
+  if (inpMeasHangTime && !inpMeasHangTime.value) inpMeasHangTime.value = measHang.toFixed(3);
+  if (inpMeasRange && !inpMeasRange.value) inpMeasRange.value = measRange.toFixed(3);
+  if (inpMeasMaxHeight && !inpMeasMaxHeight.value) inpMeasMaxHeight.value = measMaxH.toFixed(3);
+
+  // Two-way sync: Synchronize table inputs (tblInp*) with problem card inputs (inp*)
+  if (document.activeElement === tblInpAy && inpAy) {
+    inpAy.value = tblInpAy.value;
+  } else if (tblInpAy && inpAy && document.activeElement === inpAy) {
+    tblInpAy.value = inpAy.value;
+  } else if (tblInpAy && inpAy) {
+    if (tblInpAy.value !== '' && inpAy.value === '') inpAy.value = tblInpAy.value;
+    else if (inpAy.value !== '' && tblInpAy.value === '') tblInpAy.value = inpAy.value;
+  }
+
+  if (document.activeElement === tblInpAx && inpAx) {
+    inpAx.value = tblInpAx.value;
+  } else if (tblInpAx && inpAx && document.activeElement === inpAx) {
+    tblInpAx.value = inpAx.value;
+  } else if (tblInpAx && inpAx) {
+    if (tblInpAx.value !== '' && inpAx.value === '') inpAx.value = tblInpAx.value;
+    else if (inpAx.value !== '' && tblInpAx.value === '') tblInpAx.value = inpAx.value;
+  }
+
+  if (document.activeElement === tblInpHang && inpCalcHangTime) {
+    inpCalcHangTime.value = tblInpHang.value;
+  } else if (tblInpHang && inpCalcHangTime && document.activeElement === inpCalcHangTime) {
+    tblInpHang.value = inpCalcHangTime.value;
+  } else if (tblInpHang && inpCalcHangTime) {
+    if (tblInpHang.value !== '' && inpCalcHangTime.value === '') inpCalcHangTime.value = tblInpHang.value;
+    else if (inpCalcHangTime.value !== '' && tblInpHang.value === '') tblInpHang.value = inpCalcHangTime.value;
+  }
+
+  if (document.activeElement === tblInpRange && inpCalcRange) {
+    inpCalcRange.value = tblInpRange.value;
+  } else if (tblInpRange && inpCalcRange && document.activeElement === inpCalcRange) {
+    tblInpRange.value = inpCalcRange.value;
+  } else if (tblInpRange && inpCalcRange) {
+    if (tblInpRange.value !== '' && inpCalcRange.value === '') inpCalcRange.value = tblInpRange.value;
+    else if (inpCalcRange.value !== '' && tblInpRange.value === '') tblInpRange.value = inpCalcRange.value;
+  }
+
+  if (document.activeElement === tblInpMaxH && inpCalcMaxHeight) {
+    inpCalcMaxHeight.value = tblInpMaxH.value;
+  } else if (tblInpMaxH && inpCalcMaxHeight && document.activeElement === inpCalcMaxHeight) {
+    tblInpMaxH.value = inpCalcMaxHeight.value;
+  } else if (tblInpMaxH && inpCalcMaxHeight) {
+    if (tblInpMaxH.value !== '' && inpCalcMaxHeight.value === '') inpCalcMaxHeight.value = tblInpMaxH.value;
+    else if (inpCalcMaxHeight.value !== '' && tblInpMaxH.value === '') tblInpMaxH.value = inpCalcMaxHeight.value;
+  }
 
   // Theoretical Hang Time
   const yFinal = pts[pts.length - 1].y;
@@ -1881,7 +2084,7 @@ function checkAndVerifyCalculations() {
     const t2 = (-B - Math.sqrt(disc)) / (2 * A);
     exp_tHang = Math.max(t1, t2);
   } else {
-    exp_tHang = pts[pts.length - 1].time - pts[0].time;
+    exp_tHang = measHang;
   }
 
   const exp_range = exp_vx0 * exp_tHang;
@@ -1914,70 +2117,128 @@ function checkAndVerifyCalculations() {
   if (studentAx !== null) {
     const diff = Math.abs(studentAx - 0.0);
     if (lblAxDiff) lblAxDiff.textContent = `${diff.toFixed(3)} m/s²`;
+    if (tblDiffAx) tblDiffAx.textContent = `Δ = ${diff.toFixed(3)} m/s²`;
+    if (badgeAxCompare) {
+      badgeAxCompare.textContent = diff < 0.1 ? '✓ Verified (aₓ ≈ 0)' : '⚠ Check Horizontal Acc';
+      badgeAxCompare.className = 'pct-diff-badge ' + (diff < 0.1 ? 'success' : 'warn');
+    }
   } else {
     if (lblAxDiff) lblAxDiff.textContent = 'Awaiting Input';
+    if (tblDiffAx) tblDiffAx.textContent = '—';
+    if (badgeAxCompare) {
+      badgeAxCompare.textContent = 'Awaiting Input';
+      badgeAxCompare.className = 'pct-diff-badge';
+    }
   }
 
-  // Vertical Acceleration percent diff from -9.80 m/s^2
+  // Vertical Acceleration percent diff from measured & standard
   let ayPctDiff = 0;
   if (studentAy !== null) {
     ayPctDiff = (Math.abs(Math.abs(studentAy) - 9.8) / 9.8) * 100;
+    const diffAyMeas = Math.abs(studentAy - measAy);
+    const pctAyMeas = measAy !== 0 ? (diffAyMeas / Math.abs(measAy)) * 100 : 0;
+
     if (badgeAyPctDiff) {
-      badgeAyPctDiff.textContent = `${ayPctDiff.toFixed(2)}% Diff`;
+      badgeAyPctDiff.textContent = `${ayPctDiff.toFixed(2)}% Diff (vs 9.80)`;
       badgeAyPctDiff.className = `pct-diff-badge ${ayPctDiff < 6 ? 'success' : ayPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+    if (tblDiffAy) {
+      tblDiffAy.textContent = `${pctAyMeas.toFixed(2)}% (Δ = ${diffAyMeas.toFixed(3)} m/s²)`;
+    }
+    if (badgeAyCompare) {
+      badgeAyCompare.textContent = pctAyMeas < 6 ? '✓ Excellent (<6%)' : pctAyMeas < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeAyCompare.className = `pct-diff-badge ${pctAyMeas < 6 ? 'success' : pctAyMeas < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeAyPctDiff) {
       badgeAyPctDiff.textContent = 'Awaiting Input';
       badgeAyPctDiff.className = 'pct-diff-badge';
     }
+    if (tblDiffAy) tblDiffAy.textContent = '—';
+    if (badgeAyCompare) {
+      badgeAyCompare.textContent = 'Awaiting Input';
+      badgeAyCompare.className = 'pct-diff-badge';
+    }
   }
 
   // 2. Range Percent Difference
   let rangePctDiff = 0;
-  if (studentCalcRange !== null && studentMeasRange !== null) {
-    const avg = (studentCalcRange + studentMeasRange) / 2;
-    rangePctDiff = avg !== 0 ? (Math.abs(studentMeasRange - studentCalcRange) / Math.abs(avg)) * 100 : 0;
+  const activeMeasRange = studentMeasRange !== null ? studentMeasRange : measRange;
+  if (studentCalcRange !== null) {
+    const avg = (studentCalcRange + activeMeasRange) / 2;
+    rangePctDiff = avg !== 0 ? (Math.abs(activeMeasRange - studentCalcRange) / Math.abs(avg)) * 100 : 0;
     if (badgeRangePctDiff) {
       badgeRangePctDiff.textContent = `${rangePctDiff.toFixed(2)}% Diff`;
       badgeRangePctDiff.className = `pct-diff-badge ${rangePctDiff < 6 ? 'success' : rangePctDiff < 12 ? 'warn' : 'error'}`;
+    }
+    if (tblDiffRange) tblDiffRange.textContent = `${rangePctDiff.toFixed(2)}%`;
+    if (badgeRangeCompare) {
+      badgeRangeCompare.textContent = rangePctDiff < 6 ? '✓ Excellent (<6%)' : rangePctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeRangeCompare.className = `pct-diff-badge ${rangePctDiff < 6 ? 'success' : rangePctDiff < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeRangePctDiff) {
       badgeRangePctDiff.textContent = 'Awaiting Input';
       badgeRangePctDiff.className = 'pct-diff-badge';
     }
+    if (tblDiffRange) tblDiffRange.textContent = '—';
+    if (badgeRangeCompare) {
+      badgeRangeCompare.textContent = 'Awaiting Input';
+      badgeRangeCompare.className = 'pct-diff-badge';
+    }
   }
 
   // 3. Hang Time Percent Difference
   let hangPctDiff = 0;
-  if (studentCalcHang !== null && studentMeasHang !== null) {
-    const avg = (studentCalcHang + studentMeasHang) / 2;
-    hangPctDiff = avg !== 0 ? (Math.abs(studentMeasHang - studentCalcHang) / Math.abs(avg)) * 100 : 0;
+  const activeMeasHang = studentMeasHang !== null ? studentMeasHang : measHang;
+  if (studentCalcHang !== null) {
+    const avg = (studentCalcHang + activeMeasHang) / 2;
+    hangPctDiff = avg !== 0 ? (Math.abs(activeMeasHang - studentCalcHang) / Math.abs(avg)) * 100 : 0;
     if (badgeHangTimePctDiff) {
       badgeHangTimePctDiff.textContent = `${hangPctDiff.toFixed(2)}% Diff`;
       badgeHangTimePctDiff.className = `pct-diff-badge ${hangPctDiff < 6 ? 'success' : hangPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+    if (tblDiffHang) tblDiffHang.textContent = `${hangPctDiff.toFixed(2)}%`;
+    if (badgeHangCompare) {
+      badgeHangCompare.textContent = hangPctDiff < 6 ? '✓ Excellent (<6%)' : hangPctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeHangCompare.className = `pct-diff-badge ${hangPctDiff < 6 ? 'success' : hangPctDiff < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeHangTimePctDiff) {
       badgeHangTimePctDiff.textContent = 'Awaiting Input';
       badgeHangTimePctDiff.className = 'pct-diff-badge';
     }
+    if (tblDiffHang) tblDiffHang.textContent = '—';
+    if (badgeHangCompare) {
+      badgeHangCompare.textContent = 'Awaiting Input';
+      badgeHangCompare.className = 'pct-diff-badge';
+    }
   }
 
   // 4. Max Height Percent Difference
   let maxHPctDiff = 0;
-  if (studentCalcMaxH !== null && studentMeasMaxH !== null) {
-    const avg = (studentCalcMaxH + studentMeasMaxH) / 2;
-    maxHPctDiff = avg !== 0 ? (Math.abs(studentMeasMaxH - studentCalcMaxH) / Math.abs(avg)) * 100 : 0;
+  const activeMeasMaxH = studentMeasMaxH !== null ? studentMeasMaxH : measMaxH;
+  if (studentCalcMaxH !== null) {
+    const avg = (studentCalcMaxH + activeMeasMaxH) / 2;
+    maxHPctDiff = avg !== 0 ? (Math.abs(activeMeasMaxH - studentCalcMaxH) / Math.abs(avg)) * 100 : 0;
     if (badgeMaxHeightPctDiff) {
       badgeMaxHeightPctDiff.textContent = `${maxHPctDiff.toFixed(2)}% Diff`;
       badgeMaxHeightPctDiff.className = `pct-diff-badge ${maxHPctDiff < 6 ? 'success' : maxHPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+    if (tblDiffMaxH) tblDiffMaxH.textContent = `${maxHPctDiff.toFixed(2)}%`;
+    if (badgeMaxHCompare) {
+      badgeMaxHCompare.textContent = maxHPctDiff < 6 ? '✓ Excellent (<6%)' : maxHPctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeMaxHCompare.className = `pct-diff-badge ${maxHPctDiff < 6 ? 'success' : maxHPctDiff < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeMaxHeightPctDiff) {
       badgeMaxHeightPctDiff.textContent = 'Awaiting Input';
       badgeMaxHeightPctDiff.className = 'pct-diff-badge';
+    }
+    if (tblDiffMaxH) tblDiffMaxH.textContent = '—';
+    if (badgeMaxHCompare) {
+      badgeMaxHCompare.textContent = 'Awaiting Input';
+      badgeMaxHCompare.className = 'pct-diff-badge';
     }
   }
 
@@ -1994,7 +2255,7 @@ function checkAndVerifyCalculations() {
     }
   }
 
-  // Save student's values to state (fallback to expected only if student left it empty so slide deck still functions)
+  // Save student's values to state
   state.calcValues = {
     x0: studentX0 !== null ? studentX0 : exp_x0,
     vx0: studentVx0 !== null ? studentVx0 : exp_vx0,
@@ -2003,18 +2264,26 @@ function checkAndVerifyCalculations() {
     vy0: studentVy0 !== null ? studentVy0 : exp_vy0,
     ay: studentAy !== null ? studentAy : exp_ay,
     rangeCalc: studentCalcRange !== null ? studentCalcRange : exp_range,
-    rangeMeas: studentMeasRange !== null ? studentMeasRange : (pts[pts.length - 1].x - pts[0].x),
+    rangeMeas: activeMeasRange,
     rangePctDiff,
     hangCalc: studentCalcHang !== null ? studentCalcHang : exp_tHang,
-    hangMeas: studentMeasHang !== null ? studentMeasHang : (pts[pts.length - 1].time - pts[0].time),
+    hangMeas: activeMeasHang,
     hangPctDiff,
     maxHCalc: studentCalcMaxH !== null ? studentCalcMaxH : exp_maxH,
-    maxHMeas: studentMeasMaxH !== null ? studentMeasMaxH : Math.max(...pts.map(p => p.y)),
+    maxHMeas: activeMeasMaxH,
     maxHPctDiff,
     v0: studentV0 !== null ? studentV0 : exp_v0,
     theta: studentTheta !== null ? studentTheta : exp_theta,
     ayPctDiff,
     axDiff: studentAx !== null ? Math.abs(studentAx) : 0
+  };
+
+  // Save student derivation text work
+  state.studentWork = {
+    workMaxH: workMaxHeight ? workMaxHeight.value : '',
+    workHang: workHangTime ? workHangTime.value : '',
+    workRange: workRange ? workRange.value : '',
+    workVector: workVector ? workVector.value : ''
   };
 
   updateAuthenticityBadge();
@@ -2029,7 +2298,7 @@ function checkAndVerifyCalculations() {
       throwOnError: false
     });
   }
-  updateStatus('Verified student calculations and updated percent difference comparisons.');
+  updateStatus('Verified student calculations and updated Master Comparison Table.');
 }
 
 // Reflection Sentence Counter
@@ -2779,6 +3048,14 @@ function saveSessionJSON() {
       scaleStick: state.scaleStick,
       tangentPoints: state.tangentPoints,
       calcValues: state.calcValues,
+      studentWork: state.studentWork,
+      tableInputs: {
+        ay: tblInpAy ? tblInpAy.value : '',
+        ax: tblInpAx ? tblInpAx.value : '',
+        hang: tblInpHang ? tblInpHang.value : '',
+        range: tblInpRange ? tblInpRange.value : '',
+        maxH: tblInpMaxH ? tblInpMaxH.value : ''
+      },
       reflectionText: state.reflectionText,
       syntheticType: state.syntheticType
     }
@@ -2807,6 +3084,21 @@ function loadSessionJSON(file) {
         state.scaleStick = data.state.scaleStick || state.scaleStick;
         state.tangentPoints = data.state.tangentPoints || state.tangentPoints;
         state.calcValues = data.state.calcValues || state.calcValues;
+        state.studentWork = data.state.studentWork || {};
+        if (data.state.studentWork) {
+          if (workMaxHeight && data.state.studentWork.workMaxH) workMaxHeight.value = data.state.studentWork.workMaxH;
+          if (workHangTime && data.state.studentWork.workHang) workHangTime.value = data.state.studentWork.workHang;
+          if (workRange && data.state.studentWork.workRange) workRange.value = data.state.studentWork.workRange;
+          if (workVector && data.state.studentWork.workVector) workVector.value = data.state.studentWork.workVector;
+        }
+        if (data.state.tableInputs) {
+          const ti = data.state.tableInputs;
+          if (tblInpAy && ti.ay !== undefined) tblInpAy.value = ti.ay;
+          if (tblInpAx && ti.ax !== undefined) tblInpAx.value = ti.ax;
+          if (tblInpHang && ti.hang !== undefined) tblInpHang.value = ti.hang;
+          if (tblInpRange && ti.range !== undefined) tblInpRange.value = ti.range;
+          if (tblInpMaxH && ti.maxH !== undefined) tblInpMaxH.value = ti.maxH;
+        }
         state.reflectionText = data.state.reflectionText || '';
         if (reflectionText) reflectionText.value = state.reflectionText;
         if (data.state.syntheticType) initSyntheticExperiment(data.state.syntheticType);
@@ -3211,9 +3503,28 @@ function initEventListeners() {
 
   // Calculations Workspace
   if (btnCheckWorksheet) btnCheckWorksheet.addEventListener('click', checkAndVerifyCalculations);
-  [inpX0, inpVx0, inpAx, inpY0, inpVy0, inpAy, inpCalcRange, inpMeasRange, inpCalcHangTime, inpMeasHangTime, inpCalcMaxHeight, inpMeasMaxHeight, inpSpeedV0, inpAngleTheta].forEach(inp => {
+  [
+    inpX0, inpVx0, inpAx, inpY0, inpVy0, inpAy,
+    inpCalcRange, inpMeasRange, inpCalcHangTime, inpMeasHangTime,
+    inpCalcMaxHeight, inpMeasMaxHeight, inpSpeedV0, inpAngleTheta,
+    tblInpAy, tblInpAx, tblInpHang, tblInpRange, tblInpMaxH
+  ].forEach(inp => {
     if (inp) inp.addEventListener('input', () => checkAndVerifyCalculations());
   });
+
+  [workMaxHeight, workHangTime, workRange, workVector].forEach(txt => {
+    if (txt) {
+      txt.addEventListener('input', () => {
+        state.studentWork = {
+          workMaxH: workMaxHeight ? workMaxHeight.value : '',
+          workHang: workHangTime ? workHangTime.value : '',
+          workRange: workRange ? workRange.value : '',
+          workVector: workVector ? workVector.value : ''
+        };
+      });
+    }
+  });
+
   if (reflectionText) reflectionText.addEventListener('input', updateReflectionCounter);
 
   // Presentation & Exports

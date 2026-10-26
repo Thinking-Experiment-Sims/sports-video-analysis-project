@@ -418,47 +418,94 @@
 
       <!-- Grid Overview Container (Hidden by default) -->
       <div id="gridAllContainer" class="six-graph-grid" style="display: none;">
+        <!-- Card 1: Vertical Position -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">1. Vertical Position y(t)</span>
-            <span id="gridEqYPos" style="font-size: 0.72rem; color: var(--muted);">Quadratic Fit</span>
+            <span class="grid-graph-badge" id="gridBadgeYPos">Quadratic Parabola</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYPos"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridYPos"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenYPos">General: y(t) = ½aᵧt² + v₀ᵧt + y₀</div>
+            <div class="grid-eq-part" id="gridPartYPos">Particular: y(t) = ...</div>
+          </div>
         </div>
+
+        <!-- Card 2: Horizontal Position -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">2. Horizontal Position x(t)</span>
-            <span id="gridEqXPos" style="font-size: 0.72rem; color: var(--muted);">Linear Fit</span>
+            <span class="grid-graph-badge" id="gridBadgeXPos">Linear Fit</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXPos"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridXPos"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenXPos">General: x(t) = v₀ₓt + x₀</div>
+            <div class="grid-eq-part" id="gridPartXPos">Particular: x(t) = ...</div>
+          </div>
         </div>
+
+        <!-- Card 3: Vertical Velocity -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">3. Vertical Velocity vy(t) [Tangents]</span>
-            <span id="gridEqYVel" style="font-size: 0.72rem; color: var(--muted);">10 Tangents Fit</span>
+            <span class="grid-graph-badge" id="gridBadgeYVel">10 Tangent Slopes</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYVel"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridYVel"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenYVel">General: vᵧ(t) = aᵧt + v₀ᵧ</div>
+            <div class="grid-eq-part" id="gridPartYVel">Particular: vᵧ(t) = ...</div>
+          </div>
         </div>
+
+        <!-- Card 4: Horizontal Velocity -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">4. Horizontal Velocity vx(t)</span>
-            <span id="gridEqXVel" style="font-size: 0.72rem; color: var(--muted);">Linear Fit</span>
+            <span class="grid-graph-badge" id="gridBadgeXVel">Uniform Velocity</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXVel"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridXVel"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenXVel">General: vₓ(t) = v₀ₓ = constant</div>
+            <div class="grid-eq-part" id="gridPartXVel">Particular: vₓ(t) = ...</div>
+          </div>
         </div>
+
+        <!-- Card 5: Vertical Acceleration -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">5. Vertical Acceleration ay(t)</span>
-            <span id="gridEqYAcc" style="font-size: 0.72rem; color: var(--muted);">ay ≈ -9.8 m/s²</span>
+            <span class="grid-graph-badge" id="gridBadgeYAcc">Constant Gravity</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridYAcc"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridYAcc"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenYAcc">General: aᵧ(t) = aᵧ = constant</div>
+            <div class="grid-eq-part" id="gridPartYAcc">Particular: aᵧ(t) = ... (Ref g = -9.80 m/s²)</div>
+          </div>
         </div>
+
+        <!-- Card 6: Horizontal Acceleration -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
             <span class="grid-graph-title">6. Horizontal Acceleration ax(t)</span>
-            <span id="gridEqXAcc" style="font-size: 0.72rem; color: var(--muted);">ax ≈ 0 m/s²</span>
+            <span class="grid-graph-badge" id="gridBadgeXAcc">Zero Acceleration</span>
           </div>
-          <div style="flex: 1; min-height: 0; position: relative;"><canvas id="canvasGridXAcc"></canvas></div>
+          <div style="flex: 1; min-height: 220px; position: relative;">
+            <canvas id="canvasGridXAcc"></canvas>
+          </div>
+          <div class="grid-graph-footer">
+            <div class="grid-eq-gen" id="gridGenXAcc">General: aₓ(t) = 0 m/s²</div>
+            <div class="grid-eq-part" id="gridPartXAcc">Particular: aₓ(t) = 0.000 m/s² (Ref aₓ = 0.00)</div>
+          </div>
         </div>
       </div>
     </div>
@@ -480,33 +527,128 @@
       <div class="guidance-banner" style="margin-top: 1rem; margin-bottom: 1.25rem;">
         <div class="guidance-icon">🧮</div>
         <div class="guidance-content">
-          <strong>Step 4: Theoretical Calculations &amp; Percent Differences</strong>
+          <strong>Step 4: Theoretical Calculations &amp; Model Comparison</strong>
           <p>
-            Use the kinematic formulas below to calculate initial speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), launch angle \(\theta = \arctan(v_{0y}/v_{0x})\), maximum height \(y_{\max}\), hang time \(t_{\text{hang}}\), and horizontal range \(\Delta x\). Enter your calculated values into each card, then click <strong>Check &amp; Verify My Calculations</strong>. Finally, write your 5+ sentence sports analytics reflection.
+            Derive and calculate theoretical projectile values using fundamental kinematic equations. Show your full algebraic steps and substitutions (no shortcuts or pre-derived formulas). Compare your calculated values against graph-extracted parameters in the comparison table below, and verify percent differences. Finally, write your 5+ sentence reflection.
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
-          ❓ Formulas
+          ❓ Kinematic Equations
         </button>
       </div>
 
-      <!-- Section 1: Measured Values from Logger Pro Fits -->
+      <!-- MASTER COMPARISON TABLE: Graph Fits vs. Calculated Theory -->
+      <div class="worksheet-card" style="border: 2px solid var(--primary-teal);">
+        <div class="worksheet-card-header" style="background: #eef7fa; border-bottom: 2px solid var(--primary-teal);">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.2rem;">📊</span>
+            <strong style="color: var(--primary-teal); font-size: 1rem;">Master Kinematic Comparison: Graph-Measured Values vs. Student Theoretical Calculations</strong>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--muted); font-weight: 600;">Values update in real-time</span>
+        </div>
+        <div class="worksheet-card-body" style="padding: 0; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: var(--surface-alt); border-bottom: 1px solid var(--border);">
+                <th style="padding: 0.75rem 1rem; text-align: left; font-weight: 700; color: var(--primary-teal);">Kinematic Parameter</th>
+                <th style="padding: 0.75rem 1rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">Graph / Video Measured Value</th>
+                <th style="padding: 0.75rem 1rem; text-align: center; font-weight: 700; color: var(--primary-teal);">Student Calculated Value</th>
+                <th style="padding: 0.75rem 1rem; text-align: center; font-weight: 700; color: #123140;">Percent Difference</th>
+                <th style="padding: 0.75rem 1rem; text-align: center; font-weight: 700; color: #123140;">Verification Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Row 1: Vertical Acc -->
+              <tr style="border-bottom: 1px solid var(--border-light);">
+                <td style="padding: 0.75rem 1rem; font-weight: 600;">Vertical Acceleration (\(a_y\))</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><code id="tblMeasAy" style="font-weight: 700; font-size: 0.92rem;">-9.800 m/s²</code></td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <input type="number" id="tblInpAy" class="input-control" step="0.001" style="width: 110px; text-align: center; font-weight: 600;" placeholder="-9.800">
+                    <span>m/s²</span>
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;" id="tblDiffAy">—</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><span class="pct-diff-badge" id="badgeAyCompare">Awaiting Input</span></td>
+              </tr>
+
+              <!-- Row 2: Horizontal Acc -->
+              <tr style="border-bottom: 1px solid var(--border-light);">
+                <td style="padding: 0.75rem 1rem; font-weight: 600;">Horizontal Acceleration (\(a_x\))</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><code id="tblMeasAx" style="font-weight: 700; font-size: 0.92rem;">0.000 m/s²</code></td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <input type="number" id="tblInpAx" class="input-control" step="0.001" style="width: 110px; text-align: center; font-weight: 600;" placeholder="0.000">
+                    <span>m/s²</span>
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;" id="tblDiffAx">—</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><span class="pct-diff-badge" id="badgeAxCompare">Awaiting Input</span></td>
+              </tr>
+
+              <!-- Row 3: Hang Time -->
+              <tr style="border-bottom: 1px solid var(--border-light);">
+                <td style="padding: 0.75rem 1rem; font-weight: 600;">Total Flight Hang Time (\(t_{\text{hang}}\))</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><code id="tblMeasHang" style="font-weight: 700; font-size: 0.92rem;">0.000 s</code></td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <input type="number" id="tblInpHang" class="input-control" step="0.001" style="width: 110px; text-align: center; font-weight: 600;" placeholder="Enter time">
+                    <span>s</span>
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;" id="tblDiffHang">—</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><span class="pct-diff-badge" id="badgeHangCompare">Awaiting Input</span></td>
+              </tr>
+
+              <!-- Row 4: Horizontal Range -->
+              <tr style="border-bottom: 1px solid var(--border-light);">
+                <td style="padding: 0.75rem 1rem; font-weight: 600;">Horizontal Range (\(\Delta x\))</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><code id="tblMeasRange" style="font-weight: 700; font-size: 0.92rem;">0.000 m</code></td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <input type="number" id="tblInpRange" class="input-control" step="0.001" style="width: 110px; text-align: center; font-weight: 600;" placeholder="Enter range">
+                    <span>m</span>
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;" id="tblDiffRange">—</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><span class="pct-diff-badge" id="badgeRangeCompare">Awaiting Input</span></td>
+              </tr>
+
+              <!-- Row 5: Maximum Height -->
+              <tr>
+                <td style="padding: 0.75rem 1rem; font-weight: 600;">Maximum Apex Height (\(y_{\max}\))</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><code id="tblMeasMaxH" style="font-weight: 700; font-size: 0.92rem;">0.000 m</code></td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <input type="number" id="tblInpMaxH" class="input-control" step="0.001" style="width: 110px; text-align: center; font-weight: 600;" placeholder="Enter height">
+                    <span>m</span>
+                  </div>
+                </td>
+                <td style="padding: 0.75rem 1rem; text-align: center; font-weight: 600;" id="tblDiffMaxH">—</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;"><span class="pct-diff-badge" id="badgeMaxHCompare">Awaiting Input</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 1: Measured Values Extracted from Logger Pro / Video Fits -->
       <div class="worksheet-card">
         <div class="worksheet-card-header">
-          <span class="worksheet-card-title">1. Best-Fit Values from Motion Graphs</span>
-          <span style="font-size: 0.8rem; color: var(--muted);">Extract from Position &amp; Velocity curves</span>
+          <span class="worksheet-card-title">1. Best-Fit Values Extracted from Motion Graphs</span>
+          <span style="font-size: 0.8rem; color: var(--muted);">Direct from Position &amp; Velocity Curves</span>
         </div>
         <div class="worksheet-card-body">
           <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
-            <strong>How to extract:</strong>
+            <strong>Fundamental Equations for Extraction:</strong>
             <ul style="margin: 0.3rem 0 0 1.2rem;">
-              <li><strong>Horizontal Motion \(x(t) = mt + b\):</strong> The slope \(m\) is your horizontal velocity \(v_{0x}\), and the intercept \(b\) is \(x_0\). Since the velocity is constant, horizontal acceleration is zero (\(a_x = 0\text{ m/s}^2\)).</li>
-              <li><strong>Vertical Motion \(y(t) = At^2 + Bt + C\):</strong> Coefficient \(A = \frac{1}{2}a_y\) (so \(a_y = 2A\)), coefficient \(B = v_{0y}\), and intercept \(C = y_0\).</li>
+              <li><strong>Horizontal Position:</strong> \(x(t) = v_{0x}t + x_0\) &mdash; The slope is horizontal velocity \(v_{0x}\), and the y-intercept is initial position \(x_0\). Since velocity is uniform, horizontal acceleration \(a_x = 0\text{ m/s}^2\).</li>
+              <li><strong>Vertical Position:</strong> \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\) &mdash; Coefficient \(A = \frac{1}{2}a_y\) (so \(a_y = 2A\)), linear coefficient \(B = v_{0y}\), and constant \(C = y_0\).</li>
             </ul>
           </div>
           <div class="calc-grid-2">
             <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin-bottom: 0.75rem;">Horizontal Motion (x)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin-bottom: 0.75rem;">Horizontal Motion Components (x)</h4>
               <div class="calc-field-group">
                 <label>Initial Horizontal Position \(x_0\) (m):</label>
                 <input type="number" id="inpX0" class="input-control" step="0.001" placeholder="e.g. 0.000">
@@ -525,7 +667,7 @@
             </div>
 
             <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin-bottom: 0.75rem;">Vertical Motion (y)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin-bottom: 0.75rem;">Vertical Motion Components (y)</h4>
               <div class="calc-field-group">
                 <label>Initial Vertical Position \(y_0\) (m):</label>
                 <input type="number" id="inpY0" class="input-control" step="0.001" placeholder="e.g. 0.000">
@@ -547,143 +689,144 @@
         </div>
       </div>
 
-      <!-- Section 2: Range Calculation & Comparison -->
+      <!-- Section 2: Maximum Height Derivation & Calculation -->
       <div class="worksheet-card">
         <div class="worksheet-card-header">
-          <span class="worksheet-card-title">2. Range of the Object (\(R\))</span>
-          <span class="pct-diff-badge" id="badgeRangePctDiff">Awaiting Input</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
-            <strong>Formula Guide:</strong>
-            <ul style="margin: 0.3rem 0 0 1.2rem;">
-              <li><strong>Calculated Range:</strong> \(R_{\text{calc}} = v_{0x} \times t_{\text{hang}}\) (horizontal speed multiplied by total hang time).</li>
-              <li><strong>Measured Range:</strong> \(R_{\text{meas}} = x_{\text{final}} - x_{\text{initial}}\) (difference between final and initial x-positions in your table).</li>
-              <li><strong>Percent Difference:</strong> \[\text{\% Diff} = \frac{|R_{\text{meas}} - R_{\text{calc}}|}{\frac{R_{\text{meas}} + R_{\text{calc}}}{2}} \times 100\%\]</li>
-            </ul>
-          </div>
-          <div class="calc-grid-2">
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using \(R_{\text{calc}} = v_{0x} \cdot t_{\text{hang}}\):</p>
-              <div class="calc-field-group">
-                <label>Calculated Range \(R_{\text{calc}}\) (m):</label>
-                <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="Enter calculated range">
-              </div>
-            </div>
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From tracking data table \(\Delta x = x_{\text{final}} - x_{\text{initial}}\):</p>
-              <div class="calc-field-group">
-                <label>Measured Range \(R_{\text{meas}}\) (m):</label>
-                <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="Enter measured range">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 3: Hang Time Calculation & Comparison -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">3. Hang Time of the Object (\(t_{\text{hang}}\))</span>
-          <span class="pct-diff-badge" id="badgeHangTimePctDiff">Awaiting Input</span>
-        </div>
-        <div class="worksheet-card-body">
-          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
-            <strong>Formula Guide:</strong>
-            <ul style="margin: 0.3rem 0 0 1.2rem;">
-              <li><strong>Calculated Hang Time:</strong> Solve the quadratic position equation \(\frac{1}{2}a_y t^2 + v_{0y}t + (y_0 - y_{\text{final}}) = 0\) for \(t\):
-                \[t_{\text{hang,calc}} = \frac{-v_{0y} - \sqrt{v_{0y}^2 - 2a_y(y_{\text{final}} - y_0)}}{a_y}\]
-              </li>
-              <li><strong>Measured Hang Time:</strong> \(\Delta t = t_{\text{final}} - t_{\text{initial}}\) (elapsed time from first point to landing).</li>
-            </ul>
-          </div>
-          <div class="calc-grid-2">
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation for airborne flight:</p>
-              <div class="calc-field-group">
-                <label>Calculated Hang Time \(t_{\text{hang,calc}}\) (s):</label>
-                <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="Enter calculated hang time">
-              </div>
-            </div>
-            <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> Subtracting final and initial time: \(\Delta t = t_{\text{final}} - t_{\text{initial}}\):</p>
-              <div class="calc-field-group">
-                <label>Measured Hang Time \(t_{\text{hang,meas}}\) (s):</label>
-                <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="Enter measured hang time">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 4: Maximum Height Calculation & Comparison -->
-      <div class="worksheet-card">
-        <div class="worksheet-card-header">
-          <span class="worksheet-card-title">4. Maximum Height of the Object (\(y_{\max}\))</span>
+          <span class="worksheet-card-title">2. Maximum Apex Height (\(y_{\max}\)) &mdash; Show Full Derivation</span>
           <span class="pct-diff-badge" id="badgeMaxHeightPctDiff">Awaiting Input</span>
         </div>
         <div class="worksheet-card-body">
           <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
-            <strong>Formula Guide:</strong>
+            <strong>Fundamental Kinematic Equation:</strong>
+            \[v_{fy}^2 = v_{iy}^2 + 2a_y\Delta y \quad \text{where } \Delta y = y_{\max} - y_0\]
+            <strong>Physics Process:</strong>
             <ul style="margin: 0.3rem 0 0 1.2rem;">
-              <li><strong>Calculated Max Height:</strong> At the apex, instantaneous vertical velocity is zero (\(v_y = 0\)). From \(v_y^2 = v_{0y}^2 + 2a_y(y_{\max} - y_0)\):
-                \[y_{\max,\text{calc}} = y_0 + \frac{v_{0y}^2}{2|a_y|}\]
-              </li>
-              <li><strong>Measured Max Height:</strong> The highest \(y\) coordinate recorded in your tracking table.</li>
+              <li>At the highest apex of projectile flight, vertical velocity momentarily reaches zero: \(v_{fy} = 0\text{ m/s}\).</li>
+              <li>State the fundamental kinematic equation, substitute your known values with units, and show the step-by-step algebra solving for \(y_{\max}\).</li>
             </ul>
           </div>
+
+          <div style="margin-bottom: 0.85rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: var(--primary-teal);">Show Your Full Algebraic Work &amp; Substitution (No Shortcuts):</label>
+            <textarea id="workMaxHeight" class="input-control" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 0.25rem; font-family: monospace; font-size: 0.85rem;" placeholder="1. State equation: v_fy² = v_iy² + 2·a_y·(y_max - y_0)&#10;2. Substitute knowns with units: 0² = (v_0y)² + 2·(a_y)·(y_max - y_0)&#10;3. Solve algebraically for y_max:"></textarea>
+          </div>
+
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at flight apex:</p>
-              <div class="calc-field-group">
-                <label>Calculated Max Height \(y_{\max,\text{calc}}\) (m):</label>
-                <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="Enter calculated max height">
-              </div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Calculated Apex Height \(y_{\max,\text{calc}}\) (m):</label>
+              <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="Enter your calculated y_max">
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Max Height:</strong> Direct maximum \(y\) value from data table:</p>
-              <div class="calc-field-group">
-                <label>Measured Max Height \(y_{\max,\text{meas}}\) (m):</label>
-                <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="Enter measured max height">
-              </div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Measured Apex Height \(y_{\max,\text{meas}}\) (m) from Data Table:</label>
+              <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="Highest point in table">
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section 5 & 6: Total Initial Velocity & Angle -->
+      <!-- Section 3: Hang Time Derivation & Calculation -->
       <div class="worksheet-card">
         <div class="worksheet-card-header">
-          <span class="worksheet-card-title">5 &amp; 6. Initial Speed &amp; Launch Angle</span>
+          <span class="worksheet-card-title">3. Total Flight Hang Time (\(t_{\text{hang}}\)) &mdash; Show Full Derivation</span>
+          <span class="pct-diff-badge" id="badgeHangTimePctDiff">Awaiting Input</span>
+        </div>
+        <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Fundamental Kinematic Equation:</strong>
+            \[y_f = y_0 + v_{iy}t + \frac{1}{2}a_y t^2\]
+            <strong>Physics Process:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li>Set final vertical position to the landing height: \(y_f = y_{\text{final}}\).</li>
+              <li>Substitute initial height \(y_0\), launch velocity \(v_{0y}\), and vertical acceleration \(a_y\) with units.</li>
+              <li>Show the full algebra solving for flight duration \(t_{\text{hang}}\).</li>
+            </ul>
+          </div>
+
+          <div style="margin-bottom: 0.85rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: var(--primary-teal);">Show Your Full Algebraic Work &amp; Substitution (No Shortcuts):</label>
+            <textarea id="workHangTime" class="input-control" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 0.25rem; font-family: monospace; font-size: 0.85rem;" placeholder="1. State equation: y_final = y_0 + v_0y·t + ½·a_y·t²&#10;2. Substitute values with units:&#10;3. Solve equation for flight time t:"></textarea>
+          </div>
+
+          <div class="calc-grid-2">
+            <div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Calculated Hang Time \(t_{\text{hang,calc}}\) (s):</label>
+              <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="Enter your calculated hang time">
+            </div>
+            <div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Measured Hang Time \(t_{\text{hang,meas}}\) (\(\Delta t = t_{\text{final}} - t_0\)):</label>
+              <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="Elapsed video time">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Range Derivation & Calculation -->
+      <div class="worksheet-card">
+        <div class="worksheet-card-header">
+          <span class="worksheet-card-title">4. Horizontal Range of the Object (\(\Delta x\) or \(R\)) &mdash; Show Full Derivation</span>
+          <span class="pct-diff-badge" id="badgeRangePctDiff">Awaiting Input</span>
+        </div>
+        <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Fundamental Kinematic Equation:</strong>
+            \[\Delta x = v_{ix}t + \frac{1}{2}a_x t^2\]
+            <strong>Physics Process:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li>Because there is no horizontal force (\(a_x = 0\)), horizontal velocity is uniform: \(\Delta x = v_{0x} \cdot t_{\text{hang}}\).</li>
+              <li>Substitute your measured horizontal speed \(v_{0x}\) and calculated total hang time \(t_{\text{hang}}\) with units, then calculate range.</li>
+            </ul>
+          </div>
+
+          <div style="margin-bottom: 0.85rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: var(--primary-teal);">Show Your Full Algebraic Work &amp; Substitution (No Shortcuts):</label>
+            <textarea id="workRange" class="input-control" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 0.25rem; font-family: monospace; font-size: 0.85rem;" placeholder="1. State equation: Δx = v_0x·t + ½·a_x·t²&#10;2. Substitute a_x = 0: Δx = v_0x · t_hang&#10;3. Substitute values with units and calculate:"></textarea>
+          </div>
+
+          <div class="calc-grid-2">
+            <div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Calculated Range \(\Delta x_{\text{calc}}\) (m):</label>
+              <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="Enter your calculated range">
+            </div>
+            <div>
+              <label style="font-weight: 600; font-size: 0.82rem;">Measured Range \(\Delta x_{\text{meas}}\) (\(x_{\text{final}} - x_0\)):</label>
+              <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="Measured distance in data table">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: Launch Speed & Release Angle -->
+      <div class="worksheet-card">
+        <div class="worksheet-card-header">
+          <span class="worksheet-card-title">5. Total Launch Speed (\(v_0\)) &amp; Release Angle (\(\theta\))</span>
           <span style="font-size: 0.8rem; color: var(--muted);">Vector Decomposition</span>
         </div>
         <div class="worksheet-card-body">
           <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
-            <strong>Formula Guide:</strong>
-            <ul style="margin: 0.3rem 0 0 1.2rem;">
-              <li><strong>Total Launch Speed:</strong> Combine horizontal and vertical velocity components via the Pythagorean theorem:
-                \[v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\]
-              </li>
-              <li><strong>Launch Angle \(\theta\):</strong> Find the angle of elevation above the horizontal:
-                \[\theta = \arctan\left(\frac{v_{0y}}{v_{0x}}\right) \times \frac{180^\circ}{\pi}\]
-              </li>
-            </ul>
+            <strong>Fundamental Vector Equations:</strong>
+            \[v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}, \qquad \tan\theta = \frac{v_{0y}}{v_{0x}} \implies \theta = \arctan\left(\frac{v_{0y}}{v_{0x}}\right) \times \frac{180^\circ}{\pi}\]
           </div>
+
+          <div style="margin-bottom: 0.85rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: var(--primary-teal);">Show Your Full Vector Work &amp; Substitution:</label>
+            <textarea id="workVector" class="input-control" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 0.25rem; font-family: monospace; font-size: 0.85rem;" placeholder="1. Speed equation: v_0 = √(v_0x² + v_0y²)&#10;2. Angle equation: θ = arctan(v_0y / v_0x)&#10;3. Substitute values and solve:"></textarea>
+          </div>
+
           <div class="calc-grid-2">
             <div class="calc-field-group">
-              <label>5. Total Initial Speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\) (m/s):</label>
-              <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="Enter calculated speed v₀">
+              <label>Calculated Launch Speed \(v_0\) (m/s):</label>
+              <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="e.g. 4.040">
             </div>
             <div class="calc-field-group">
-              <label>6. Launch Angle \(\theta = \arctan(v_{0y} / v_{0x})\) (degrees):</label>
-              <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="Enter calculated angle θ">
+              <label>Calculated Launch Angle \(\theta\) (degrees):</label>
+              <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="e.g. 52.50">
             </div>
           </div>
           
           <div style="margin-top: 1rem; padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-            <strong style="font-size: 0.82rem; color: var(--primary-teal);">7. Consistency Check:</strong>
+            <strong style="font-size: 0.82rem; color: var(--primary-teal);">Consistency Check:</strong>
             <p style="font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0 0;" id="lblConsistencyCheck">
-              Enter your \(v_0\) and \(\theta\) above, then click Check &amp; Verify to confirm recomputed components \(v_{0x} = v_0 \cos\theta\) and \(v_{0y} = v_0 \sin\theta\).
+              Enter \(v_0\) and \(\theta\) above, then click Check &amp; Verify to confirm recomputed components \(v_{0x} = v_0 \cos\theta\) and \(v_{0y} = v_0 \sin\theta\).
             </p>
           </div>
         </div>

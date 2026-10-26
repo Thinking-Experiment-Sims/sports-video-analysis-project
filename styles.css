@@ -963,7 +963,7 @@ body {
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  height: 320px;
+  min-height: 380px;
 }
 
 .grid-graph-header {
@@ -977,6 +977,38 @@ body {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--primary-teal);
+}
+
+.grid-graph-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  background: #eef7fa;
+  border: 1px solid #c8dbe3;
+  border-radius: 4px;
+  color: var(--primary-teal);
+  font-weight: 600;
+}
+
+.grid-graph-footer {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+}
+
+.grid-eq-gen {
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.grid-eq-part {
+  color: var(--primary-teal);
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 0.82rem;
 }
 
 /* ========================================================================== */
