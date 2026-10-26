@@ -282,10 +282,10 @@
           <div class="pedagogy-card">
             <h4>💡 Why Linearize Parabolic Motion?</h4>
             <p>
-              In physics, fitting a parabola \(y(t) = rac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
+              In physics, fitting a parabola \(y(t) = \frac{1}{2}at^2 + v_0t + y_0\) contains three dependent parameters \((a, v_0, y_0)\). Simply graphing \(y\) versus \(t^2\) <strong>does not produce a straight line</strong> unless the initial velocity \(v_0 = 0\).
             </p>
             <div class="formula-box" style="text-align: center; font-size: 1rem;">
-              \[y(t) = rac{1}{2}at^2 + v_0t + y_0\]
+              \[y(t) = \frac{1}{2}at^2 + v_0t + y_0\]
             </div>
           </div>
 
@@ -296,14 +296,14 @@
             </p>
             <p>
               <strong>Look at the apex (peak) of the position-time curve!</strong>
-              At the apex \((t_{	ext{apex}}, y_{	ext{apex}})\), the instantaneous vertical velocity is exactly zero: \(v_y(t_{	ext{apex}}) = 0\).
+              At the apex \((t_{\text{apex}}, y_{\text{apex}})\), the instantaneous vertical velocity is exactly zero: \(v_y(t_{\text{apex}}) = 0\).
             </p>
             <div class="formula-box">
               <div style="font-weight: 600; margin-bottom: 0.35rem; color: var(--primary-teal);">Shifted Vertex Form:</div>
-              \[[y - y_{	ext{apex}}] = rac{1}{2}a(t - t_{	ext{apex}})^2\]
+              \[[y - y_{\text{apex}}] = \frac{1}{2}a(t - t_{\text{apex}})^2\]
               <div style="margin-top: 0.5rem;">
-                Let \(Y' = [y - y_{	ext{apex}}]\) and \(X' = (t - t_{	ext{apex}})^2\):
-                \[Y' = (	ext{Slope}) \cdot X' \quad 	ext{where} \quad 	ext{Slope} = rac{1}{2}a \implies a = 2 \cdot (	ext{Slope})\]
+                Let \(Y' = [y - y_{\text{apex}}]\) and \(X' = (t - t_{\text{apex}})^2\):
+                \[Y' = (\text{Slope}) \cdot X' \quad \text{where} \quad \text{Slope} = \frac{1}{2}a \implies a = 2 \cdot (\text{Slope})\]
               </div>
             </div>
           </div>
@@ -416,11 +416,11 @@
           <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 0.35rem;">
             <div>
               <span style="font-size: 0.75rem; color: var(--subtle); font-weight: 600;">GENERAL EQUATION:</span>
-              <div class="equation-formula" id="activeGeneralEq">\[y(t) = rac{1}{2}a_y t^2 + v_{0y} t + y_0\]</div>
+              <div class="equation-formula" id="activeGeneralEq">\[y(t) = \frac{1}{2}a_y t^2 + v_{0y} t + y_0\]</div>
             </div>
             <div>
               <span style="font-size: 0.75rem; color: var(--subtle); font-weight: 600;">PARTICULAR EQUATION (WITH UNITS):</span>
-              <div class="equation-formula" id="activeParticularEq">\[y(t) = (-4.90	ext{ m/s}^2)t^2 + (4.25	ext{ m/s})t + (1.10	ext{ m})\]</div>
+              <div class="equation-formula" id="activeParticularEq">\[y(t) = (-4.90\text{ m/s}^2)t^2 + (4.25\text{ m/s})t + (1.10\text{ m})\]</div>
             </div>
           </div>
         </div>
@@ -513,7 +513,7 @@
                 <input type="number" id="inpAx" class="input-control" step="0.001" placeholder="0.000">
               </div>
               <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted);">
-                Reference comparison: \(|a_x - 0	ext{ m/s}^2| =\) <strong id="lblAxDiff">0.00 m/s²</strong>
+                Reference comparison: \(|a_x - 0\text{ m/s}^2| =\) <strong id="lblAxDiff">0.00 m/s²</strong>
               </div>
             </div>
 
@@ -532,7 +532,7 @@
                 <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="-9.800">
               </div>
               <div style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.8rem; color: var(--muted);">Percent difference from \(g = -9.80	ext{ m/s}^2\):</span>
+                <span style="font-size: 0.8rem; color: var(--muted);">Percent difference from \(g = -9.80\text{ m/s}^2\):</span>
                 <span class="pct-diff-badge" id="badgeAyPctDiff">0.0% Diff</span>
               </div>
             </div>
@@ -549,16 +549,16 @@
         <div class="worksheet-card-body">
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using kinematic equations for accelerating motion with \(v_{0x}\) and total hang time \(t_{	ext{hang}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using kinematic equations for accelerating motion with \(v_{0x}\) and total hang time \(t_{\text{hang}}\):</p>
               <div class="calc-field-group">
-                <label>Calculated Range \(R_{	ext{calc}}\) (m):</label>
+                <label>Calculated Range \(R_{\text{calc}}\) (m):</label>
                 <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From data table initial and final positions: \(\Delta x = x_{	ext{final}} - x_{	ext{initial}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From data table initial and final positions: \(\Delta x = x_{\text{final}} - x_{\text{initial}}\):</p>
               <div class="calc-field-group">
-                <label>Measured Range \(R_{	ext{meas}}\) (m):</label>
+                <label>Measured Range \(R_{\text{meas}}\) (m):</label>
                 <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
@@ -569,22 +569,22 @@
       <!-- Section 3: Hang Time Calculation & Comparison -->
       <div class="worksheet-card">
         <div class="worksheet-card-header">
-          <span class="worksheet-card-title">3. Hang Time of the Object (\(t_{	ext{hang}}\))</span>
+          <span class="worksheet-card-title">3. Hang Time of the Object (\(t_{\text{hang}}\))</span>
           <span class="pct-diff-badge" id="badgeHangTimePctDiff">0.0% Diff</span>
         </div>
         <div class="worksheet-card-body">
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation \(y(t) = y_{	ext{final}}\) for accelerating flight:</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation \(y(t) = y_{\text{final}}\) for accelerating flight:</p>
               <div class="calc-field-group">
-                <label>Calculated Hang Time \(t_{	ext{hang,calc}}\) (s):</label>
+                <label>Calculated Hang Time \(t_{\text{hang,calc}}\) (s):</label>
                 <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> By subtracting final and initial time: \(\Delta t = t_{	ext{final}} - t_{	ext{initial}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> By subtracting final and initial time: \(\Delta t = t_{\text{final}} - t_{\text{initial}}\):</p>
               <div class="calc-field-group">
-                <label>Measured Hang Time \(t_{	ext{hang,meas}}\) (s):</label>
+                <label>Measured Hang Time \(t_{\text{hang,meas}}\) (s):</label>
                 <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
@@ -601,16 +601,16 @@
         <div class="worksheet-card-body">
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at apex: \(y_{\max} = y_0 + rac{v_{0y}^2}{2|a_y|}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at apex: \(y_{\max} = y_0 + \frac{v_{0y}^2}{2|a_y|}\):</p>
               <div class="calc-field-group">
-                <label>Calculated Max Height \(y_{\max,	ext{calc}}\) (m):</label>
+                <label>Calculated Max Height \(y_{\max,\text{calc}}\) (m):</label>
                 <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
             <div>
               <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Max Height:</strong> Direct maximum \(y\) value recorded in the tracking data table:</p>
               <div class="calc-field-group">
-                <label>Measured Max Height \(y_{\max,	ext{meas}}\) (m):</label>
+                <label>Measured Max Height \(y_{\max,\text{meas}}\) (m):</label>
                 <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="0.000">
               </div>
             </div>
@@ -631,7 +631,7 @@
               <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="0.000">
             </div>
             <div class="calc-field-group">
-              <label>6. Launch Angle \(	heta = rctan(v_{0y} / v_{0x})\) (degrees):</label>
+              <label>6. Launch Angle \(\theta = \arctan(v_{0y} / v_{0x})\) (degrees):</label>
               <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="0.00">
             </div>
           </div>
@@ -639,7 +639,7 @@
           <div style="margin-top: 1rem; padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
             <strong style="font-size: 0.82rem; color: var(--primary-teal);">7. Consistency Check:</strong>
             <p style="font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0 0;" id="lblConsistencyCheck">
-              Recomputed components: \(v_{0x} = v_0 \cos	heta = 0.000	ext{ m/s}\), \(v_{0y} = v_0 \sin	heta = 0.000	ext{ m/s}\). Both components agree with the best-fit curve parameters.
+              Recomputed components: \(v_{0x} = v_0 \cos\theta = 0.000\text{ m/s}\), \(v_{0y} = v_0 \sin\theta = 0.000\text{ m/s}\). Both components agree with the best-fit curve parameters.
             </p>
           </div>
         </div>

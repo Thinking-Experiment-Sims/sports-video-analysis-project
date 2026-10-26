@@ -236,6 +236,25 @@ function init() {
   drawOverlay();
   updateTable();
   updateStepView(1);
+
+  // Trigger KaTeX rendering on startup
+  const tryRenderKaTeX = () => {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+      renderStudioGraph(state.activeGraphTab);
+    } else {
+      setTimeout(tryRenderKaTeX, 100);
+    }
+  };
+  tryRenderKaTeX();
 }
 
 function updateStatus(msg) {
@@ -1174,6 +1193,27 @@ function updateCharts() {
 // ============================================================================
 // Step 3: 6-Graph Kinematics Studio & Tangent Tool
 // ============================================================================
+// KaTeX Math Rendering Helper
+function renderKaTeX(element, latexStr, isDisplay = true) {
+  if (!element || !latexStr) {
+    if (element) element.innerHTML = '';
+    return;
+  }
+  let clean = latexStr.trim();
+  if (clean.startsWith('\\[') && clean.endsWith('\\]')) clean = clean.slice(2, -2).trim();
+  if (clean.startsWith('\\(') && clean.endsWith('\\)')) clean = clean.slice(2, -2).trim();
+
+  if (window.katex && typeof window.katex.render === 'function') {
+    try {
+      window.katex.render(clean, element, { displayMode: isDisplay, throwOnError: false });
+      return;
+    } catch (e) {
+      console.warn('KaTeX render error:', e);
+    }
+  }
+  element.textContent = latexStr;
+}
+
 function autoFitAllGraphs() {
   const pts = state.series[state.activeSeries];
   if (pts.length < 3) {
@@ -1363,8 +1403,8 @@ function renderStudioGraph(graphType) {
 
   if (activeGraphEqTitle) activeGraphEqTitle.textContent = title;
   if (activeGraphR2) activeGraphR2.textContent = r2Val;
-  if (activeGeneralEq) activeGeneralEq.textContent = generalEq;
-  if (activeParticularEq) activeParticularEq.textContent = particularEq;
+  renderKaTeX(activeGeneralEq, generalEq, true);
+  renderKaTeX(activeParticularEq, particularEq, true);
 
   studioChart = new Chart(ctxS, {
     type: 'scatter',
