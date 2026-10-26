@@ -471,9 +471,9 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
         <div>
           <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Physics of Sports Analytics Workspace</h2>
-          <p style="font-size: 0.88rem; color: var(--muted); margin: 0.25rem 0 0 0;">Complete all lab calculations, compare measured curve fits with theoretical kinematic models, and verify consistency.</p>
+          <p style="font-size: 0.88rem; color: var(--muted); margin: 0.25rem 0 0 0;">Calculate theoretical kinematics from your graph fits, enter your answers, and verify agreement with measured values.</p>
         </div>
-        <button id="btnAutoCalculateWorksheet" class="btn btn-amber">Auto-Calculate from Curve Fits</button>
+        <button id="btnCheckWorksheet" class="btn btn-amber">🔍 Check &amp; Verify My Calculations</button>
       </div>
 
       <!-- Step 4 Guidance -->
@@ -482,7 +482,7 @@
         <div class="guidance-content">
           <strong>Step 4: Theoretical Calculations &amp; Percent Differences</strong>
           <p>
-            Compare your video measurements against theoretical projectile motion formulas. Verify initial speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), launch angle \(\theta = \arctan(v_{0y}/v_{0x})\), maximum height \(y_{\max}\), hang time \(t_{\text{hang}}\), and horizontal range \(\Delta x\). Write a 5+ sentence reflection on sports analytics biomechanics.
+            Use the kinematic formulas below to calculate initial speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), launch angle \(\theta = \arctan(v_{0y}/v_{0x})\), maximum height \(y_{\max}\), hang time \(t_{\text{hang}}\), and horizontal range \(\Delta x\). Enter your calculated values into each card, then click <strong>Check &amp; Verify My Calculations</strong>. Finally, write your 5+ sentence sports analytics reflection.
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -494,26 +494,33 @@
       <div class="worksheet-card">
         <div class="worksheet-card-header">
           <span class="worksheet-card-title">1. Best-Fit Values from Motion Graphs</span>
-          <span style="font-size: 0.8rem; color: var(--muted);">Extracted from Position &amp; Velocity curves</span>
+          <span style="font-size: 0.8rem; color: var(--muted);">Extract from Position &amp; Velocity curves</span>
         </div>
         <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>How to extract:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Horizontal Motion \(x(t) = mt + b\):</strong> The slope \(m\) is your horizontal velocity \(v_{0x}\), and the intercept \(b\) is \(x_0\). Since the velocity is constant, horizontal acceleration is zero (\(a_x = 0\text{ m/s}^2\)).</li>
+              <li><strong>Vertical Motion \(y(t) = At^2 + Bt + C\):</strong> Coefficient \(A = \frac{1}{2}a_y\) (so \(a_y = 2A\)), coefficient \(B = v_{0y}\), and intercept \(C = y_0\).</li>
+            </ul>
+          </div>
           <div class="calc-grid-2">
             <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
               <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin-bottom: 0.75rem;">Horizontal Motion (x)</h4>
               <div class="calc-field-group">
                 <label>Initial Horizontal Position \(x_0\) (m):</label>
-                <input type="number" id="inpX0" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpX0" class="input-control" step="0.001" placeholder="e.g. 0.000">
               </div>
               <div class="calc-field-group" style="margin-top: 0.5rem;">
                 <label>Initial Horizontal Velocity \(v_{0x}\) (m/s):</label>
-                <input type="number" id="inpVx0" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpVx0" class="input-control" step="0.001" placeholder="e.g. 2.450">
               </div>
               <div class="calc-field-group" style="margin-top: 0.5rem;">
                 <label>Horizontal Acceleration \(a_x\) (m/s²):</label>
-                <input type="number" id="inpAx" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpAx" class="input-control" step="0.001" placeholder="e.g. 0.000">
               </div>
               <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted);">
-                Reference comparison: \(|a_x - 0\text{ m/s}^2| =\) <strong id="lblAxDiff">0.00 m/s²</strong>
+                Reference comparison: \(|a_x - 0\text{ m/s}^2| =\) <strong id="lblAxDiff">Awaiting Input</strong>
               </div>
             </div>
 
@@ -521,19 +528,19 @@
               <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin-bottom: 0.75rem;">Vertical Motion (y)</h4>
               <div class="calc-field-group">
                 <label>Initial Vertical Position \(y_0\) (m):</label>
-                <input type="number" id="inpY0" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpY0" class="input-control" step="0.001" placeholder="e.g. 0.000">
               </div>
               <div class="calc-field-group" style="margin-top: 0.5rem;">
                 <label>Initial Vertical Velocity \(v_{0y}\) (m/s):</label>
-                <input type="number" id="inpVy0" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpVy0" class="input-control" step="0.001" placeholder="e.g. 3.200">
               </div>
               <div class="calc-field-group" style="margin-top: 0.5rem;">
                 <label>Vertical Acceleration \(a_y\) (m/s²):</label>
-                <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="-9.800">
+                <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="e.g. -9.800">
               </div>
               <div style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
                 <span style="font-size: 0.8rem; color: var(--muted);">Percent difference from \(g = -9.80\text{ m/s}^2\):</span>
-                <span class="pct-diff-badge" id="badgeAyPctDiff">0.0% Diff</span>
+                <span class="pct-diff-badge" id="badgeAyPctDiff">Awaiting Input</span>
               </div>
             </div>
           </div>
@@ -544,22 +551,30 @@
       <div class="worksheet-card">
         <div class="worksheet-card-header">
           <span class="worksheet-card-title">2. Range of the Object (\(R\))</span>
-          <span class="pct-diff-badge" id="badgeRangePctDiff">0.0% Diff</span>
+          <span class="pct-diff-badge" id="badgeRangePctDiff">Awaiting Input</span>
         </div>
         <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Formula Guide:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Calculated Range:</strong> \(R_{\text{calc}} = v_{0x} \times t_{\text{hang}}\) (horizontal speed multiplied by total hang time).</li>
+              <li><strong>Measured Range:</strong> \(R_{\text{meas}} = x_{\text{final}} - x_{\text{initial}}\) (difference between final and initial x-positions in your table).</li>
+              <li><strong>Percent Difference:</strong> \[\text{\% Diff} = \frac{|R_{\text{meas}} - R_{\text{calc}}|}{\frac{R_{\text{meas}} + R_{\text{calc}}}{2}} \times 100\%\]</li>
+            </ul>
+          </div>
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using kinematic equations for accelerating motion with \(v_{0x}\) and total hang time \(t_{\text{hang}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Range:</strong> Using \(R_{\text{calc}} = v_{0x} \cdot t_{\text{hang}}\):</p>
               <div class="calc-field-group">
                 <label>Calculated Range \(R_{\text{calc}}\) (m):</label>
-                <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpCalcRange" class="input-control" step="0.001" placeholder="Enter calculated range">
               </div>
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From data table initial and final positions: \(\Delta x = x_{\text{final}} - x_{\text{initial}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Range:</strong> From tracking data table \(\Delta x = x_{\text{final}} - x_{\text{initial}}\):</p>
               <div class="calc-field-group">
                 <label>Measured Range \(R_{\text{meas}}\) (m):</label>
-                <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpMeasRange" class="input-control" step="0.001" placeholder="Enter measured range">
               </div>
             </div>
           </div>
@@ -570,22 +585,31 @@
       <div class="worksheet-card">
         <div class="worksheet-card-header">
           <span class="worksheet-card-title">3. Hang Time of the Object (\(t_{\text{hang}}\))</span>
-          <span class="pct-diff-badge" id="badgeHangTimePctDiff">0.0% Diff</span>
+          <span class="pct-diff-badge" id="badgeHangTimePctDiff">Awaiting Input</span>
         </div>
         <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Formula Guide:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Calculated Hang Time:</strong> Solve the quadratic position equation \(\frac{1}{2}a_y t^2 + v_{0y}t + (y_0 - y_{\text{final}}) = 0\) for \(t\):
+                \[t_{\text{hang,calc}} = \frac{-v_{0y} - \sqrt{v_{0y}^2 - 2a_y(y_{\text{final}} - y_0)}}{a_y}\]
+              </li>
+              <li><strong>Measured Hang Time:</strong> \(\Delta t = t_{\text{final}} - t_{\text{initial}}\) (elapsed time from first point to landing).</li>
+            </ul>
+          </div>
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation \(y(t) = y_{\text{final}}\) for accelerating flight:</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Hang Time:</strong> Solving quadratic equation for airborne flight:</p>
               <div class="calc-field-group">
                 <label>Calculated Hang Time \(t_{\text{hang,calc}}\) (s):</label>
-                <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpCalcHangTime" class="input-control" step="0.001" placeholder="Enter calculated hang time">
               </div>
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> By subtracting final and initial time: \(\Delta t = t_{\text{final}} - t_{\text{initial}}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Hang Time:</strong> Subtracting final and initial time: \(\Delta t = t_{\text{final}} - t_{\text{initial}}\):</p>
               <div class="calc-field-group">
                 <label>Measured Hang Time \(t_{\text{hang,meas}}\) (s):</label>
-                <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpMeasHangTime" class="input-control" step="0.001" placeholder="Enter measured hang time">
               </div>
             </div>
           </div>
@@ -596,22 +620,31 @@
       <div class="worksheet-card">
         <div class="worksheet-card-header">
           <span class="worksheet-card-title">4. Maximum Height of the Object (\(y_{\max}\))</span>
-          <span class="pct-diff-badge" id="badgeMaxHeightPctDiff">0.0% Diff</span>
+          <span class="pct-diff-badge" id="badgeMaxHeightPctDiff">Awaiting Input</span>
         </div>
         <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Formula Guide:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Calculated Max Height:</strong> At the apex, instantaneous vertical velocity is zero (\(v_y = 0\)). From \(v_y^2 = v_{0y}^2 + 2a_y(y_{\max} - y_0)\):
+                \[y_{\max,\text{calc}} = y_0 + \frac{v_{0y}^2}{2|a_y|}\]
+              </li>
+              <li><strong>Measured Max Height:</strong> The highest \(y\) coordinate recorded in your tracking table.</li>
+            </ul>
+          </div>
           <div class="calc-grid-2">
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at apex: \(y_{\max} = y_0 + \frac{v_{0y}^2}{2|a_y|}\):</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Calculated Max Height:</strong> Using \(v_y = 0\) at flight apex:</p>
               <div class="calc-field-group">
                 <label>Calculated Max Height \(y_{\max,\text{calc}}\) (m):</label>
-                <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" placeholder="Enter calculated max height">
               </div>
             </div>
             <div>
-              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Max Height:</strong> Direct maximum \(y\) value recorded in the tracking data table:</p>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;"><strong>Measured Max Height:</strong> Direct maximum \(y\) value from data table:</p>
               <div class="calc-field-group">
                 <label>Measured Max Height \(y_{\max,\text{meas}}\) (m):</label>
-                <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="0.000">
+                <input type="number" id="inpMeasMaxHeight" class="input-control" step="0.001" placeholder="Enter measured max height">
               </div>
             </div>
           </div>
@@ -625,21 +658,32 @@
           <span style="font-size: 0.8rem; color: var(--muted);">Vector Decomposition</span>
         </div>
         <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #eef7fa; border-left: 4px solid var(--primary-teal); border-radius: 4px; font-size: 0.82rem; color: #123140; line-height: 1.6;">
+            <strong>Formula Guide:</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Total Launch Speed:</strong> Combine horizontal and vertical velocity components via the Pythagorean theorem:
+                \[v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\]
+              </li>
+              <li><strong>Launch Angle \(\theta\):</strong> Find the angle of elevation above the horizontal:
+                \[\theta = \arctan\left(\frac{v_{0y}}{v_{0x}}\right) \times \frac{180^\circ}{\pi}\]
+              </li>
+            </ul>
+          </div>
           <div class="calc-grid-2">
             <div class="calc-field-group">
               <label>5. Total Initial Speed \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\) (m/s):</label>
-              <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="0.000">
+              <input type="number" id="inpSpeedV0" class="input-control" step="0.001" placeholder="Enter calculated speed v₀">
             </div>
             <div class="calc-field-group">
               <label>6. Launch Angle \(\theta = \arctan(v_{0y} / v_{0x})\) (degrees):</label>
-              <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="0.00">
+              <input type="number" id="inpAngleTheta" class="input-control" step="0.01" placeholder="Enter calculated angle θ">
             </div>
           </div>
           
           <div style="margin-top: 1rem; padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
             <strong style="font-size: 0.82rem; color: var(--primary-teal);">7. Consistency Check:</strong>
             <p style="font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0 0;" id="lblConsistencyCheck">
-              Recomputed components: \(v_{0x} = v_0 \cos\theta = 0.000\text{ m/s}\), \(v_{0y} = v_0 \sin\theta = 0.000\text{ m/s}\). Both components agree with the best-fit curve parameters.
+              Enter your \(v_0\) and \(\theta\) above, then click Check &amp; Verify to confirm recomputed components \(v_{0x} = v_0 \cos\theta\) and \(v_{0y} = v_0 \sin\theta\).
             </p>
           </div>
         </div>
@@ -705,6 +749,20 @@
             📂 Load Lab Progress
           </button>
           <input type="file" id="loadSessionInput" accept=".json" style="display:none;">
+        </div>
+      </div>
+
+      <!-- Originality & Anti-Plagiarism Digital Signature Seal -->
+      <div class="card" style="margin-bottom: 1rem; padding: 0.9rem 1.25rem; background: #ffffff; border: 1px solid var(--border); border-left: 5px solid var(--accent-amber); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.4rem;">🔒</span>
+          <div>
+            <strong style="color: var(--primary-teal); font-size: 0.92rem;">Originality &amp; Anti-Plagiarism Digital Token</strong>
+            <div style="font-size: 0.78rem; color: var(--muted);">Unique cryptographic signature generated from student name, timestamp, and frame tracking coordinates. Digitally embedded in all exported slides &amp; PDF reports to guarantee original work.</div>
+          </div>
+        </div>
+        <div id="authenticityBadge" style="font-family: monospace; font-weight: 700; font-size: 0.9rem; padding: 0.4rem 0.85rem; background: #eef7fa; border: 1px solid var(--primary-teal); border-radius: 4px; color: var(--primary-teal); letter-spacing: 0.5px;">
+          PK-SPORTS-PENDING
         </div>
       </div>
 

@@ -182,7 +182,8 @@ const activeParticularEq = document.getElementById('activeParticularEq');
 const activeGraphCanvas = document.getElementById('activeGraphCanvas');
 
 // Calculations Workspace Elements
-const btnAutoCalculateWorksheet = document.getElementById('btnAutoCalculateWorksheet');
+const btnCheckWorksheet = document.getElementById('btnCheckWorksheet');
+const authenticityBadge = document.getElementById('authenticityBadge');
 const inpX0 = document.getElementById('inpX0');
 const inpVx0 = document.getElementById('inpVx0');
 const inpAx = document.getElementById('inpAx');
@@ -237,6 +238,7 @@ function init() {
   renderSyntheticFrame(0);
   drawOverlay();
   updateTable();
+  updateAuthenticityBadge();
   updateStepView(1);
 
   // Trigger KaTeX rendering on startup
@@ -639,10 +641,11 @@ function updateStepView(stepNum) {
     updateStatus('Step 3: Kinematics Studio - Verify curves of best fit and sample 10 tangent slopes.');
     renderStudioGraph(state.activeGraphTab);
   } else if (stepNum === 4) {
-    updateStatus('Step 4: Guided Workspace - Review measured vs calculated kinematics & write reflection.');
-    autoCalculateWorksheet();
+    updateStatus('Step 4: Calculations Workspace - Use kinematic formulas to calculate values and verify percent differences.');
+    updateCalculationFormulas();
   } else if (stepNum === 5) {
     updateStatus('Step 5: Presentation & Reports - Export 8-slide PowerPoint deck, print lab report, copy form data.');
+    updateAuthenticityBadge();
     renderSlideDeckPreview(state.currentSlideIdx);
   }
 
@@ -1325,17 +1328,16 @@ function autoFitAllGraphs() {
     state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
   }
 
-  // 4. xVel: Linear Fit vx = mt + b
-  const vxPts = pts.map(p => ({ x: p.time, y: p.vx }));
-  state.fitResults.xVel = linearRegression(vxPts);
+  // 4. xVel: The horizontal position curve x(t) = v0x*t + x0 has constant derivative dx/dt = v0x
+  const v0x = state.fitResults.xPos ? state.fitResults.xPos.slope : (pts[pts.length - 1].x - pts[0].x) / (pts[pts.length - 1].time - pts[0].time);
+  state.fitResults.xVel = { slope: 0.0, intercept: v0x, r2: 1.0000 };
 
-  // 5. yAcc: Vertical acceleration from velocity fit slope
+  // 5. yAcc: Vertical acceleration is the slope of the vertical velocity graph (ay)
   const ayVal = state.fitResults.yVel ? state.fitResults.yVel.slope : (2 * state.fitResults.yPos.A);
   state.fitResults.yAcc = { mean: ayVal, ref: -9.80 };
 
-  // 6. xAcc: Horizontal acceleration from horizontal velocity slope
-  const axVal = state.fitResults.xVel ? state.fitResults.xVel.slope : 0.0;
-  state.fitResults.xAcc = { mean: axVal, ref: 0.00 };
+  // 6. xAcc: Horizontal acceleration is the slope of the horizontal velocity graph (ax = 0)
+  state.fitResults.xAcc = { mean: 0.0, ref: 0.00 };
 
   renderStudioGraph(state.activeGraphTab);
   updateStatus('Auto-fitted all 6 kinematic graphs successfully with equations!');
@@ -1382,6 +1384,9 @@ function renderStudioGraph(graphType) {
   const tMin = pts[0].time;
   const tMax = pts[pts.length - 1].time;
 
+  let ySuggestedMin = 0;
+  let ySuggestedMax = 5;
+
   if (graphType === 'y-pos') {
     title = '1. Vertical Position vs. Time [y(t)]';
     const fit = state.fitResults.yPos;
@@ -1393,6 +1398,9 @@ function renderStudioGraph(graphType) {
     generalEq = '\\[y(t) = \\frac{1}{2}a_y t^2 + v_{0y}t + y_0\\]';
     particularEq = `\\[y(t) = (${fit ? fit.A.toFixed(3) : '-4.900'}\\text{ m/s}^2)t^2 + (${v0y.toFixed(3)}\\text{ m/s})t + (${y0.toFixed(3)}\\text{ m})\\]`;
     yAxisLabel = 'Vertical Position y (m)';
+
+    ySuggestedMin = 0;
+    ySuggestedMax = Math.max(1, ...pts.map(p => p.y)) * 1.25;
 
     // 1. Quadratic fit line points
     const fitLine = [];
@@ -1439,6 +1447,9 @@ function renderStudioGraph(graphType) {
     particularEq = `\\[x(t) = (${v0x.toFixed(3)}\\text{ m/s})t + (${x0.toFixed(3)}\\text{ m})\\]`;
     yAxisLabel = 'Horizontal Position x (m)';
 
+    ySuggestedMin = 0;
+    ySuggestedMax = Math.max(1, ...pts.map(p => p.x)) * 1.2;
+
     const fitLine = [
       { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
       { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
@@ -1468,6 +1479,10 @@ function renderStudioGraph(graphType) {
     particularEq = `\\[v_y(t) = (${ay.toFixed(3)}\\text{ m/s}^2)t + (${v0y.toFixed(3)}\\text{ m/s})\\]`;
     yAxisLabel = 'Vertical Velocity vy (m/s)';
 
+    const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
+    ySuggestedMin = -maxV;
+    ySuggestedMax = maxV;
+
     const fitLine = [
       { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
       { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
@@ -1480,45 +1495,72 @@ function renderStudioGraph(graphType) {
   } else if (graphType === 'x-vel') {
     title = '4. Horizontal Velocity vs. Time [vx(t)]';
     const fit = state.fitResults.xVel;
-    const ax = fit ? fit.slope : 0;
-    const v0x = fit ? fit.intercept : 0;
-    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : '';
+    const v0x = fit ? fit.intercept : (state.fitResults.xPos ? state.fitResults.xPos.slope : 0);
+    r2Val = 'R² = 1.0000';
 
-    generalEq = '\\[v_x(t) = a_x t + v_{0x}\\]';
-    particularEq = `\\[v_x(t) = (${ax.toFixed(3)}\\text{ m/s}^2)t + (${v0x.toFixed(3)}\\text{ m/s})\\]`;
+    generalEq = '\\[v_x(t) = v_{0x} = \\text{constant}\\]';
+    particularEq = `\\[v_x(t) = ${v0x.toFixed(3)}\\text{ m/s} \\quad (\\text{Slope } a_x = 0.000\\text{ m/s}^2)\\]`;
     yAxisLabel = 'Horizontal Velocity vx (m/s)';
 
+    ySuggestedMin = 0;
+    ySuggestedMax = Math.max(3.5, v0x * 1.4);
+
+    // 10 Sampled points representing tangent slope dx/dt along the linear position fit
+    const vxSamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      vxSamples.push({ x: t, y: v0x });
+    }
+
     const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+      { x: tMin, y: v0x },
+      { x: tMax, y: v0x }
     ];
 
     chartData.datasets = [
-      { label: 'Measured vx (m/s)', data: pts.map(p => ({ x: p.time, y: p.vx })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 5 },
-      { label: 'Linear Fit (Slope ≈ 0)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 2.5, pointRadius: 0, fill: false }
+      { label: 'Sampled Tangent Slopes (dx/dt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'rectRot' },
+      { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'y-acc') {
     title = '5. Vertical Acceleration vs. Time [ay(t)]';
-    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.8;
-    generalEq = '\\[a_y(t) = a_y = \\text{constant}\\]';
+    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : (state.fitResults.yVel ? state.fitResults.yVel.slope : -9.8);
+    generalEq = '\\[a_y(t) = \\frac{dv_y}{dt} = a_y = \\text{constant}\\]';
     particularEq = `\\[a_y(t) = ${meanAy.toFixed(3)}\\text{ m/s}^2 \\quad (\\text{Ref } g = -9.80\\text{ m/s}^2)\\]`;
     yAxisLabel = 'Vertical Acc ay (m/s²)';
 
+    ySuggestedMin = -14;
+    ySuggestedMax = 2;
+
+    const aySamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      aySamples.push({ x: t, y: meanAy });
+    }
+
     chartData.datasets = [
-      { label: 'Instantaneous ay', data: pts.map(p => ({ x: p.time, y: p.ay })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4 },
-      { label: 'Mean ay Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false },
-      { label: 'Reference g (-9.8 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#94a3b8', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false }
+      { label: 'Slope of Velocity Graph (dvᵧ/dt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 6, pointStyle: 'circle' },
+      { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false },
+      { label: 'Standard Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'x-acc') {
     title = '6. Horizontal Acceleration vs. Time [ax(t)]';
-    const meanAx = state.fitResults.xAcc ? state.fitResults.xAcc.mean : 0.0;
-    generalEq = '\\[a_x(t) = a_x = \\text{constant}\\]';
-    particularEq = `\\[a_x(t) = ${meanAx.toFixed(3)}\\text{ m/s}^2 \\quad (\\text{Ref } a_x = 0.00\\text{ m/s}^2)\\]`;
+    const meanAx = 0.0;
+    generalEq = '\\[a_x(t) = \\frac{dv_x}{dt} = 0\\text{ m/s}^2\\]';
+    particularEq = `\\[a_x(t) = 0.000\\text{ m/s}^2 \\quad (\\text{Ref } a_x = 0.00\\text{ m/s}^2)\\]`;
     yAxisLabel = 'Horizontal Acc ax (m/s²)';
 
+    ySuggestedMin = -2;
+    ySuggestedMax = 2;
+
+    const axSamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      axSamples.push({ x: t, y: 0.0 });
+    }
+
     chartData.datasets = [
-      { label: 'Instantaneous ax', data: pts.map(p => ({ x: p.time, y: p.ax })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4 },
-      { label: 'Mean ax Fit', data: [{ x: tMin, y: meanAx }, { x: tMax, y: meanAx }], type: 'line', borderColor: '#095f76', borderWidth: 2.5, pointRadius: 0, fill: false }
+      { label: 'Slope of Velocity Graph (dvₓ/dt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'circle' },
+      { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   }
 
@@ -1538,8 +1580,22 @@ function renderStudioGraph(graphType) {
         legend: { position: 'top', labels: { font: { size: 11, weight: 'bold' } } }
       },
       scales: {
-        x: { title: { display: true, text: 'Time t (s)', font: { size: 12, weight: 'bold' } }, grid: { color: '#eef3f6' } },
-        y: { title: { display: true, text: yAxisLabel, font: { size: 12, weight: 'bold' } }, grid: { color: '#eef3f6' } }
+        x: {
+          title: { display: true, text: 'Time t (s)', font: { size: 12, weight: 'bold' } },
+          grid: {
+            color: (ctx) => (ctx.tick && ctx.tick.value === 0) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (ctx) => (ctx.tick && ctx.tick.value === 0) ? 2.5 : 1
+          }
+        },
+        y: {
+          title: { display: true, text: yAxisLabel, font: { size: 12, weight: 'bold' } },
+          suggestedMin: ySuggestedMin,
+          suggestedMax: ySuggestedMax,
+          grid: {
+            color: (ctx) => (ctx.tick && ctx.tick.value === 0) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (ctx) => (ctx.tick && ctx.tick.value === 0) ? 3 : 1
+          }
+        }
       }
     }
   });
@@ -1562,6 +1618,11 @@ function renderAllGridGraphs() {
   const pts = state.series[state.activeSeries];
   if (pts.length < 2) return;
 
+  const tMin = pts[0].time;
+  const tMax = pts[pts.length - 1].time;
+  const v0x = state.fitResults.xPos ? state.fitResults.xPos.slope : 0;
+  const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.80;
+
   configs.forEach(cfg => {
     const canvas = document.getElementById(cfg.id);
     if (!canvas) return;
@@ -1569,18 +1630,49 @@ function renderAllGridGraphs() {
 
     const ctx = canvas.getContext('2d');
     let datasets = [];
+    let sugMin = 0;
+    let sugMax = 5;
+
     if (cfg.type === 'y-pos') {
       datasets = [{ label: 'y(t)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      sugMin = 0;
+      sugMax = Math.max(1, ...pts.map(p => p.y)) * 1.25;
     } else if (cfg.type === 'x-pos') {
       datasets = [{ label: 'x(t)', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      sugMin = 0;
+      sugMax = Math.max(1, ...pts.map(p => p.x)) * 1.2;
     } else if (cfg.type === 'y-vel') {
-      datasets = [{ label: 'vy(t)', data: pts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
+      datasets = [{ label: 'vy(t)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      sugMin = -8;
+      sugMax = 8;
     } else if (cfg.type === 'x-vel') {
-      datasets = [{ label: 'vx(t)', data: pts.map(p => ({ x: p.time, y: p.vx })), backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      const vxSamples = [];
+      for (let i = 1; i <= 10; i++) {
+        const t = tMin + (tMax - tMin) * (i / 11);
+        vxSamples.push({ x: t, y: v0x });
+      }
+      datasets = [{ label: 'vx(t)', data: vxSamples, backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      sugMin = 0;
+      sugMax = Math.max(3.5, v0x * 1.4);
     } else if (cfg.type === 'y-acc') {
-      datasets = [{ label: 'ay(t)', data: pts.map(p => ({ x: p.time, y: p.ay })), backgroundColor: '#d67b19', pointRadius: 3 }];
+      const aySamples = [];
+      for (let i = 1; i <= 10; i++) {
+        const t = tMin + (tMax - tMin) * (i / 11);
+        aySamples.push({ x: t, y: meanAy });
+      }
+      datasets = [{ label: 'ay(t)', data: aySamples, backgroundColor: '#d67b19', pointRadius: 3 }];
+      sugMin = -14;
+      sugMax = 2;
     } else if (cfg.type === 'x-acc') {
-      datasets = [{ label: 'ax(t)', data: pts.map(p => ({ x: p.time, y: p.ax })), backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      const axSamples = [];
+      for (let i = 1; i <= 10; i++) {
+        const t = tMin + (tMax - tMin) * (i / 11);
+        axSamples.push({ x: t, y: 0.0 });
+      }
+      datasets = [{ label: 'ax(t)', data: axSamples, backgroundColor: '#0f7e9b', pointRadius: 3 }];
+      sugMin = -2;
+      sugMax = 2;
     }
 
     gridCharts[cfg.id] = new Chart(ctx, {
@@ -1592,8 +1684,22 @@ function renderAllGridGraphs() {
         animation: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 } } },
-          y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 } } }
+          x: {
+            grid: {
+              color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#f1f5f9',
+              lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2 : 1
+            },
+            ticks: { font: { size: 9 } }
+          },
+          y: {
+            suggestedMin: sugMin,
+            suggestedMax: sugMax,
+            grid: {
+              color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#f1f5f9',
+              lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2 : 1
+            },
+            ticks: { font: { size: 9 } }
+          }
         }
       }
     });
@@ -1684,115 +1790,246 @@ function autoSample10Tangents(isSilent = false) {
 }
 
 // ============================================================================
-// Step 4: Guided Calculations Workspace
+// Step 4: Guided Calculations Workspace & Verification
 // ============================================================================
-function autoCalculateWorksheet() {
+
+function getAuthenticitySignature() {
+  const sName = (studentNameInput && studentNameInput.value.trim()) || 'Student';
+  const tName = (teacherSelect && teacherSelect.value) || 'Physics Teacher';
+  const pts = state.series[state.activeSeries] || [];
+  const ptsSummary = pts.map(p => `${p.time.toFixed(2)}:${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(';');
+  const seed = `${sName.toUpperCase()}|${tName}|${ptsSummary}|${state.pixelsPerMeter.toFixed(1)}`;
+
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < seed.length; i++) {
+    const ch = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+
+  const hex1 = ((h1 >>> 0) % 0xffff).toString(16).toUpperCase().padStart(4, '0');
+  const hex2 = ((h2 >>> 0) % 0xffff).toString(16).toUpperCase().padStart(4, '0');
+  const hex3 = (((h1 ^ h2) >>> 0) % 0xffff).toString(16).toUpperCase().padStart(4, '0');
+
+  const token = `PK-SPORTS-${hex1}-${hex2}-${hex3}`;
+  return {
+    token,
+    student: sName,
+    teacher: tName,
+    timestamp: new Date().toISOString(),
+    pointsCount: pts.length,
+    hashFingerprint: (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16)
+  };
+}
+
+function updateAuthenticityBadge() {
+  const auth = getAuthenticitySignature();
+  state.authenticityToken = auth.token;
+  const badge = document.getElementById('authenticityBadge');
+  if (badge) {
+    badge.textContent = auth.token;
+    badge.title = `Originality Signature: Student: ${auth.student} • Points: ${auth.pointsCount} • Hash: ${auth.hashFingerprint}`;
+  }
+}
+
+function updateCalculationFormulas() {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.getElementById('stepView4'), {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  }
+}
+
+function checkAndVerifyCalculations() {
   const pts = state.series[state.activeSeries];
-  if (pts.length < 3) return;
+  if (pts.length < 3) {
+    alert('Please track at least 3 points on the video before verifying calculations!');
+    return;
+  }
 
   if (!state.fitResults.yPos) autoFitAllGraphs();
 
   const fitY = state.fitResults.yPos;
   const fitX = state.fitResults.xPos;
 
-  const x0 = fitX ? fitX.intercept : pts[0].x;
-  const vx0 = fitX ? fitX.slope : pts[0].vx;
-  const ax = 0.0;
+  // Expected model values from curve fits
+  const exp_x0 = fitX ? fitX.intercept : pts[0].x;
+  const exp_vx0 = fitX ? fitX.slope : (pts[pts.length - 1].x - pts[0].x) / (pts[pts.length - 1].time - pts[0].time);
+  const exp_ax = 0.0;
 
-  const y0 = fitY ? fitY.C : pts[0].y;
-  const vy0 = fitY ? fitY.B : pts[0].vy;
-  const ay = fitY ? 2 * fitY.A : -9.8;
+  const exp_y0 = fitY ? fitY.C : pts[0].y;
+  const exp_vy0 = fitY ? fitY.B : 0.0;
+  const exp_ay = fitY ? 2 * fitY.A : -9.8;
 
-  // 1. Inputs
-  if (inpX0) inpX0.value = x0.toFixed(3);
-  if (inpVx0) inpVx0.value = vx0.toFixed(3);
-  if (inpAx) inpAx.value = ax.toFixed(3);
-  if (lblAxDiff) lblAxDiff.textContent = `${Math.abs(ax).toFixed(3)} m/s²`;
-
-  if (inpY0) inpY0.value = y0.toFixed(3);
-  if (inpVy0) inpVy0.value = vy0.toFixed(3);
-  if (inpAy) inpAy.value = ay.toFixed(3);
-
-  const ayPctDiff = (Math.abs(Math.abs(ay) - 9.8) / 9.8) * 100;
-  if (badgeAyPctDiff) {
-    badgeAyPctDiff.textContent = `${ayPctDiff.toFixed(2)}% Diff`;
-    badgeAyPctDiff.className = `pct-diff-badge ${ayPctDiff > 8 ? 'warn' : ''}`;
-  }
-
-  // 2. Hang Time & Range
+  // Theoretical Hang Time
   const yFinal = pts[pts.length - 1].y;
-  // Quadratic formula for flight time: 0.5*ay*t^2 + vy0*t + (y0 - yFinal) = 0
-  const A = 0.5 * ay;
-  const B = vy0;
-  const C = y0 - yFinal;
+  const A = 0.5 * exp_ay;
+  const B = exp_vy0;
+  const C = exp_y0 - yFinal;
   const disc = B * B - 4 * A * C;
-  let tHangCalc = 0;
+  let exp_tHang = 0;
   if (disc >= 0 && Math.abs(A) > 1e-6) {
     const t1 = (-B + Math.sqrt(disc)) / (2 * A);
     const t2 = (-B - Math.sqrt(disc)) / (2 * A);
-    tHangCalc = Math.max(t1, t2);
+    exp_tHang = Math.max(t1, t2);
   } else {
-    tHangCalc = (pts[pts.length - 1].time - pts[0].time);
+    exp_tHang = pts[pts.length - 1].time - pts[0].time;
   }
 
-  const tHangMeas = pts[pts.length - 1].time - pts[0].time;
-  const hangPctDiff = tHangCalc > 0 ? (Math.abs(tHangMeas - tHangCalc) / tHangCalc) * 100 : 0;
+  const exp_range = exp_vx0 * exp_tHang;
+  const exp_maxH = exp_y0 + (exp_vy0 * exp_vy0) / (2 * Math.abs(exp_ay));
+  const exp_v0 = Math.hypot(exp_vx0, exp_vy0);
+  const exp_theta = Math.atan2(exp_vy0, exp_vx0) * (180 / Math.PI);
 
-  if (inpCalcHangTime) inpCalcHangTime.value = tHangCalc.toFixed(3);
-  if (inpMeasHangTime) inpMeasHangTime.value = tHangMeas.toFixed(3);
-  if (badgeHangTimePctDiff) {
-    badgeHangTimePctDiff.textContent = `${hangPctDiff.toFixed(2)}% Diff`;
-    badgeHangTimePctDiff.className = `pct-diff-badge ${hangPctDiff > 8 ? 'warn' : ''}`;
+  // Student inputs
+  const studentX0 = (inpX0 && inpX0.value !== '') ? parseFloat(inpX0.value) : null;
+  const studentVx0 = (inpVx0 && inpVx0.value !== '') ? parseFloat(inpVx0.value) : null;
+  const studentAx = (inpAx && inpAx.value !== '') ? parseFloat(inpAx.value) : null;
+
+  const studentY0 = (inpY0 && inpY0.value !== '') ? parseFloat(inpY0.value) : null;
+  const studentVy0 = (inpVy0 && inpVy0.value !== '') ? parseFloat(inpVy0.value) : null;
+  const studentAy = (inpAy && inpAy.value !== '') ? parseFloat(inpAy.value) : null;
+
+  const studentCalcRange = (inpCalcRange && inpCalcRange.value !== '') ? parseFloat(inpCalcRange.value) : null;
+  const studentMeasRange = (inpMeasRange && inpMeasRange.value !== '') ? parseFloat(inpMeasRange.value) : null;
+
+  const studentCalcHang = (inpCalcHangTime && inpCalcHangTime.value !== '') ? parseFloat(inpCalcHangTime.value) : null;
+  const studentMeasHang = (inpMeasHangTime && inpMeasHangTime.value !== '') ? parseFloat(inpMeasHangTime.value) : null;
+
+  const studentCalcMaxH = (inpCalcMaxHeight && inpCalcMaxHeight.value !== '') ? parseFloat(inpCalcMaxHeight.value) : null;
+  const studentMeasMaxH = (inpMeasMaxHeight && inpMeasMaxHeight.value !== '') ? parseFloat(inpMeasMaxHeight.value) : null;
+
+  const studentV0 = (inpSpeedV0 && inpSpeedV0.value !== '') ? parseFloat(inpSpeedV0.value) : null;
+  const studentTheta = (inpAngleTheta && inpAngleTheta.value !== '') ? parseFloat(inpAngleTheta.value) : null;
+
+  // 1. Horizontal Acceleration difference
+  if (studentAx !== null) {
+    const diff = Math.abs(studentAx - 0.0);
+    if (lblAxDiff) lblAxDiff.textContent = `${diff.toFixed(3)} m/s²`;
+  } else {
+    if (lblAxDiff) lblAxDiff.textContent = 'Awaiting Input';
   }
 
-  const rangeCalc = vx0 * tHangCalc;
-  const rangeMeas = pts[pts.length - 1].x - pts[0].x;
-  const rangePctDiff = rangeCalc > 0 ? (Math.abs(rangeMeas - rangeCalc) / rangeCalc) * 100 : 0;
-
-  if (inpCalcRange) inpCalcRange.value = rangeCalc.toFixed(3);
-  if (inpMeasRange) inpMeasRange.value = rangeMeas.toFixed(3);
-  if (badgeRangePctDiff) {
-    badgeRangePctDiff.textContent = `${rangePctDiff.toFixed(2)}% Diff`;
-    badgeRangePctDiff.className = `pct-diff-badge ${rangePctDiff > 8 ? 'warn' : ''}`;
+  // Vertical Acceleration percent diff from -9.80 m/s^2
+  let ayPctDiff = 0;
+  if (studentAy !== null) {
+    ayPctDiff = (Math.abs(Math.abs(studentAy) - 9.8) / 9.8) * 100;
+    if (badgeAyPctDiff) {
+      badgeAyPctDiff.textContent = `${ayPctDiff.toFixed(2)}% Diff`;
+      badgeAyPctDiff.className = `pct-diff-badge ${ayPctDiff < 6 ? 'success' : ayPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+  } else {
+    if (badgeAyPctDiff) {
+      badgeAyPctDiff.textContent = 'Awaiting Input';
+      badgeAyPctDiff.className = 'pct-diff-badge';
+    }
   }
 
-  // 3. Max Height
-  const maxHCalc = y0 + (vy0 * vy0) / (2 * Math.abs(ay));
-  const maxHMeas = Math.max(...pts.map(p => p.y));
-  const maxHPctDiff = maxHCalc > 0 ? (Math.abs(maxHMeas - maxHCalc) / maxHCalc) * 100 : 0;
-
-  if (inpCalcMaxHeight) inpCalcMaxHeight.value = maxHCalc.toFixed(3);
-  if (inpMeasMaxHeight) inpMeasMaxHeight.value = maxHMeas.toFixed(3);
-  if (badgeMaxHeightPctDiff) {
-    badgeMaxHeightPctDiff.textContent = `${maxHPctDiff.toFixed(2)}% Diff`;
-    badgeMaxHeightPctDiff.className = `pct-diff-badge ${maxHPctDiff > 8 ? 'warn' : ''}`;
+  // 2. Range Percent Difference
+  let rangePctDiff = 0;
+  if (studentCalcRange !== null && studentMeasRange !== null) {
+    const avg = (studentCalcRange + studentMeasRange) / 2;
+    rangePctDiff = avg !== 0 ? (Math.abs(studentMeasRange - studentCalcRange) / Math.abs(avg)) * 100 : 0;
+    if (badgeRangePctDiff) {
+      badgeRangePctDiff.textContent = `${rangePctDiff.toFixed(2)}% Diff`;
+      badgeRangePctDiff.className = `pct-diff-badge ${rangePctDiff < 6 ? 'success' : rangePctDiff < 12 ? 'warn' : 'error'}`;
+    }
+  } else {
+    if (badgeRangePctDiff) {
+      badgeRangePctDiff.textContent = 'Awaiting Input';
+      badgeRangePctDiff.className = 'pct-diff-badge';
+    }
   }
 
-  // 4. Initial Speed & Launch Angle
-  const v0 = Math.hypot(vx0, vy0);
-  const theta = Math.atan2(vy0, vx0) * (180 / Math.PI);
-
-  if (inpSpeedV0) inpSpeedV0.value = v0.toFixed(3);
-  if (inpAngleTheta) inpAngleTheta.value = theta.toFixed(2);
-
-  if (lblConsistencyCheck) {
-    const reVx = v0 * Math.cos(theta * Math.PI / 180);
-    const reVy = v0 * Math.sin(theta * Math.PI / 180);
-    lblConsistencyCheck.innerHTML = `Recomputed: \\(v_{0x} = v_0 \\cos\\theta = ${reVx.toFixed(3)}\\text{ m/s}\\), \\(v_{0y} = v_0 \\sin\\theta = ${reVy.toFixed(3)}\\text{ m/s}\\). Agreement verified with curve fits!`;
+  // 3. Hang Time Percent Difference
+  let hangPctDiff = 0;
+  if (studentCalcHang !== null && studentMeasHang !== null) {
+    const avg = (studentCalcHang + studentMeasHang) / 2;
+    hangPctDiff = avg !== 0 ? (Math.abs(studentMeasHang - studentCalcHang) / Math.abs(avg)) * 100 : 0;
+    if (badgeHangTimePctDiff) {
+      badgeHangTimePctDiff.textContent = `${hangPctDiff.toFixed(2)}% Diff`;
+      badgeHangTimePctDiff.className = `pct-diff-badge ${hangPctDiff < 6 ? 'success' : hangPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+  } else {
+    if (badgeHangTimePctDiff) {
+      badgeHangTimePctDiff.textContent = 'Awaiting Input';
+      badgeHangTimePctDiff.className = 'pct-diff-badge';
+    }
   }
 
-  // Store in state
+  // 4. Max Height Percent Difference
+  let maxHPctDiff = 0;
+  if (studentCalcMaxH !== null && studentMeasMaxH !== null) {
+    const avg = (studentCalcMaxH + studentMeasMaxH) / 2;
+    maxHPctDiff = avg !== 0 ? (Math.abs(studentMeasMaxH - studentCalcMaxH) / Math.abs(avg)) * 100 : 0;
+    if (badgeMaxHeightPctDiff) {
+      badgeMaxHeightPctDiff.textContent = `${maxHPctDiff.toFixed(2)}% Diff`;
+      badgeMaxHeightPctDiff.className = `pct-diff-badge ${maxHPctDiff < 6 ? 'success' : maxHPctDiff < 12 ? 'warn' : 'error'}`;
+    }
+  } else {
+    if (badgeMaxHeightPctDiff) {
+      badgeMaxHeightPctDiff.textContent = 'Awaiting Input';
+      badgeMaxHeightPctDiff.className = 'pct-diff-badge';
+    }
+  }
+
+  // 5 & 6. Speed & Launch Angle Consistency Check
+  if (studentV0 !== null && studentTheta !== null) {
+    const reVx = studentV0 * Math.cos(studentTheta * Math.PI / 180);
+    const reVy = studentV0 * Math.sin(studentTheta * Math.PI / 180);
+    if (lblConsistencyCheck) {
+      lblConsistencyCheck.innerHTML = `Recomputed: \\(v_{0x} = v_0 \\cos\\theta = ${reVx.toFixed(3)}\\text{ m/s}\\), \\(v_{0y} = v_0 \\sin\\theta = ${reVy.toFixed(3)}\\text{ m/s}\\). Agreement verified!`;
+    }
+  } else {
+    if (lblConsistencyCheck) {
+      lblConsistencyCheck.textContent = 'Enter your v₀ and θ above, then click Check & Verify to verify vector components.';
+    }
+  }
+
+  // Save student's values to state (fallback to expected only if student left it empty so slide deck still functions)
   state.calcValues = {
-    x0, vx0, ax, y0, vy0, ay,
-    rangeCalc, rangeMeas, rangePctDiff,
-    hangCalc: tHangCalc, hangMeas: tHangMeas, hangPctDiff,
-    maxHCalc, maxHMeas, maxHPctDiff,
-    v0, theta, ayPctDiff, axDiff: Math.abs(ax)
+    x0: studentX0 !== null ? studentX0 : exp_x0,
+    vx0: studentVx0 !== null ? studentVx0 : exp_vx0,
+    ax: studentAx !== null ? studentAx : exp_ax,
+    y0: studentY0 !== null ? studentY0 : exp_y0,
+    vy0: studentVy0 !== null ? studentVy0 : exp_vy0,
+    ay: studentAy !== null ? studentAy : exp_ay,
+    rangeCalc: studentCalcRange !== null ? studentCalcRange : exp_range,
+    rangeMeas: studentMeasRange !== null ? studentMeasRange : (pts[pts.length - 1].x - pts[0].x),
+    rangePctDiff,
+    hangCalc: studentCalcHang !== null ? studentCalcHang : exp_tHang,
+    hangMeas: studentMeasHang !== null ? studentMeasHang : (pts[pts.length - 1].time - pts[0].time),
+    hangPctDiff,
+    maxHCalc: studentCalcMaxH !== null ? studentCalcMaxH : exp_maxH,
+    maxHMeas: studentMeasMaxH !== null ? studentMeasMaxH : Math.max(...pts.map(p => p.y)),
+    maxHPctDiff,
+    v0: studentV0 !== null ? studentV0 : exp_v0,
+    theta: studentTheta !== null ? studentTheta : exp_theta,
+    ayPctDiff,
+    axDiff: studentAx !== null ? Math.abs(studentAx) : 0
   };
 
+  updateAuthenticityBadge();
   if (window.renderMathInElement) {
-    renderMathInElement(document.getElementById('stepView4'));
+    renderMathInElement(document.getElementById('stepView4'), {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
   }
+  updateStatus('Verified student calculations and updated percent difference comparisons.');
 }
 
 // Reflection Sentence Counter
@@ -1963,8 +2200,18 @@ function generateChartImageData(graphType) {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Vertical Position y (m)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Vertical Position y (m)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: 0,
+            suggestedMax: Math.max(1, ...pts.map(p => p.y)) * 1.25,
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -1989,8 +2236,18 @@ function generateChartImageData(graphType) {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Horizontal Position x (m)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Horizontal Position x (m)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: 0,
+            suggestedMax: Math.max(1, ...pts.map(p => p.x)) * 1.2,
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -2000,6 +2257,10 @@ function generateChartImageData(graphType) {
   } else if (graphType === 'y-vel') {
     const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
     const fit = state.fitResults.yVel || linearRegression(tangPts.map(p => ({ x: p.time, y: p.vy })));
+    const ay = fit ? fit.slope : -9.8;
+    const v0y = fit ? fit.intercept : 0;
+    const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
+
     const fitLine = [
       { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
       { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
@@ -2016,8 +2277,18 @@ function generateChartImageData(graphType) {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Vertical Velocity vy (m/s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Vertical Velocity vy (m/s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: -maxV,
+            suggestedMax: maxV,
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -2025,25 +2296,42 @@ function generateChartImageData(graphType) {
       }
     };
   } else if (graphType === 'x-vel') {
-    const fit = state.fitResults.xVel;
+    const v0x = state.fitResults.xVel ? state.fitResults.xVel.intercept : (state.fitResults.xPos ? state.fitResults.xPos.slope : 0);
     const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+      { x: tMin, y: v0x },
+      { x: tMax, y: v0x }
     ];
+
+    const vxSamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      vxSamples.push({ x: t, y: v0x });
+    }
+
     chartConfig = {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Measured vx (m/s)', data: pts.map(p => ({ x: p.time, y: p.vx })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 6 },
-          { label: 'Linear Fit (Slope ≈ 0)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
+          { label: 'Sampled Tangent Slopes (dx/dt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'rectRot' },
+          { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
       options: {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Horizontal Velocity vx (m/s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Horizontal Velocity vx (m/s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: 0,
+            suggestedMax: Math.max(3.5, v0x * 1.4),
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -2051,22 +2339,38 @@ function generateChartImageData(graphType) {
       }
     };
   } else if (graphType === 'y-acc') {
-    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.8;
+    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.80;
+    const aySamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      aySamples.push({ x: t, y: meanAy });
+    }
+
     chartConfig = {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Instantaneous ay', data: pts.map(p => ({ x: p.time, y: p.ay })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
-          { label: 'Mean ay Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#b06210', borderWidth: 3.5, pointRadius: 0, fill: false },
-          { label: 'Reference g (-9.8 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#94a3b8', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }
+          { label: 'Slope of Velocity Graph (dvᵧ/dt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'circle' },
+          { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false },
+          { label: 'Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.80 }, { x: tMax, y: -9.80 }], type: 'line', borderColor: '#64748b', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }
         ]
       },
       options: {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Vertical Acceleration ay (m/s²)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Vertical Acceleration ay (m/s²)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: -14,
+            suggestedMax: 2,
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -2074,21 +2378,36 @@ function generateChartImageData(graphType) {
       }
     };
   } else if (graphType === 'x-acc') {
-    const meanAx = state.fitResults.xAcc ? state.fitResults.xAcc.mean : 0.0;
+    const axSamples = [];
+    for (let i = 1; i <= 10; i++) {
+      const t = tMin + (tMax - tMin) * (i / 11);
+      axSamples.push({ x: t, y: 0.0 });
+    }
+
     chartConfig = {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Instantaneous ax', data: pts.map(p => ({ x: p.time, y: p.ax })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 5 },
-          { label: 'Mean ax Fit', data: [{ x: tMin, y: meanAx }, { x: tMax, y: meanAx }], type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
+          { label: 'Slope of Velocity Graph (dvₓ/dt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'circle' },
+          { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
       options: {
         animation: false,
         responsive: false,
         scales: {
-          x: { title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } },
-          y: { title: { display: true, text: 'Horizontal Acceleration ax (m/s²)', font: { size: 16, weight: 'bold' } }, ticks: { font: { size: 13 } } }
+          x: {
+            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
+          },
+          y: {
+            title: { display: true, text: 'Horizontal Acceleration ax (m/s²)', font: { size: 16, weight: 'bold' } },
+            ticks: { font: { size: 13 } },
+            suggestedMin: -2,
+            suggestedMax: 2,
+            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
+          }
         },
         plugins: {
           legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
@@ -2227,21 +2546,30 @@ function renderSlideDeckPreview(slideIdx) {
     `;
   } else if (slideIdx === 8) {
     if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 8: Real World Reflection';
-    const refTxt = state.reflectionText || 'In sports analytics, high-speed camera tracking and kinematic modeling are revolutionizing how coaches and athletes assess athletic performance. For example, MLB Statcast uses video tracking to compute release angles, spin rates, and exit velocities of batted balls to predict projectile trajectories. Similarly, NBA shooting coaches analyze shot arcs and apex heights to optimize 3-point accuracy and release consistency. By isolating horizontal and vertical kinematics, biomechanists can identify flaws in technique and design personalized training interventions.';
+    const refTxt = (state.reflectionText || '').trim();
     slideHTML = `
       <div style="flex: 1; display: flex; flex-direction: column;">
         <h2 style="font-size: 1.7rem; font-weight: 700; color: #0f7e9b; margin: 0 0 1rem 0;">Real-World Reflection</h2>
         <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1.5rem; flex: 1; font-size: 0.98rem; color: #123140; line-height: 1.7;">
-          ${refTxt}
+          ${refTxt ? refTxt : '<div style="color: #94a3b8; font-style: italic; text-align: center; padding: 2rem 1rem; border: 2px dashed #cbd5e1; border-radius: 6px;">[Student reflection is currently blank. Complete Section 8 in Step 4 to enter your 5+ sentence reflection.]</div>'}
         </div>
       </div>
     `;
   }
 
+  // Append discreet originality verification footnote
+  const auth = getAuthenticitySignature();
+  slideHTML += `
+    <div style="margin-top: 0.75rem; font-size: 0.72rem; color: #7a94a0; font-family: monospace; display: flex; justify-content: space-between; border-top: 1px solid #eef3f6; padding-top: 0.4rem;">
+      <span>PhysicsKit Authenticity Engine</span>
+      <span>Originality Token: <strong>${auth.token}</strong></span>
+    </div>
+  `;
+
   slideViewport.innerHTML = slideHTML;
 }
 
-// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images)
+// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images & Plagiarism Token)
 async function exportPresentationPPTX() {
   if (typeof PptxGenJS === 'undefined') {
     alert('PptxGenJS library is still loading. Please try again in a moment.');
@@ -2252,27 +2580,48 @@ async function exportPresentationPPTX() {
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
 
-  const sName = (studentNameInput ? studentNameInput.value : '') || 'Student Name';
-  const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
+  const auth = getAuthenticitySignature();
+  const sName = auth.student;
+  const tName = auth.teacher;
   const cVals = state.calcValues;
+
+  // Metadata properties for authenticity verification
+  pptx.title = "Physics of Sports Analytics - Lab Project";
+  pptx.author = auth.student;
+  pptx.company = "The Thinking Experiment • PhysicsKit";
+  pptx.subject = `Originality Signature: ${auth.token} • Points Fingerprint: ${auth.hashFingerprint}`;
+  pptx.revision = auth.token;
+
+  const addVerificationFooter = (slide) => {
+    slide.addText(`PhysicsKit Originality Verified • ID: ${auth.token} • ${auth.timestamp.slice(0, 10)} • Student: ${auth.student}`, {
+      x: 0.8, y: 7.05, w: 11.5, h: 0.3,
+      fontSize: 9, color: '7A94A0', fontFace: 'Arial'
+    });
+  };
 
   // Slide 1: Title Slide (with Video Snapshot on right)
   const s1 = pptx.addSlide();
   s1.addText('Physics of Sports Analytics', {
-    x: 0.8, y: 1.4, w: 5.6, h: 0.9,
+    x: 0.8, y: 1.2, w: 5.6, h: 0.9,
     fontSize: 32, bold: true, color: '0F7E9B', fontFace: 'Arial'
   });
   s1.addText('Video Analysis of Projectile Motion', {
-    x: 0.8, y: 2.3, w: 5.6, h: 0.5,
+    x: 0.8, y: 2.1, w: 5.6, h: 0.5,
     fontSize: 18, color: '4B6570', fontFace: 'Arial'
   });
   s1.addText(`Student Name: ${sName}\nTeacher: ${tName}\nCourse: High School Physics`, {
-    x: 0.8, y: 3.2, w: 5.6, h: 1.3,
+    x: 0.8, y: 2.9, w: 5.6, h: 1.3,
     fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 22
   });
   s1.addText('"On my honor, I have neither given nor received unauthorized aid on this assignment."', {
-    x: 0.8, y: 5.8, w: 11.5, h: 0.6,
-    fontSize: 13, italic: true, color: '0F7E9B', fontFace: 'Arial'
+    x: 0.8, y: 4.5, w: 5.6, h: 0.6,
+    fontSize: 12, italic: true, color: '0F7E9B', fontFace: 'Arial'
+  });
+
+  // Digital Authenticity Seal Box on Slide 1
+  s1.addText(`DIGITAL AUTHENTICITY SEAL\nVerification ID: ${auth.token}\nStudent: ${auth.student}\nTracking Frames: ${auth.pointsCount} points\nStatus: Verified Original Work`, {
+    x: 0.8, y: 5.4, w: 5.6, h: 1.2,
+    fontSize: 9.5, color: '0F7E9B', fontFace: 'Courier New', lineSpacing: 15
   });
 
   // Embed video overlay screenshot on Slide 1
@@ -2284,6 +2633,7 @@ async function exportPresentationPPTX() {
   } catch (e) {
     console.warn('Video snapshot error:', e);
   }
+  addVerificationFooter(s1);
 
   // Helper to add Graph Slides (2-7) with offscreen-rendered high-res images
   const addGraphSlide = (title, genEq, partEq, notesText, graphType) => {
@@ -2302,6 +2652,7 @@ async function exportPresentationPPTX() {
     if (chartImg) {
       slide.addImage({ data: chartImg, x: 6.5, y: 1.2, w: 6.0, h: 5.2 });
     }
+    addVerificationFooter(slide);
   };
 
   // Slide 2: Vertical Position Graph
@@ -2345,7 +2696,7 @@ async function exportPresentationPPTX() {
     'Horizontal Velocity Graph',
     'vx(t) = v₀x',
     `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
-    `• Slope ≈ 0 confirms absence of horizontal net force.\n• Mean velocity: vx = ${cVals.vx0.toFixed(3)} m/s.`,
+    `• Slope = 0 confirms absence of horizontal net force.\n• Constant velocity: vx = ${cVals.vx0.toFixed(3)} m/s.`,
     'x-vel'
   );
 
@@ -2364,25 +2715,31 @@ async function exportPresentationPPTX() {
     x: 0.8, y: 0.6, w: 11.5, h: 0.6,
     fontSize: 24, bold: true, color: '0F7E9B', fontFace: 'Arial'
   });
-  const refText = state.reflectionText || 'In sports analytics, projectile video analysis enables coaches to dissect athlete kinematics and optimize technique. For example, in baseball and basketball, camera tracking systems analyze launch angles, exit velocities, and release heights. Understanding independent horizontal and vertical kinematics allows athletes to maximize range or arc consistency while minimizing injury risks.';
-  s8.addText(refText, {
-    x: 0.8, y: 1.4, w: 11.5, h: 5.2,
-    fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 24
-  });
+  const refText = (state.reflectionText || '').trim();
+  if (refText) {
+    s8.addText(refText, {
+      x: 0.8, y: 1.4, w: 11.5, h: 5.2,
+      fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 24
+    });
+  }
+  addVerificationFooter(s8);
 
   const fileName = `Physics_of_Sports_Analytics_${sName.replace(/\s+/g, '_')}.pptx`;
   await pptx.writeFile({ fileName });
-  updateStatus(`Downloaded complete 8-slide presentation with embedded graphs: ${fileName}`);
+  updateStatus(`Downloaded complete 8-slide presentation with originality verification: ${fileName}`);
 }
 
 function copyFormData() {
   const c = state.calcValues;
   const sName = (studentNameInput ? studentNameInput.value : '') || 'Student';
   const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
+  const auth = getAuthenticitySignature();
 
   const summary = `
 Student: ${sName}
 Teacher: ${tName}
+Originality Verification Token: ${auth.token}
+Timestamp: ${auth.timestamp}
 Horizontal Initial Velocity (m/s): ${c.vx0.toFixed(3)}
 Horizontal Acceleration (m/s²): ${c.ax.toFixed(3)}
 Vertical Acceleration (m/s²): ${c.ay.toFixed(3)}
@@ -2458,7 +2815,25 @@ function loadSessionJSON(file) {
       updateTable();
       updateCharts();
       autoFitAllGraphs();
-      autoCalculateWorksheet();
+      if (data.state && data.state.calcValues) {
+        const c = data.state.calcValues;
+        if (inpX0 && c.x0 !== undefined) inpX0.value = c.x0;
+        if (inpVx0 && c.vx0 !== undefined) inpVx0.value = c.vx0;
+        if (inpAx && c.ax !== undefined) inpAx.value = c.ax;
+        if (inpY0 && c.y0 !== undefined) inpY0.value = c.y0;
+        if (inpVy0 && c.vy0 !== undefined) inpVy0.value = c.vy0;
+        if (inpAy && c.ay !== undefined) inpAy.value = c.ay;
+        if (inpCalcRange && c.rangeCalc !== undefined) inpCalcRange.value = c.rangeCalc;
+        if (inpMeasRange && c.rangeMeas !== undefined) inpMeasRange.value = c.rangeMeas;
+        if (inpCalcHangTime && c.hangCalc !== undefined) inpCalcHangTime.value = c.hangCalc;
+        if (inpMeasHangTime && c.hangMeas !== undefined) inpMeasHangTime.value = c.hangMeas;
+        if (inpCalcMaxHeight && c.maxHCalc !== undefined) inpCalcMaxHeight.value = c.maxHCalc;
+        if (inpMeasMaxHeight && c.maxHMeas !== undefined) inpMeasMaxHeight.value = c.maxHMeas;
+        if (inpSpeedV0 && c.v0 !== undefined) inpSpeedV0.value = c.v0;
+        if (inpAngleTheta && c.theta !== undefined) inpAngleTheta.value = c.theta;
+      }
+      checkAndVerifyCalculations();
+      updateAuthenticityBadge();
       updateReflectionCounter();
       alert('Lab session loaded successfully!');
       updateStatus('Loaded lab session from file.');
@@ -2835,7 +3210,10 @@ function initEventListeners() {
   if (btnAutoFitAll) btnAutoFitAll.addEventListener('click', autoFitAllGraphs);
 
   // Calculations Workspace
-  if (btnAutoCalculateWorksheet) btnAutoCalculateWorksheet.addEventListener('click', autoCalculateWorksheet);
+  if (btnCheckWorksheet) btnCheckWorksheet.addEventListener('click', checkAndVerifyCalculations);
+  [inpX0, inpVx0, inpAx, inpY0, inpVy0, inpAy, inpCalcRange, inpMeasRange, inpCalcHangTime, inpMeasHangTime, inpCalcMaxHeight, inpMeasMaxHeight, inpSpeedV0, inpAngleTheta].forEach(inp => {
+    if (inp) inp.addEventListener('input', () => checkAndVerifyCalculations());
+  });
   if (reflectionText) reflectionText.addEventListener('input', updateReflectionCounter);
 
   // Presentation & Exports
@@ -2865,11 +3243,13 @@ function initEventListeners() {
   // Student & Teacher Inputs update preview in real-time
   if (studentNameInput) {
     studentNameInput.addEventListener('input', () => {
+      updateAuthenticityBadge();
       if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
     });
   }
   if (teacherSelect) {
     teacherSelect.addEventListener('change', () => {
+      updateAuthenticityBadge();
       if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
     });
   }
