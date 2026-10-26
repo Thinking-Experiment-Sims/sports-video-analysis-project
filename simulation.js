@@ -1688,6 +1688,103 @@ function updateReflectionCounter() {
 // Step 5: Presentation Deck Preview & 1-Click PPTX Exporter
 // ============================================================================
 
+// High-Resolution Offscreen Video + Trajectory Snapshot (independent of DOM visibility)
+function getVideoSnapshotData() {
+  const w = 960;
+  const h = 540;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = w;
+  offCanvas.height = h;
+  const offCtx = offCanvas.getContext('2d');
+
+  // Solid clean background
+  offCtx.fillStyle = '#f8fafc';
+  offCtx.fillRect(0, 0, w, h);
+
+  // 1. Draw video frame or synthetic field if available
+  let drewBackground = false;
+  if (video && video.videoWidth > 0 && !state.isSynthetic) {
+    try {
+      offCtx.drawImage(video, 0, 0, w, h);
+      drewBackground = true;
+    } catch (e) {}
+  } else if (state.isSynthetic && state.syntheticCanvas) {
+    try {
+      offCtx.drawImage(state.syntheticCanvas, 0, 0, w, h);
+      drewBackground = true;
+    } catch (e) {}
+  }
+
+  if (!drewBackground) {
+    // Beautiful default sports turf & sky backdrop
+    const grad = offCtx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#e0f2fe');
+    grad.addColorStop(0.7, '#f0fdf4');
+    grad.addColorStop(1, '#bbf7d0');
+    offCtx.fillStyle = grad;
+    offCtx.fillRect(0, 0, w, h);
+
+    // Ground plane
+    offCtx.fillStyle = '#86efac';
+    offCtx.fillRect(0, h * 0.82, w, h * 0.18);
+    offCtx.strokeStyle = '#15803d';
+    offCtx.lineWidth = 3;
+    offCtx.beginPath();
+    offCtx.moveTo(0, h * 0.82);
+    offCtx.lineTo(w, h * 0.82);
+    offCtx.stroke();
+  }
+
+  // 2. Trajectory points overlay scaled from viewport coordinates
+  const pts = state.series[state.activeSeries] || [];
+  const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : (video && video.videoWidth > 0 ? video.videoWidth : w);
+  const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : (video && video.videoHeight > 0 ? video.videoHeight : h);
+  const scaleX = w / srcW;
+  const scaleY = h / srcH;
+
+  if (pts.length > 0) {
+    // Trajectory spline
+    offCtx.strokeStyle = 'rgba(15, 126, 155, 0.85)';
+    offCtx.lineWidth = 3;
+    offCtx.beginPath();
+    pts.forEach((pt, idx) => {
+      const px = pt.canvasX * scaleX;
+      const py = pt.canvasY * scaleY;
+      if (idx === 0) offCtx.moveTo(px, py);
+      else offCtx.lineTo(px, py);
+    });
+    offCtx.stroke();
+
+    // Data points with sequence numbers
+    pts.forEach((pt, idx) => {
+      const px = pt.canvasX * scaleX;
+      const py = pt.canvasY * scaleY;
+      const isApex = idx === Math.floor(pts.length / 2);
+      const isEnd = idx === pts.length - 1;
+
+      offCtx.beginPath();
+      offCtx.arc(px, py, isApex || isEnd ? 8 : 6, 0, 2 * Math.PI);
+      offCtx.fillStyle = isApex ? '#d67b19' : (isEnd ? '#0f7e9b' : '#0284c7');
+      offCtx.fill();
+      offCtx.strokeStyle = '#ffffff';
+      offCtx.lineWidth = 2;
+      offCtx.stroke();
+    });
+  }
+
+  // Header badge on snapshot
+  offCtx.fillStyle = 'rgba(15, 126, 155, 0.92)';
+  offCtx.fillRect(20, 20, 310, 38);
+  offCtx.strokeStyle = '#c8dbe3';
+  offCtx.lineWidth = 1;
+  offCtx.strokeRect(20, 20, 310, 38);
+  offCtx.fillStyle = '#ffffff';
+  offCtx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  offCtx.fillText('🎯 MotionTracker: Trajectory Capture', 32, 44);
+
+  return offCanvas.toDataURL('image/png');
+}
+
 // High-Resolution Offscreen Chart Image Generator (independent of DOM visibility)
 function generateChartImageData(graphType) {
   const pts = state.series[state.activeSeries];
@@ -1891,11 +1988,13 @@ function renderSlideDeckPreview(slideIdx) {
   if (slideIdx === 1) {
     if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 8: Title & Honor Code';
     let videoPreviewImg = '';
-    if (overlayCanvas) {
-      try {
-        const snap = overlayCanvas.toDataURL('image/png');
+    try {
+      const snap = getVideoSnapshotData();
+      if (snap) {
         videoPreviewImg = `<img src="${snap}" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">`;
-      } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Slide 1 preview snapshot error:', e);
     }
     slideHTML = `
       <div style="flex: 1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center;">
@@ -2043,13 +2142,13 @@ async function exportPresentationPPTX() {
   });
 
   // Embed video overlay screenshot on Slide 1
-  if (overlayCanvas) {
-    try {
-      const snap = overlayCanvas.toDataURL('image/png');
+  try {
+    const snap = getVideoSnapshotData();
+    if (snap) {
       s1.addImage({ data: snap, x: 6.6, y: 1.2, w: 5.8, h: 4.4 });
-    } catch (e) {
-      console.warn('Video snapshot error:', e);
     }
+  } catch (e) {
+    console.warn('Video snapshot error:', e);
   }
 
   // Helper to add Graph Slides (2-7) with offscreen-rendered high-res images
