@@ -772,19 +772,21 @@ function updateTimeAndFrame(t) {
 
   if (state.isSynthetic) {
     renderSyntheticFrame(t);
-    drawOverlay();
-  } else if (video && !video.paused) {
-    drawOverlay();
   }
+  drawOverlay();
 }
 
 function stepFrame(delta) {
+  if (state.isPlaying) {
+    togglePlay();
+  }
   const dt = 1 / state.fps;
   let nextT = state.currentTime + delta * dt;
-  nextT = Math.max(0, Math.min(state.duration, nextT));
-  if (state.isSynthetic) {
-    updateTimeAndFrame(nextT);
-  } else if (video) {
+  const maxDur = (state.duration > 0) ? state.duration : (video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 10);
+  nextT = Math.max(0, Math.min(maxDur, nextT));
+
+  updateTimeAndFrame(nextT);
+  if (!state.isSynthetic && video) {
     video.currentTime = nextT;
   }
 }
@@ -797,8 +799,18 @@ function togglePlay() {
   if (state.isSynthetic) {
     if (state.isPlaying) playSyntheticLoop();
   } else if (video) {
-    if (state.isPlaying) video.play();
-    else video.pause();
+    if (state.isPlaying) {
+      const rate = parseFloat(playbackRateSelect ? playbackRateSelect.value : 0.5) || 0.5;
+      video.playbackRate = rate;
+      video.play().catch(err => {
+        console.warn('Playback error:', err);
+        state.isPlaying = false;
+        if (iconPlay) iconPlay.style.display = 'block';
+        if (iconPause) iconPause.style.display = 'none';
+      });
+    } else {
+      video.pause();
+    }
   }
 }
 
@@ -816,13 +828,23 @@ function playSyntheticLoop() {
 
 // Point Tracking
 function addTrackPoint(screenX, screenY) {
-  const currentT = state.currentTime;
+  if (state.isPlaying) {
+    togglePlay();
+  }
+
+  // Synchronize with active video position or state time
+  const currentT = (!state.isSynthetic && video && Number.isFinite(video.currentTime))
+    ? video.currentTime
+    : state.currentTime;
+  state.currentTime = currentT;
+
   const pts = state.series[state.activeSeries];
   const phys = transformToPhysics(screenX, screenY);
   const frame = Math.round(currentT * state.fps);
 
-  // Avoid duplicates within 1 frame
-  const existingIdx = pts.findIndex(p => Math.abs(p.rawTime - currentT) < 0.005);
+  // Avoid duplicates on the exact same frame (within 0.4 of a frame period)
+  const frameThreshold = 0.4 / state.fps;
+  const existingIdx = pts.findIndex(p => Math.abs(p.rawTime - currentT) < frameThreshold || p.frame === frame);
   const ptData = {
     frame,
     rawTime: currentT,
@@ -847,10 +869,11 @@ function addTrackPoint(screenX, screenY) {
   recalculateKinematics();
   updateTable();
   updateCharts();
+  drawOverlay();
 
-  // Step forward
-  const framesToStep = parseInt(stepFrameSelect ? stepFrameSelect.value : 2, 10);
-  stepFrame(framesToStep);
+  // Automatically step forward to next frame for fast tracking
+  const stepCount = parseInt(stepFrameSelect ? stepFrameSelect.value : 2, 10) || 2;
+  stepFrame(stepCount);
 }
 
 function recalculateKinematics() {
@@ -3944,30 +3967,76 @@ function initEventListeners() {
     });
   });
 
+  // Helper to load video file
+  const loadUserVideoFile = (file) => {
+    if (!file) return;
+    state.isSynthetic = false;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.style.display = 'block';
+    video.load();
+    video.onloadedmetadata = () => {
+      const dur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 10;
+      state.duration = dur;
+      state.currentTime = 0;
+      state.timeOffset = 0;
+      if (timeScrubber) {
+        timeScrubber.min = 0;
+        timeScrubber.max = dur;
+        timeScrubber.step = 1 / state.fps;
+        timeScrubber.value = 0;
+      }
+      resizeCanvas();
+      updateTimeAndFrame(0);
+      if (dropzoneOverlay) {
+        dropzoneOverlay.classList.add('hidden');
+        dropzoneOverlay.style.display = 'none';
+      }
+      updateStatus(`Loaded video: ${file.name} (${dur.toFixed(2)}s, ${state.fps} FPS)`);
+    };
+  };
+
   // Video File Input
   if (videoFileInput) {
     videoFileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      state.isSynthetic = false;
-      const url = URL.createObjectURL(file);
-      video.src = url;
-      video.style.display = 'block';
-      video.onloadedmetadata = () => {
-        state.duration = video.duration;
-        if (timeScrubber) {
-          timeScrubber.min = 0;
-          timeScrubber.max = video.duration;
-          timeScrubber.value = 0;
-        }
-        resizeCanvas();
-        updateTimeAndFrame(0);
-        if (dropzoneOverlay) {
-          dropzoneOverlay.classList.add('hidden');
-          dropzoneOverlay.style.display = 'none';
-        }
-        updateStatus(`Loaded video: ${file.name} (${video.duration.toFixed(2)}s)`);
-      };
+      if (e.target.files && e.target.files[0]) {
+        loadUserVideoFile(e.target.files[0]);
+      }
+    });
+  }
+
+  // Drag and Drop on viewport & dropzone
+  [viewportContainer, dropzoneOverlay].forEach(el => {
+    if (!el) return;
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        loadUserVideoFile(e.dataTransfer.files[0]);
+      }
+    });
+  });
+
+  // Video Synchronization Listeners
+  if (video) {
+    video.addEventListener('timeupdate', () => {
+      if (!state.isSynthetic && state.isPlaying) {
+        updateTimeAndFrame(video.currentTime);
+      }
+    });
+    video.addEventListener('seeked', () => {
+      if (!state.isSynthetic) {
+        updateTimeAndFrame(video.currentTime);
+      }
+    });
+    video.addEventListener('ended', () => {
+      if (!state.isSynthetic && state.isPlaying) {
+        togglePlay();
+      }
     });
   }
 
@@ -3999,10 +4068,47 @@ function initEventListeners() {
   if (timeScrubber) {
     timeScrubber.addEventListener('input', e => {
       const t = parseFloat(e.target.value);
-      if (state.isSynthetic) updateTimeAndFrame(t);
-      else if (video) video.currentTime = t;
+      updateTimeAndFrame(t);
+      if (!state.isSynthetic && video) {
+        video.currentTime = t;
+      }
     });
   }
+
+  if (playbackRateSelect) {
+    playbackRateSelect.addEventListener('change', e => {
+      const rate = parseFloat(e.target.value) || 0.5;
+      if (video) video.playbackRate = rate;
+    });
+  }
+
+  if (fpsInput) {
+    fpsInput.addEventListener('change', e => {
+      const val = parseInt(e.target.value, 10);
+      if (val > 0) {
+        state.fps = val;
+        if (timeScrubber) timeScrubber.step = 1 / state.fps;
+        updateTimeAndFrame(state.currentTime);
+      }
+    });
+  }
+
+  // Keyboard Navigation: ArrowLeft (prev frame), ArrowRight (next frame), Spacebar (play/pause)
+  window.addEventListener('keydown', e => {
+    const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      stepFrame(1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      stepFrame(-1);
+    } else if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
 
   // Canvas Interactions
   if (overlayCanvas) {
