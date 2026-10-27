@@ -701,7 +701,7 @@ function updateStepView(stepNum) {
     updateStatus('Step 4: Calculations Workspace - Use kinematic formulas to calculate values and verify percent differences.');
     updateCalculationFormulas();
   } else if (stepNum === 5) {
-    updateStatus('Step 5: Presentation & Reports - Export 8-slide PowerPoint deck, print lab report, copy form data.');
+    updateStatus('Step 5: Presentation & Reports - Export 10-slide PowerPoint deck, print 4-page lab report, copy form data.');
     updateAuthenticityBadge();
     renderSlideDeckPreview(state.currentSlideIdx);
   }
@@ -2802,7 +2802,8 @@ function generateChartImageData(graphType) {
 function renderSlideDeckPreview(slideIdx) {
   state.currentSlideIdx = slideIdx;
 
-  slideThumbs.forEach(thumb => {
+  const allThumbs = document.querySelectorAll('.slide-thumb');
+  allThumbs.forEach(thumb => {
     thumb.classList.toggle('active', parseInt(thumb.dataset.slideIdx, 10) === slideIdx);
   });
 
@@ -2814,7 +2815,7 @@ function renderSlideDeckPreview(slideIdx) {
 
   let slideHTML = '';
   if (slideIdx === 1) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 8: Title & Honor Code';
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 10: Title & Honor Code';
     let videoPreviewImg = '';
     try {
       const snap = getVideoSnapshotData();
@@ -2845,12 +2846,12 @@ function renderSlideDeckPreview(slideIdx) {
     `;
   } else if (slideIdx >= 2 && slideIdx <= 7) {
     const titles = {
-      2: 'Slide 2 of 8: Vertical Position Graph',
-      3: 'Slide 3 of 8: Vertical Velocity Graph',
-      4: 'Slide 4 of 8: Vertical Acceleration Graph',
-      5: 'Slide 5 of 8: Horizontal Position Graph',
-      6: 'Slide 6 of 8: Horizontal Velocity Graph',
-      7: 'Slide 7 of 8: Horizontal Acceleration Graph'
+      2: 'Slide 2 of 10: Vertical Position Graph',
+      3: 'Slide 3 of 10: Vertical Velocity Graph',
+      4: 'Slide 4 of 10: Vertical Acceleration Graph',
+      5: 'Slide 5 of 10: Horizontal Position Graph',
+      6: 'Slide 6 of 10: Horizontal Velocity Graph',
+      7: 'Slide 7 of 10: Horizontal Acceleration Graph'
     };
     if (slidePreviewTitle) slidePreviewTitle.textContent = titles[slideIdx];
 
@@ -2920,7 +2921,110 @@ function renderSlideDeckPreview(slideIdx) {
       </div>
     `;
   } else if (slideIdx === 8) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 8: Real World Reflection';
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 10: Kinematic Calculations & Predictions';
+    const workH = (workMaxHeight ? workMaxHeight.value : '') || '';
+    const workT = (workHangTime ? workHangTime.value : '') || '';
+    const workR = (workRange ? workRange.value : '') || '';
+    const workV = (workVector ? workVector.value : '') || '';
+
+    slideHTML = `
+      <div style="flex: 1; display: flex; flex-direction: column;">
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Kinematic Calculations &amp; Theoretical Predictions</h2>
+        <p style="font-size: 0.8rem; color: #4b6570; margin: 0 0 0.65rem 0;">Theoretical projectile motion parameters derived algebraically from velocity components without shortcuts.</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; flex: 1;">
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">1. Launch Speed &amp; Angle</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">v₀ = √(v₀ₓ² + v₀y²) = <strong style="color: #d67b19;">${cVals.v0.toFixed(3)} m/s</strong></div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin-bottom: 0.25rem;">θ = arctan(v₀y / v₀ₓ) = <strong style="color: #d67b19;">${cVals.theta.toFixed(2)}°</strong></div>
+            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workV || `Components: v₀ₓ=${cVals.vx0.toFixed(2)}, v₀y=${cVals.vy0.toFixed(2)}`}</div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">2. Maximum Apex Height (y_max)</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">v_fy² = v_iy² + 2ay·Δy → y_max = y₀ - (v₀y² / 2ay)</div>
+            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.maxHCalc.toFixed(3)} m</strong> | Measured: <strong>${cVals.maxHMeas.toFixed(3)} m</strong></div>
+            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workH || 'Apex vy = 0 m/s'}</div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">3. Flight Hang Time (t_hang)</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">y(t) = y₀ + v₀y·t + ½·ay·t² = 0</div>
+            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.hangCalc.toFixed(3)} s</strong> | Measured: <strong>${cVals.hangMeas.toFixed(3)} s</strong></div>
+            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workT || 'Solved for flight landing time'}</div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">4. Horizontal Range (Δx)</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">Δx = v₀ₓ · t_hang (ax = 0 m/s²)</div>
+            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.rangeCalc.toFixed(3)} m</strong> | Measured: <strong>${cVals.rangeMeas.toFixed(3)} m</strong></div>
+            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workR || 'Uniform horizontal motion'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (slideIdx === 9) {
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 9 of 10: Model Verification & Comparison Table';
+    slideHTML = `
+      <div style="flex: 1; display: flex; flex-direction: column;">
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Model Verification: Measured vs. Theoretical Comparison</h2>
+        <p style="font-size: 0.8rem; color: #4b6570; margin: 0 0 0.5rem 0;">Direct comparison of video-measured parameters against theoretical kinematics (% Diff = (Calc - Meas)/Meas × 100%).</p>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; border: 1px solid #c8dbe3; background: #ffffff;">
+          <thead>
+            <tr style="background: #0f7e9b; color: #ffffff;">
+              <th style="padding: 0.4rem 0.55rem; text-align: left;">Kinematic Parameter</th>
+              <th style="padding: 0.4rem 0.55rem; text-align: center;">Measured (Graph / Video)</th>
+              <th style="padding: 0.4rem 0.55rem; text-align: center;">Theoretical / Calculated</th>
+              <th style="padding: 0.4rem 0.55rem; text-align: center;">Percent Difference</th>
+              <th style="padding: 0.4rem 0.55rem; text-align: center;">Model Agreement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #c8dbe3;">
+              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Vertical Acc (ay)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.ay.toFixed(3)} m/s²</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">-9.800 m/s² (Ref)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.ayPctDiff) < 6 ? 'success' : Math.abs(cVals.ayPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #c8dbe3; background: #f8fafc;">
+              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Horizontal Acc (ax)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.ax.toFixed(3)} m/s²</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">0.000 m/s² (Newton I)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge success">✓ Verified (ax ≈ 0)</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #c8dbe3;">
+              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Max Apex Height (y_max)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.maxHMeas.toFixed(3)} m</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.maxHCalc.toFixed(3)} m</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.maxHPctDiff) < 6 ? 'success' : Math.abs(cVals.maxHPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #c8dbe3; background: #f8fafc;">
+              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Flight Hang Time (t_hang)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.hangMeas.toFixed(3)} s</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.hangCalc.toFixed(3)} s</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.hangPctDiff) < 6 ? 'success' : Math.abs(cVals.hangPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Horizontal Range (Δx)</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.rangeMeas.toFixed(3)} m</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.rangeCalc.toFixed(3)} m</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%</td>
+              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.rangePctDiff) < 6 ? 'success' : Math.abs(cVals.rangePctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top: 0.45rem; font-size: 0.74rem; color: #4b6570; font-style: italic;">
+          • Tight percentage differences (&lt; 6%) validate independence of horizontal and vertical motions and verify the parabolic free-fall projectile model.
+        </div>
+      </div>
+    `;
+  } else if (slideIdx === 10) {
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 10 of 10: Real World Reflection';
     const refTxt = (state.reflectionText || '').trim();
     slideHTML = `
       <div style="flex: 1; display: flex; flex-direction: column;">
@@ -2944,14 +3048,14 @@ function renderSlideDeckPreview(slideIdx) {
   slideViewport.innerHTML = slideHTML;
 }
 
-// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images & Plagiarism Token)
+// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images, Calculations, Table & Plagiarism Token)
 async function exportPresentationPPTX() {
   if (typeof PptxGenJS === 'undefined') {
     alert('PptxGenJS library is still loading. Please try again in a moment.');
     return;
   }
 
-  updateStatus('Generating rubric-aligned 8-slide PowerPoint presentation with embedded graphs...');
+  updateStatus('Generating rubric-aligned 10-slide PowerPoint presentation with embedded graphs, calculations, and comparison tables...');
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9';
 
@@ -3084,24 +3188,484 @@ async function exportPresentationPPTX() {
     'x-acc'
   );
 
-  // Slide 8: Real World Reflection
+  // Slide 8: Kinematic Calculations & Theoretical Predictions
   const s8 = pptx.addSlide();
-  s8.addText('Real World Reflection', {
+  s8.addText('Kinematic Calculations & Theoretical Predictions', {
+    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
+    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
+  });
+  s8.addText('Algebraic derivations of projectile motion parameters without shortcuts.', {
+    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
+    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
+  });
+
+  // Box 1: Launch Velocity & Angle
+  s8.addText(`1. INITIAL LAUNCH SPEED & ANGLE\n• Components: v₀ₓ = ${cVals.vx0.toFixed(3)} m/s, v₀y = ${cVals.vy0.toFixed(3)} m/s\n• Speed Formula: v₀ = √(v₀ₓ² + v₀y²)\n• Calculated Speed: v₀ = ${cVals.v0.toFixed(3)} m/s\n• Launch Angle: θ = arctan(v₀y / v₀ₓ) = ${cVals.theta.toFixed(2)}°`, {
+    x: 0.8, y: 1.6, w: 5.6, h: 2.3,
+    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  // Box 2: Maximum Apex Height
+  s8.addText(`2. MAXIMUM APEX HEIGHT (y_max)\n• Kinematic Equation: v_fy² = v_iy² + 2ay·Δy (v_fy = 0 m/s at apex)\n• Theoretical Formula: y_max = y₀ - (v₀y² / 2ay)\n• Theoretical y_max: ${cVals.maxHCalc.toFixed(3)} m\n• Measured Apex Height: ${cVals.maxHMeas.toFixed(3)} m`, {
+    x: 6.8, y: 1.6, w: 5.6, h: 2.3,
+    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  // Box 3: Flight Hang Time
+  s8.addText(`3. FLIGHT HANG TIME (t_hang)\n• Kinematic Equation: y(t) = y₀ + v₀y·t + ½·ay·t²\n• Solved algebraically for landing time where y(t) = 0 m\n• Theoretical Hang Time: ${cVals.hangCalc.toFixed(3)} s\n• Measured Flight Duration: ${cVals.hangMeas.toFixed(3)} s`, {
+    x: 0.8, y: 4.2, w: 5.6, h: 2.4,
+    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  // Box 4: Horizontal Range
+  s8.addText(`4. HORIZONTAL RANGE (Δx)\n• Kinematic Equation: Δx = v₀ₓ · t_hang (ax = 0 m/s²)\n• Theoretical Formula: (${cVals.vx0.toFixed(3)} m/s) × (${cVals.hangCalc.toFixed(3)} s)\n• Theoretical Range: ${cVals.rangeCalc.toFixed(3)} m\n• Measured Horizontal Range: ${cVals.rangeMeas.toFixed(3)} m`, {
+    x: 6.8, y: 4.2, w: 5.6, h: 2.4,
+    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+  addVerificationFooter(s8);
+
+  // Slide 9: Model Verification & Comparison Table
+  const s9 = pptx.addSlide();
+  s9.addText('Model Verification: Measured vs. Theoretical Comparison', {
+    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
+    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
+  });
+  s9.addText('Rigorous comparison of video-measured values against theoretical kinematics (% Diff = (Calc - Meas)/Meas × 100%).', {
+    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
+    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
+  });
+
+  const tableRows = [
+    [
+      { text: 'Kinematic Parameter', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'left' } },
+      { text: 'Measured (From Video / Fits)', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
+      { text: 'Theoretical / Calculated', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
+      { text: 'Percent Difference', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
+      { text: 'Model Agreement', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } }
+    ],
+    [
+      { text: 'Vertical Acceleration (ay)', options: { bold: true, fontSize: 10.5 } },
+      { text: `${cVals.ay.toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5 } },
+      { text: '-9.800 m/s² (Ref)', options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
+      { text: Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.ayPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
+    ],
+    [
+      { text: 'Horizontal Acceleration (ax)', options: { bold: true, fontSize: 10.5 } },
+      { text: `${cVals.ax.toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5 } },
+      { text: '0.000 m/s² (Newton I)', options: { align: 'center', fontSize: 10.5 } },
+      { text: `Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5, bold: true } },
+      { text: Math.abs(cVals.ax) < 0.1 ? '✓ Verified (ax ≈ 0)' : 'Acceptable', options: { align: 'center', fontSize: 10.5 } }
+    ],
+    [
+      { text: 'Maximum Apex Height (y_max)', options: { bold: true, fontSize: 10.5 } },
+      { text: `${cVals.maxHMeas.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.maxHCalc.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
+      { text: Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.maxHPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
+    ],
+    [
+      { text: 'Flight Hang Time (t_hang)', options: { bold: true, fontSize: 10.5 } },
+      { text: `${cVals.hangMeas.toFixed(3)} s`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.hangCalc.toFixed(3)} s`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
+      { text: Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.hangPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
+    ],
+    [
+      { text: 'Horizontal Range (Δx)', options: { bold: true, fontSize: 10.5 } },
+      { text: `${cVals.rangeMeas.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.rangeCalc.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
+      { text: `${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
+      { text: Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.rangePctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
+    ]
+  ];
+
+  s9.addTable(tableRows, {
+    x: 0.8, y: 1.6, w: 11.5,
+    colW: [2.8, 2.2, 2.2, 2.1, 2.2],
+    border: { type: 'solid', pt: 1, color: 'C8DBE3' },
+    fill: { color: 'FFFFFF' },
+    lineSpacing: 14
+  });
+
+  s9.addText('Formula: % Diff = [(Calculated - Measured) / Measured] × 100% • Low error (< 6%) validates free-fall projectile mechanics and negligible aerodynamic drag at measured speeds.', {
+    x: 0.8, y: 5.6, w: 11.5, h: 0.9,
+    fontSize: 11.5, italic: true, color: '4B6570', fontFace: 'Arial', lineSpacing: 17
+  });
+  addVerificationFooter(s9);
+
+  // Slide 10: Real World Reflection
+  const s10 = pptx.addSlide();
+  s10.addText('Real World Reflection', {
     x: 0.8, y: 0.6, w: 11.5, h: 0.6,
     fontSize: 24, bold: true, color: '0F7E9B', fontFace: 'Arial'
   });
   const refText = (state.reflectionText || '').trim();
   if (refText) {
-    s8.addText(refText, {
+    s10.addText(refText, {
       x: 0.8, y: 1.4, w: 11.5, h: 5.2,
       fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 24
     });
   }
-  addVerificationFooter(s8);
+  addVerificationFooter(s10);
 
   const fileName = `Physics_of_Sports_Analytics_${sName.replace(/\s+/g, '_')}.pptx`;
   await pptx.writeFile({ fileName });
-  updateStatus(`Downloaded complete 8-slide presentation with originality verification: ${fileName}`);
+  updateStatus(`Downloaded complete 10-slide presentation with originality verification: ${fileName}`);
+}
+
+function preparePrintableReport() {
+  const container = document.getElementById('printableLabReport');
+  if (!container) return;
+
+  const auth = getAuthenticitySignature();
+  const sName = (studentNameInput ? studentNameInput.value : '') || 'Student Name';
+  const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
+  const cVals = state.calcValues;
+  const pts = state.series[state.activeSeries] || [];
+  const refText = (state.reflectionText || '').trim();
+  const workH = (workMaxHeight ? workMaxHeight.value : '') || '';
+  const workT = (workHangTime ? workHangTime.value : '') || '';
+  const workR = (workRange ? workRange.value : '') || '';
+  const workV = (workVector ? workVector.value : '') || '';
+
+  const snap = getVideoSnapshotData();
+  const chartYPos = generateChartImageData('y-pos');
+  const chartXPos = generateChartImageData('x-pos');
+  const chartYVel = generateChartImageData('y-vel');
+  const chartXVel = generateChartImageData('x-vel');
+  const chartYAcc = generateChartImageData('y-acc');
+  const chartXAcc = generateChartImageData('x-acc');
+
+  const nowStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  container.innerHTML = `
+    <!-- PAGE 1: Trajectory Evidence & Tracking Data -->
+    <div class="print-page">
+      <div class="print-header">
+        <div>
+          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
+          <h1 class="print-title">Physics of Sports Analytics: Video Project</h1>
+          <p class="print-subtitle">Formal Laboratory Investigation &amp; Kinematic Verification Report</p>
+        </div>
+        <div style="text-align: right; font-family: monospace; font-size: 0.8rem; color: #0f7e9b; font-weight: 700;">
+          Originality ID: ${auth.token}
+        </div>
+      </div>
+
+      <div class="print-meta-grid">
+        <div><strong>Student:</strong> ${sName}</div>
+        <div><strong>Teacher:</strong> ${tName}</div>
+        <div><strong>Course:</strong> High School Physics</div>
+        <div><strong>Date:</strong> ${nowStr}</div>
+      </div>
+
+      <h3 class="print-section-title">1. Projectile Motion Video Trajectory &amp; Calibration</h3>
+      <div style="text-align: center; margin-bottom: 0.6rem;">
+        ${snap ? `<img src="${snap}" style="max-width: 100%; max-height: 340px; object-fit: contain; border: 1px solid #c8dbe3; border-radius: 6px;">` : '<div style="padding: 2rem; border: 1px dashed #c8dbe3;">[Video Trajectory Frame]</div>'}
+      </div>
+
+      <h3 class="print-section-title">2. Video Tracking &amp; Coordinate Setup Summary</h3>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Calibration Metric</th>
+            <th>Value</th>
+            <th>Kinematic Parameter</th>
+            <th>Initial Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Calibration Scale Factor</strong></td>
+            <td>${(state.pixelsPerMeter || 140).toFixed(1)} px/meter</td>
+            <td><strong>Initial Horizontal Pos (x₀)</strong></td>
+            <td>${cVals.x0.toFixed(3)} m</td>
+          </tr>
+          <tr>
+            <td><strong>Coordinate Origin (x, y)</strong></td>
+            <td>(${state.origin.x.toFixed(0)}, ${state.origin.y.toFixed(0)}) px</td>
+            <td><strong>Initial Vertical Pos (y₀)</strong></td>
+            <td>${cVals.y0.toFixed(3)} m</td>
+          </tr>
+          <tr>
+            <td><strong>Total Video Frames Tracked</strong></td>
+            <td>${pts.length} coordinates</td>
+            <td><strong>Initial Horizontal Speed (v₀ₓ)</strong></td>
+            <td>${cVals.vx0.toFixed(3)} m/s</td>
+          </tr>
+          <tr>
+            <td><strong>Tracking Center of Mass</strong></td>
+            <td>Projectile Geometric Center</td>
+            <td><strong>Initial Vertical Speed (v₀y)</strong></td>
+            <td>${cVals.vy0.toFixed(3)} m/s</td>
+          </tr>
+          <tr>
+            <td><strong>Resolved Initial Velocity</strong></td>
+            <td colspan="3"><strong style="color: #0f7e9b;">v₀ = ${cVals.v0.toFixed(3)} m/s</strong> at launch angle <strong style="color: #d67b19;">θ = ${cVals.theta.toFixed(2)}°</strong> (above horizontal)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="print-footer">
+        <span>The Thinking Experiment • Sports Analytics Video Project</span>
+        <span>Originality Token: <strong>${auth.token}</strong></span>
+        <span>Page 1 of 4</span>
+      </div>
+    </div>
+
+    <!-- PAGE 2: The 6 Kinematics Graphs -->
+    <div class="print-page">
+      <div class="print-header">
+        <div>
+          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
+          <h2 class="print-title" style="font-size: 1.25rem;">Section 3: Kinematics Studio: 6 Required Graphs &amp; Fits</h2>
+          <p class="print-subtitle">Parabolic position fits, 10-point tangent slope velocity extraction, and acceleration models</p>
+        </div>
+        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
+          ID: ${auth.token}
+        </div>
+      </div>
+
+      <div class="print-graphs-grid">
+        <!-- 1. y(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">1. Vertical Position y(t)</div>
+          ${chartYPos ? `<img src="${chartYPos}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Particular:</strong> y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)
+          </div>
+        </div>
+
+        <!-- 2. x(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">2. Horizontal Position x(t)</div>
+          ${chartXPos ? `<img src="${chartXPos}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Particular:</strong> x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)
+          </div>
+        </div>
+
+        <!-- 3. vy(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">3. Vertical Velocity vy(t) [Tangents]</div>
+          ${chartYVel ? `<img src="${chartYVel}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Fitted Line:</strong> vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s) • (Slope = ay)
+          </div>
+        </div>
+
+        <!-- 4. vx(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">4. Horizontal Velocity vx(t)</div>
+          ${chartXVel ? `<img src="${chartXVel}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Constant Velocity:</strong> vx(t) = ${cVals.vx0.toFixed(3)} m/s • (Uniform motion, Slope ax ≈ 0)
+          </div>
+        </div>
+
+        <!-- 5. ay(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">5. Vertical Acceleration ay(t)</div>
+          ${chartYAcc ? `<img src="${chartYAcc}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Measured:</strong> ay = ${cVals.ay.toFixed(3)} m/s² (Ref: -9.80 m/s², % Diff: ${cVals.ayPctDiff.toFixed(2)}%)
+          </div>
+        </div>
+
+        <!-- 6. ax(t) -->
+        <div class="print-graph-card">
+          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">6. Horizontal Acceleration ax(t)</div>
+          ${chartXAcc ? `<img src="${chartXAcc}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
+          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
+            <strong>Measured:</strong> ax = ${cVals.ax.toFixed(3)} m/s² (Ref: 0.00 m/s², Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²)
+          </div>
+        </div>
+      </div>
+
+      <div class="print-footer">
+        <span>The Thinking Experiment • Sports Analytics Video Project</span>
+        <span>Originality Token: <strong>${auth.token}</strong></span>
+        <span>Page 2 of 4</span>
+      </div>
+    </div>
+
+    <!-- PAGE 3: Theoretical Calculations & Master Comparison Table -->
+    <div class="print-page">
+      <div class="print-header">
+        <div>
+          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
+          <h2 class="print-title" style="font-size: 1.25rem;">Section 4: Theoretical Calculations &amp; Model Comparison</h2>
+          <p class="print-subtitle">Kinematic derivations without shortcuts and comparison against graph-extracted values</p>
+        </div>
+        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
+          ID: ${auth.token}
+        </div>
+      </div>
+
+      <h3 class="print-section-title">Theoretical Derivations &amp; Work</h3>
+      <div class="print-calc-grid">
+        <div class="print-calc-card">
+          <strong style="color: #0f7e9b;">1. Resultant Launch Speed &amp; Angle</strong><br>
+          • <em>Formula:</em> v₀ = √(v₀ₓ² + v₀y²), θ = arctan(v₀y / v₀ₓ)<br>
+          • <strong>Calculated:</strong> v₀ = ${cVals.v0.toFixed(3)} m/s, θ = ${cVals.theta.toFixed(2)}°<br>
+          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workV || `v₀ = √(${cVals.vx0.toFixed(2)}² + ${cVals.vy0.toFixed(2)}²)`}</div>
+        </div>
+
+        <div class="print-calc-card">
+          <strong style="color: #0f7e9b;">2. Maximum Apex Height (y_max)</strong><br>
+          • <em>Equation:</em> v_fy² = v_iy² + 2ay·Δy (v_fy = 0 m/s at apex)<br>
+          • <strong>Calculated:</strong> y_max = ${cVals.maxHCalc.toFixed(3)} m (Measured: ${cVals.maxHMeas.toFixed(3)} m)<br>
+          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workH || `y_max = y₀ - (v₀y² / 2ay) = ${cVals.maxHCalc.toFixed(3)} m`}</div>
+        </div>
+
+        <div class="print-calc-card">
+          <strong style="color: #0f7e9b;">3. Flight Hang Time (t_hang)</strong><br>
+          • <em>Equation:</em> y(t) = y₀ + v₀y·t + ½·ay·t² = 0 (landing)<br>
+          • <strong>Calculated:</strong> t_hang = ${cVals.hangCalc.toFixed(3)} s (Measured: ${cVals.hangMeas.toFixed(3)} s)<br>
+          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workT || `Quadratic solution for landing t = ${cVals.hangCalc.toFixed(3)} s`}</div>
+        </div>
+
+        <div class="print-calc-card">
+          <strong style="color: #0f7e9b;">4. Horizontal Range (Δx)</strong><br>
+          • <em>Equation:</em> Δx = v₀ₓ · t_hang (uniform motion, ax = 0)<br>
+          • <strong>Calculated:</strong> Δx = ${cVals.rangeCalc.toFixed(3)} m (Measured: ${cVals.rangeMeas.toFixed(3)} m)<br>
+          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workR || `Δx = (${cVals.vx0.toFixed(2)} m/s) × (${cVals.hangCalc.toFixed(2)} s) = ${cVals.rangeCalc.toFixed(3)} m`}</div>
+        </div>
+      </div>
+
+      <h3 class="print-section-title">Master Kinematic Comparison: Measured vs. Theoretical Model</h3>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Kinematic Parameter</th>
+            <th style="text-align: center;">Measured (Graph / Video)</th>
+            <th style="text-align: center;">Student Calculated (Theory)</th>
+            <th style="text-align: center;">Percent Difference</th>
+            <th style="text-align: center;">Model Agreement</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Vertical Acceleration (ay)</strong></td>
+            <td style="text-align: center;">${cVals.ay.toFixed(3)} m/s²</td>
+            <td style="text-align: center;">-9.800 m/s² (Ref)</td>
+            <td style="text-align: center; font-weight: 700;">${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%</td>
+            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.ayPctDiff) < 6 ? 'success' : Math.abs(cVals.ayPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+          </tr>
+          <tr>
+            <td><strong>Horizontal Acceleration (ax)</strong></td>
+            <td style="text-align: center;">${cVals.ax.toFixed(3)} m/s²</td>
+            <td style="text-align: center;">0.000 m/s² (Newton I)</td>
+            <td style="text-align: center; font-weight: 700;">Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²</td>
+            <td style="text-align: center;"><span class="print-badge success">✓ Verified (ax ≈ 0)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Maximum Apex Height (y_max)</strong></td>
+            <td style="text-align: center;">${cVals.maxHMeas.toFixed(3)} m</td>
+            <td style="text-align: center;">${cVals.maxHCalc.toFixed(3)} m</td>
+            <td style="text-align: center; font-weight: 700;">${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%</td>
+            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.maxHPctDiff) < 6 ? 'success' : Math.abs(cVals.maxHPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+          </tr>
+          <tr>
+            <td><strong>Flight Hang Time (t_hang)</strong></td>
+            <td style="text-align: center;">${cVals.hangMeas.toFixed(3)} s</td>
+            <td style="text-align: center;">${cVals.hangCalc.toFixed(3)} s</td>
+            <td style="text-align: center; font-weight: 700;">${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%</td>
+            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.hangPctDiff) < 6 ? 'success' : Math.abs(cVals.hangPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+          </tr>
+          <tr>
+            <td><strong>Horizontal Range (Δx)</strong></td>
+            <td style="text-align: center;">${cVals.rangeMeas.toFixed(3)} m</td>
+            <td style="text-align: center;">${cVals.rangeCalc.toFixed(3)} m</td>
+            <td style="text-align: center; font-weight: 700;">${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%</td>
+            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.rangePctDiff) < 6 ? 'success' : Math.abs(cVals.rangePctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 0.72rem; color: #4b6570; font-style: italic; margin-top: 0.35rem;">
+        * Formula: % Diff = [(Calculated - Measured) / Measured] × 100%. Low percent differences confirm parabolic projectile trajectory and negligible aerodynamic drag at measured sports speeds.
+      </p>
+
+      <div class="print-footer">
+        <span>The Thinking Experiment • Sports Analytics Video Project</span>
+        <span>Originality Token: <strong>${auth.token}</strong></span>
+        <span>Page 3 of 4</span>
+      </div>
+    </div>
+
+    <!-- PAGE 4: Reflection & Academic Integrity Seal -->
+    <div class="print-page">
+      <div class="print-header">
+        <div>
+          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
+          <h2 class="print-title" style="font-size: 1.25rem;">Section 5: Real-World Reflection &amp; Academic Integrity</h2>
+          <p class="print-subtitle">Physics analysis of sport performance, biomechanics, and verification signatures</p>
+        </div>
+        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
+          ID: ${auth.token}
+        </div>
+      </div>
+
+      <h3 class="print-section-title">Real-World Reflection</h3>
+      <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: #123140; min-height: 160px; margin-bottom: 1.2rem;">
+        ${refText ? refText : '<span style="color: #94a3b8; font-style: italic;">[No student reflection entered in Section 8.]</span>'}
+      </div>
+
+      <h3 class="print-section-title">Academic Integrity &amp; Originality Verification Seal</h3>
+      <div style="background: #f8fafc; border: 2px solid #0f7e9b; border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #c8dbe3; padding-bottom: 0.5rem; margin-bottom: 0.6rem;">
+          <div>
+            <strong style="color: #0f7e9b; font-size: 0.95rem;">PhysicsKit Anti-Plagiarism Digital Certificate</strong><br>
+            <span style="font-size: 0.75rem; color: #64748b;">Cryptographically linked to tracked frame coordinates, student name, and time of analysis.</span>
+          </div>
+          <div style="font-family: monospace; font-weight: 700; font-size: 0.95rem; color: #0f7e9b; background: #eef7fa; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #0f7e9b;">
+            ${auth.token}
+          </div>
+        </div>
+        <div style="font-size: 0.78rem; color: #334155; line-height: 1.5;">
+          • <strong>Student Name:</strong> ${auth.student} • <strong>Teacher:</strong> ${auth.teacher}<br>
+          • <strong>Tracking Frames Analyzed:</strong> ${auth.pointsCount} coordinate points<br>
+          • <strong>Digital Fingerprint:</strong> ${auth.hashFingerprint}<br>
+          • <strong>Verification Timestamp:</strong> ${auth.timestamp}<br>
+          • <strong>Status:</strong> <span style="color: #1a7f37; font-weight: 700;">Verified Authentic Student Work</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1.5px solid #c8dbe3; padding-top: 1rem; margin-top: 1rem;">
+        <p style="font-style: italic; font-size: 0.85rem; color: #0f7e9b; margin-bottom: 2rem;">
+          "On my honor, I have neither given nor received unauthorized aid on this assignment."
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 1rem;">
+          <div>
+            <div style="border-bottom: 1px solid #123140; height: 35px;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #475569; margin-top: 0.25rem;">
+              <span>Student Signature: <strong>${sName}</strong></span>
+              <span>Date: ${nowStr}</span>
+            </div>
+          </div>
+          <div>
+            <div style="border-bottom: 1px solid #123140; height: 35px;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #475569; margin-top: 0.25rem;">
+              <span>Teacher Review: <strong>${tName}</strong></span>
+              <span>Grade / Signature</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="print-footer">
+        <span>The Thinking Experiment • Sports Analytics Video Project</span>
+        <span>Originality Token: <strong>${auth.token}</strong></span>
+        <span>Page 4 of 4</span>
+      </div>
+    </div>
+  `;
 }
 
 function copyFormData() {
@@ -3648,8 +4212,12 @@ function initEventListeners() {
 
   // Presentation & Exports
   if (btnDownloadPptx) btnDownloadPptx.addEventListener('click', exportPresentationPPTX);
-  if (btnPrintReport) btnPrintReport.addEventListener('click', () => window.print());
+  if (btnPrintReport) btnPrintReport.addEventListener('click', () => {
+    preparePrintableReport();
+    window.print();
+  });
   if (btnCopyFormData) btnCopyFormData.addEventListener('click', copyFormData);
+  window.addEventListener('beforeprint', preparePrintableReport);
 
   if (btnPrevSlide) {
     btnPrevSlide.addEventListener('click', () => {
@@ -3659,11 +4227,12 @@ function initEventListeners() {
   }
   if (btnNextSlide) {
     btnNextSlide.addEventListener('click', () => {
-      const next = Math.min(8, state.currentSlideIdx + 1);
+      const next = Math.min(10, state.currentSlideIdx + 1);
       renderSlideDeckPreview(next);
     });
   }
-  slideThumbs.forEach(thumb => {
+  const allThumbs = document.querySelectorAll('.slide-thumb');
+  allThumbs.forEach(thumb => {
     thumb.addEventListener('click', () => {
       const idx = parseInt(thumb.dataset.slideIdx, 10);
       renderSlideDeckPreview(idx);

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sports Analytics &amp; Projectile Video Lab - The Thinking Experiment</title>
-  <meta name="description" content="Physics of Sports Analytics & Video Motion Lab: Replicate Logger Pro, generate 6 kinematics graphs, sample 10 tangent slopes, calculate kinematic theoretical percent differences, and export complete 8-slide PowerPoint presentations.">
+  <meta name="description" content="Physics of Sports Analytics & Video Motion Lab: Replicate Logger Pro, generate 6 kinematics graphs, sample 10 tangent slopes, calculate kinematic theoretical percent differences, and export complete 10-slide PowerPoint presentations.">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
   
@@ -52,7 +52,7 @@
       <p class="kicker">The Thinking Experiment &bull; PhysicsKit</p>
       <h1>Physics of Sports Analytics: Video Project</h1>
       <p class="subtitle">
-        Complete interactive laboratory for projectile motion video analysis. Calibrate camera scale in meters, track projectile motion frame-by-frame, construct 6 kinematic curves with 10-point tangent slope sampling, verify theoretical models with percent differences, and export an 8-slide PowerPoint (.pptx) presentation.
+        Complete interactive laboratory for projectile motion video analysis. Calibrate camera scale in meters, track projectile motion frame-by-frame, construct 6 kinematic curves with 10-point tangent slope sampling, verify theoretical models with percent differences, and export a 10-slide PowerPoint (.pptx) presentation.
       </p>
     </header>
 
@@ -857,7 +857,7 @@
         <div class="guidance-content">
           <strong class="guidance-title">Step 5: Classroom Presentation &amp; Report Submission</strong>
           <p>
-            Review all 8 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves and video trajectory capture showing all tracked points, the scale stick, and the origin.
+            Review all 10 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves, theoretical calculations, comparison tables, and video trajectory capture.
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -918,7 +918,7 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
         <div>
           <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Presentation &amp; Deliverables</h2>
-          <p style="font-size: 0.82rem; color: var(--muted); margin: 0.2rem 0 0 0;">Export your complete 8-slide presentation deck matching the classroom rubric, print your worksheet, and copy form responses.</p>
+          <p style="font-size: 0.82rem; color: var(--muted); margin: 0.2rem 0 0 0;">Export your complete 10-slide presentation deck matching the classroom rubric, print your comprehensive lab report, and copy form responses.</p>
         </div>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
           <button id="btnDownloadPptx" class="btn btn-amber" style="font-weight: 700;">
@@ -937,7 +937,7 @@
       <div class="slide-deck-preview">
         <!-- Slide Header Controls -->
         <div style="padding: 0.6rem 1rem; background: var(--surface-alt); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 600; font-size: 0.85rem; color: var(--primary-teal);" id="slidePreviewTitle">Slide 1 of 8: Title &amp; Honor Code</span>
+          <span style="font-weight: 600; font-size: 0.85rem; color: var(--primary-teal);" id="slidePreviewTitle">Slide 1 of 10: Title &amp; Honor Code</span>
           <div style="display: flex; gap: 0.35rem;">
             <button id="btnPrevSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">‹</button>
             <button id="btnNextSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">›</button>
@@ -958,11 +958,16 @@
           <div class="slide-thumb" data-slide-idx="5">Slide 5<br><small>x(t)</small></div>
           <div class="slide-thumb" data-slide-idx="6">Slide 6<br><small>vx(t)</small></div>
           <div class="slide-thumb" data-slide-idx="7">Slide 7<br><small>ax(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="8">Slide 8<br><small>Reflection</small></div>
+          <div class="slide-thumb" data-slide-idx="8">Slide 8<br><small>Calculations</small></div>
+          <div class="slide-thumb" data-slide-idx="9">Slide 9<br><small>Comparison</small></div>
+          <div class="slide-thumb" data-slide-idx="10">Slide 10<br><small>Reflection</small></div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Complete Printable Laboratory Report Container (Active during window.print()) -->
+  <div id="printableLabReport" aria-hidden="true"></div>
   </div> <!-- /.shell -->
 
   <!-- Comprehensive Lab Help & Rubric Modal -->
@@ -996,7 +1001,7 @@
         <div id="help-overview" class="help-tab-panel active">
           <h4>🎯 Project Objective &amp; Workflow</h4>
           <p>
-            In this laboratory project, you act as a sports analytics biomechanist analyzing the two-dimensional projectile motion of a sports ball. You will track the projectile frame-by-frame, construct 6 kinematics graphs, use the <strong>tangent slope method</strong> to construct vertical velocity, verify theoretical kinematic models with percent differences, and export an 8-slide presentation deck.
+            In this laboratory project, you act as a sports analytics biomechanist analyzing the two-dimensional projectile motion of a sports ball. You will track the projectile frame-by-frame, construct 6 kinematics graphs, use the <strong>tangent slope method</strong> to construct vertical velocity, verify theoretical kinematic models with percent differences, and export a 10-slide presentation deck.
           </p>
           <div class="help-callout">
             <strong>The 5 Project Stages:</strong>
@@ -1005,7 +1010,7 @@
               <li><strong>Step 2: Track Motion</strong> — Step through frames and mark the projectile's center of mass with circular reticles.</li>
               <li><strong>Step 3: 6-Graph Studio &amp; Tangents</strong> — Inspect the 6 kinematics curves and sample 10 tangent slopes along \(y(t)\) to construct \(v_y(t)\).</li>
               <li><strong>Step 4: Guided Calculations</strong> — Compute launch speed \(v_0\), release angle \(\theta\), \(y_{\max}\), \(t_{\text{hang}}\), \(\Delta x\), and percent differences. Write a 5-sentence reflection.</li>
-              <li><strong>Step 5: Presentation &amp; Reports</strong> — Generate an 8-slide PowerPoint (.pptx) deck matching classroom grading rubrics.</li>
+              <li><strong>Step 5: Presentation &amp; Reports</strong> — Generate a 10-slide PowerPoint (.pptx) deck matching classroom grading rubrics and print a 4-page lab report.</li>
             </ol>
           </div>
         </div>
@@ -1088,8 +1093,8 @@
 
         <!-- Tab 6: Step 5 Presentation -->
         <div id="help-step5" class="help-tab-panel">
-          <h4>📊 Step 5: PowerPoint Deck Format (8 Slides)</h4>
-          <p>The 1-click exporter generates an 8-slide presentation aligned with the high school physics rubric:</p>
+          <h4>📊 Step 5: PowerPoint Deck Format (10 Slides)</h4>
+          <p>The 1-click exporter generates a 10-slide presentation aligned with the high school physics rubric:</p>
           <ul>
             <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Course, Honor Code pledge, and Calibrated Video Trajectory Snapshot showing all tracked points, the scale stick, and the coordinate origin.</li>
             <li><strong>Slide 2:</strong> Vertical Position Graph \(y(t)\), quadratic equations with units, and analysis notes.</li>
@@ -1098,7 +1103,9 @@
             <li><strong>Slide 5:</strong> Horizontal Position Graph \(x(t)\), linear equations with units, and velocity analysis.</li>
             <li><strong>Slide 6:</strong> Horizontal Velocity Graph \(v_x(t)\), verification of uniform velocity with zero horizontal force.</li>
             <li><strong>Slide 7:</strong> Horizontal Acceleration Graph \(a_x(t)\), comparison with \(0\text{ m/s}^2\).</li>
-            <li><strong>Slide 8:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
+            <li><strong>Slide 8:</strong> Kinematic Calculations &amp; Predictions — Algebraic derivations of \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\).</li>
+            <li><strong>Slide 9:</strong> Model Verification &amp; Comparison Table — Full comparison table of measured vs. theoretical values and percent differences.</li>
+            <li><strong>Slide 10:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
           </ul>
         </div>
 

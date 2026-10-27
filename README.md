@@ -9,8 +9,8 @@ An interactive, browser-native projectile motion video analysis and modeling lab
 - **Interactive Tangent Line Slope Sampler:** Slide along the vertical position curve to measure instantaneous tangent slopes ($\frac{dy}{dt} = v_y$) and record 10 verified points onto the velocity graph (fulfilling the classroom rubric).
 - **Guided Calculations Workspace:** Interactive lab worksheet matching `Lab: Physics of Sports Analytics Worksheet.docx` with automatic theoretical comparisons, percent difference calculations, consistency checks, and a Part 5 reflection editor with a live $\ge 5$ sentence counter.
 - **1-Click Deliverables Exporter:**
-  - **Download Presentation (.pptx):** Client-side generation via `pptxgenjs` of an 8-slide presentation matching the classroom template with embedded high-resolution graph snapshots and equations.
-  - **Print Lab Report (PDF):** Formatted printable report.
+  - **Download Presentation (.pptx):** Client-side generation via `pptxgenjs` of a 10-slide presentation matching the classroom template with embedded high-resolution graph snapshots, calculations, comparison tables, and equations.
+  - **Print Lab Report (PDF):** Clean 4-page printable laboratory report with trajectory evidence, graphs, derivations, and authenticity verification seal.
   - **Copy Form Data:** Formatted for Google Form / Canvas submission.
   - **Save / Load Lab (.json):** Full project state persistence.
 
