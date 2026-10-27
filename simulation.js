@@ -171,7 +171,7 @@ const tangentTimeDisplay = document.getElementById('tangentTimeDisplay');
 const tangentSlopeDisplay = document.getElementById('tangentSlopeDisplay');
 const tangentSlider = document.getElementById('tangentSlider');
 const btnRecordTangent = document.getElementById('btnRecordTangent');
-const btnAutoSampleTangents = document.getElementById('btnAutoSampleTangents');
+const btnClearTangents = document.getElementById('btnClearTangents');
 const btnAutoFitAll = document.getElementById('btnAutoFitAll');
 const singleGraphContainer = document.getElementById('singleGraphContainer');
 const gridAllContainer = document.getElementById('gridAllContainer');
@@ -1378,11 +1378,11 @@ function autoFitAllGraphs() {
   const xPts = pts.map(p => ({ x: p.time, y: p.x }));
   state.fitResults.xPos = linearRegression(xPts);
 
-  // 3. Ensure 10 tangent slopes are sampled from the quadratic position curve
-  if (!state.tangentPoints || state.tangentPoints.length < 2) {
-    autoSample10Tangents(true);
-  } else {
+  // 3. Fit line through student-recorded tangent points if at least 2 exist
+  if (state.tangentPoints && state.tangentPoints.length >= 2) {
     state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+  } else {
+    state.fitResults.yVel = null;
   }
 
   // 4. xVel: The horizontal position curve x(t) = v0x*t + x0 has constant slope Δx/Δt = v0x
@@ -1517,38 +1517,38 @@ function renderStudioGraph(graphType) {
       { label: 'Linear Fit (v₀ₓ)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'y-vel') {
-    title = '3. Vertical Velocity vs. Time [vy(t)] (From 10 Tangent Slopes)';
+    title = '3. Vertical Velocity vs. Time [vy(t)] (From Sampled Tangent Slopes)';
 
-    // Ensure 10 tangent points are sampled if not already done
-    if (!state.tangentPoints || state.tangentPoints.length < 2) {
-      autoSample10Tangents(true);
-    }
-
-    const linearData = state.tangentPoints.map(p => ({ x: p.time, y: p.vy }));
-    const fit = linearRegression(linearData);
+    const tangPts = state.tangentPoints || [];
+    const linearData = tangPts.map(p => ({ x: p.time, y: p.vy }));
+    const fit = linearData.length >= 2 ? linearRegression(linearData) : null;
     state.fitResults.yVel = fit;
 
-    const ay = fit ? fit.slope : -9.8;
-    const v0y = fit ? fit.intercept : 0;
-    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : '';
+    const ay = fit ? fit.slope : (state.fitResults.yPos ? 2 * state.fitResults.yPos.A : -9.8);
+    const v0y = fit ? fit.intercept : (state.fitResults.yPos ? state.fitResults.yPos.B : 0);
+    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : (linearData.length < 2 ? '(Record at least 2 tangent slopes)' : '');
 
     generalEq = '\\[v_y(t) = a_y t + v_{0y}\\]';
-    particularEq = `\\[v_y(t) = (${ay.toFixed(3)}\\text{ m/s}^2)t + (${v0y.toFixed(3)}\\text{ m/s})\\]`;
+    particularEq = fit
+      ? `\\[v_y(t) = (${ay.toFixed(3)}\\text{ m/s}^2)t + (${v0y.toFixed(3)}\\text{ m/s})\\]`
+      : `\\[\\text{Sample at least 2 tangent points on Graph 1 [y(t)] to construct } v_y(t)\\]`;
     yAxisLabel = 'Vertical Velocity vy (m/s)';
 
     const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
     ySuggestedMin = -maxV;
     ySuggestedMax = maxV;
 
-    const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
-    ];
+    const fitLine = fit ? [
+      { x: tMin, y: fit.slope * tMin + fit.intercept },
+      { x: tMax, y: fit.slope * tMax + fit.intercept }
+    ] : [];
 
     chartData.datasets = [
-      { label: '10 Tangent Velocities (Δy/Δt)', data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
-      { label: `Linear Fit (Slope ay = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false }
+      { label: `Sampled Tangents (${tangPts.length} / 10 Points)`, data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' }
     ];
+    if (fitLine.length > 0) {
+      chartData.datasets.push({ label: `Linear Fit (Slope ay = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false });
+    }
   } else if (graphType === 'x-vel') {
     title = '4. Horizontal Velocity vs. Time [vx(t)]';
     const fit = state.fitResults.xVel;
@@ -1891,39 +1891,18 @@ function recordTangentPoint() {
   updateStatus(`Recorded tangent slope: vy = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s`);
 }
 
-function autoSample10Tangents(isSilent = false) {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) {
-    if (!isSilent) alert('Please track at least 3 points first!');
-    return;
-  }
-  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  if (!fit) return;
-
+function clearTangentPoints() {
   state.tangentPoints = [];
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  const count = 10;
-
-  for (let i = 1; i <= count; i++) {
-    const t = tMin + (tMax - tMin) * (i / (count + 1));
-    const slope = 2 * fit.A * t + fit.B;
-    state.tangentPoints.push({ time: t, vy: slope });
-  }
-
-  // Linear fit through the 10 tangent slopes
-  state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+  state.fitResults.yVel = null;
 
   if (tangentPointCountBadge) {
-    tangentPointCountBadge.textContent = `Sampled: 10 / 10 Tangent Points ✓`;
-    tangentPointCountBadge.style.background = '#e6f8ea';
-    tangentPointCountBadge.style.color = '#1a7f37';
+    tangentPointCountBadge.textContent = 'Sampled: 0 / 10 Tangent Points';
+    tangentPointCountBadge.style.background = '#eef7fa';
+    tangentPointCountBadge.style.color = '#0f7e9b';
   }
 
-  if (!isSilent) {
-    renderStudioGraph(state.activeGraphTab || 'y-vel');
-    updateStatus('Auto-sampled 10 verified tangent slopes across the trajectory!');
-  }
+  renderStudioGraph(state.activeGraphTab);
+  updateStatus('Reset tangent points. Move the Tangent Slider and click Record Tangent Point to sample your 10 points.');
 }
 
 // ============================================================================
@@ -2138,20 +2117,20 @@ function checkAndVerifyCalculations() {
   // Vertical Acceleration percent diff from measured & standard
   let ayPctDiff = 0;
   if (studentAy !== null) {
-    ayPctDiff = (Math.abs(Math.abs(studentAy) - 9.8) / 9.8) * 100;
-    const diffAyMeas = Math.abs(studentAy - measAy);
+    ayPctDiff = ((Math.abs(studentAy) - 9.8) / 9.8) * 100;
+    const diffAyMeas = studentAy - measAy;
     const pctAyMeas = measAy !== 0 ? (diffAyMeas / Math.abs(measAy)) * 100 : 0;
 
     if (badgeAyPctDiff) {
-      badgeAyPctDiff.textContent = `${ayPctDiff.toFixed(2)}% Diff (vs 9.80)`;
-      badgeAyPctDiff.className = `pct-diff-badge ${ayPctDiff < 6 ? 'success' : ayPctDiff < 12 ? 'warn' : 'error'}`;
+      badgeAyPctDiff.textContent = `${ayPctDiff >= 0 ? '+' : ''}${ayPctDiff.toFixed(2)}% Diff (vs 9.80)`;
+      badgeAyPctDiff.className = `pct-diff-badge ${Math.abs(ayPctDiff) < 6 ? 'success' : Math.abs(ayPctDiff) < 12 ? 'warn' : 'error'}`;
     }
     if (tblDiffAy) {
-      tblDiffAy.textContent = `${pctAyMeas.toFixed(2)}% (Δ = ${diffAyMeas.toFixed(3)} m/s²)`;
+      tblDiffAy.textContent = `${pctAyMeas >= 0 ? '+' : ''}${pctAyMeas.toFixed(2)}% (Δ = ${diffAyMeas >= 0 ? '+' : ''}${diffAyMeas.toFixed(3)} m/s²)`;
     }
     if (badgeAyCompare) {
-      badgeAyCompare.textContent = pctAyMeas < 6 ? '✓ Excellent (<6%)' : pctAyMeas < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeAyCompare.className = `pct-diff-badge ${pctAyMeas < 6 ? 'success' : pctAyMeas < 12 ? 'warn' : 'error'}`;
+      badgeAyCompare.textContent = Math.abs(pctAyMeas) < 6 ? '✓ Excellent (<6%)' : Math.abs(pctAyMeas) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeAyCompare.className = `pct-diff-badge ${Math.abs(pctAyMeas) < 6 ? 'success' : Math.abs(pctAyMeas) < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeAyPctDiff) {
@@ -2165,20 +2144,19 @@ function checkAndVerifyCalculations() {
     }
   }
 
-  // 2. Range Percent Difference
+  // 2. Range Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
   let rangePctDiff = 0;
   const activeMeasRange = studentMeasRange !== null ? studentMeasRange : measRange;
   if (studentCalcRange !== null) {
-    const avg = (studentCalcRange + activeMeasRange) / 2;
-    rangePctDiff = avg !== 0 ? (Math.abs(activeMeasRange - studentCalcRange) / Math.abs(avg)) * 100 : 0;
+    rangePctDiff = activeMeasRange !== 0 ? ((studentCalcRange - activeMeasRange) / Math.abs(activeMeasRange)) * 100 : 0;
     if (badgeRangePctDiff) {
-      badgeRangePctDiff.textContent = `${rangePctDiff.toFixed(2)}% Diff`;
-      badgeRangePctDiff.className = `pct-diff-badge ${rangePctDiff < 6 ? 'success' : rangePctDiff < 12 ? 'warn' : 'error'}`;
+      badgeRangePctDiff.textContent = `${rangePctDiff >= 0 ? '+' : ''}${rangePctDiff.toFixed(2)}% Diff`;
+      badgeRangePctDiff.className = `pct-diff-badge ${Math.abs(rangePctDiff) < 6 ? 'success' : Math.abs(rangePctDiff) < 12 ? 'warn' : 'error'}`;
     }
-    if (tblDiffRange) tblDiffRange.textContent = `${rangePctDiff.toFixed(2)}%`;
+    if (tblDiffRange) tblDiffRange.textContent = `${rangePctDiff >= 0 ? '+' : ''}${rangePctDiff.toFixed(2)}%`;
     if (badgeRangeCompare) {
-      badgeRangeCompare.textContent = rangePctDiff < 6 ? '✓ Excellent (<6%)' : rangePctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeRangeCompare.className = `pct-diff-badge ${rangePctDiff < 6 ? 'success' : rangePctDiff < 12 ? 'warn' : 'error'}`;
+      badgeRangeCompare.textContent = Math.abs(rangePctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(rangePctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeRangeCompare.className = `pct-diff-badge ${Math.abs(rangePctDiff) < 6 ? 'success' : Math.abs(rangePctDiff) < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeRangePctDiff) {
@@ -2192,20 +2170,19 @@ function checkAndVerifyCalculations() {
     }
   }
 
-  // 3. Hang Time Percent Difference
+  // 3. Hang Time Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
   let hangPctDiff = 0;
   const activeMeasHang = studentMeasHang !== null ? studentMeasHang : measHang;
   if (studentCalcHang !== null) {
-    const avg = (studentCalcHang + activeMeasHang) / 2;
-    hangPctDiff = avg !== 0 ? (Math.abs(activeMeasHang - studentCalcHang) / Math.abs(avg)) * 100 : 0;
+    hangPctDiff = activeMeasHang !== 0 ? ((studentCalcHang - activeMeasHang) / Math.abs(activeMeasHang)) * 100 : 0;
     if (badgeHangTimePctDiff) {
-      badgeHangTimePctDiff.textContent = `${hangPctDiff.toFixed(2)}% Diff`;
-      badgeHangTimePctDiff.className = `pct-diff-badge ${hangPctDiff < 6 ? 'success' : hangPctDiff < 12 ? 'warn' : 'error'}`;
+      badgeHangTimePctDiff.textContent = `${hangPctDiff >= 0 ? '+' : ''}${hangPctDiff.toFixed(2)}% Diff`;
+      badgeHangTimePctDiff.className = `pct-diff-badge ${Math.abs(hangPctDiff) < 6 ? 'success' : Math.abs(hangPctDiff) < 12 ? 'warn' : 'error'}`;
     }
-    if (tblDiffHang) tblDiffHang.textContent = `${hangPctDiff.toFixed(2)}%`;
+    if (tblDiffHang) tblDiffHang.textContent = `${hangPctDiff >= 0 ? '+' : ''}${hangPctDiff.toFixed(2)}%`;
     if (badgeHangCompare) {
-      badgeHangCompare.textContent = hangPctDiff < 6 ? '✓ Excellent (<6%)' : hangPctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeHangCompare.className = `pct-diff-badge ${hangPctDiff < 6 ? 'success' : hangPctDiff < 12 ? 'warn' : 'error'}`;
+      badgeHangCompare.textContent = Math.abs(hangPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(hangPctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeHangCompare.className = `pct-diff-badge ${Math.abs(hangPctDiff) < 6 ? 'success' : Math.abs(hangPctDiff) < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeHangTimePctDiff) {
@@ -2219,20 +2196,19 @@ function checkAndVerifyCalculations() {
     }
   }
 
-  // 4. Max Height Percent Difference
+  // 4. Max Height Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
   let maxHPctDiff = 0;
   const activeMeasMaxH = studentMeasMaxH !== null ? studentMeasMaxH : measMaxH;
   if (studentCalcMaxH !== null) {
-    const avg = (studentCalcMaxH + activeMeasMaxH) / 2;
-    maxHPctDiff = avg !== 0 ? (Math.abs(activeMeasMaxH - studentCalcMaxH) / Math.abs(avg)) * 100 : 0;
+    maxHPctDiff = activeMeasMaxH !== 0 ? ((studentCalcMaxH - activeMeasMaxH) / Math.abs(activeMeasMaxH)) * 100 : 0;
     if (badgeMaxHeightPctDiff) {
-      badgeMaxHeightPctDiff.textContent = `${maxHPctDiff.toFixed(2)}% Diff`;
-      badgeMaxHeightPctDiff.className = `pct-diff-badge ${maxHPctDiff < 6 ? 'success' : maxHPctDiff < 12 ? 'warn' : 'error'}`;
+      badgeMaxHeightPctDiff.textContent = `${maxHPctDiff >= 0 ? '+' : ''}${maxHPctDiff.toFixed(2)}% Diff`;
+      badgeMaxHeightPctDiff.className = `pct-diff-badge ${Math.abs(maxHPctDiff) < 6 ? 'success' : Math.abs(maxHPctDiff) < 12 ? 'warn' : 'error'}`;
     }
-    if (tblDiffMaxH) tblDiffMaxH.textContent = `${maxHPctDiff.toFixed(2)}%`;
+    if (tblDiffMaxH) tblDiffMaxH.textContent = `${maxHPctDiff >= 0 ? '+' : ''}${maxHPctDiff.toFixed(2)}%`;
     if (badgeMaxHCompare) {
-      badgeMaxHCompare.textContent = maxHPctDiff < 6 ? '✓ Excellent (<6%)' : maxHPctDiff < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeMaxHCompare.className = `pct-diff-badge ${maxHPctDiff < 6 ? 'success' : maxHPctDiff < 12 ? 'warn' : 'error'}`;
+      badgeMaxHCompare.textContent = Math.abs(maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(maxHPctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
+      badgeMaxHCompare.className = `pct-diff-badge ${Math.abs(maxHPctDiff) < 6 ? 'success' : Math.abs(maxHPctDiff) < 12 ? 'warn' : 'error'}`;
     }
   } else {
     if (badgeMaxHeightPctDiff) {
@@ -3165,11 +3141,14 @@ Percent Difference Max Height: ${c.maxHPctDiff.toFixed(2)}%
 
 // Session Save & Load
 function saveSessionJSON() {
+  const auth = getAuthenticitySignature();
   const session = {
     version: '1.0',
     date: new Date().toISOString(),
     studentName: studentNameInput ? studentNameInput.value : '',
     teacherName: teacherSelect ? teacherSelect.value : '',
+    authenticityToken: auth.token,
+    authenticitySignature: auth,
     state: {
       series: state.series,
       origin: state.origin,
@@ -3178,6 +3157,8 @@ function saveSessionJSON() {
       scaleStick: state.scaleStick,
       tangentPoints: state.tangentPoints,
       calcValues: state.calcValues,
+      authenticityToken: auth.token,
+      authenticitySignature: auth,
       studentWork: state.studentWork,
       tableInputs: {
         ay: tblInpAy ? tblInpAy.value : '',
@@ -3206,6 +3187,12 @@ function loadSessionJSON(file) {
       const data = JSON.parse(e.target.result);
       if (data.studentName && studentNameInput) studentNameInput.value = data.studentName;
       if (data.teacherName && teacherSelect) teacherSelect.value = data.teacherName;
+      if (data.authenticityToken || (data.state && data.state.authenticityToken)) {
+        state.authenticityToken = data.authenticityToken || data.state.authenticityToken;
+        if (authenticityBadge) {
+          authenticityBadge.textContent = state.authenticityToken;
+        }
+      }
       if (data.state) {
         state.series = data.state.series || state.series;
         state.origin = data.state.origin || state.origin;
@@ -3255,7 +3242,9 @@ function loadSessionJSON(file) {
         if (inpAngleTheta && c.theta !== undefined) inpAngleTheta.value = c.theta;
       }
       checkAndVerifyCalculations();
-      updateAuthenticityBadge();
+      if (!state.authenticityToken) {
+        updateAuthenticityBadge();
+      }
       updateReflectionCounter();
       alert('Lab session loaded successfully!');
       updateStatus('Loaded lab session from file.');
@@ -3628,7 +3617,7 @@ function initEventListeners() {
     });
   }
   if (btnRecordTangent) btnRecordTangent.addEventListener('click', recordTangentPoint);
-  if (btnAutoSampleTangents) btnAutoSampleTangents.addEventListener('click', autoSample10Tangents);
+  if (btnClearTangents) btnClearTangents.addEventListener('click', clearTangentPoints);
   if (btnAutoFitAll) btnAutoFitAll.addEventListener('click', autoFitAllGraphs);
 
   // Calculations Workspace

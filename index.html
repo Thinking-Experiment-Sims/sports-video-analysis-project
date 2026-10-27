@@ -358,7 +358,7 @@
           <strong class="guidance-title">Step 3: 6 Kinematics Graphs &amp; Tangent Slope Method (\(\Delta y / \Delta t\))</strong>
           <p>
             • <strong>Vertical Position [y(t)]:</strong> Fits a parabolic curve \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).<br>
-            • <strong>The Tangent Slope Method:</strong> In algebra-based physics, vertical velocity is the slope of the position curve: \(v_y = \frac{\Delta y}{\Delta t}\). Move the <strong>Tangent Slider</strong> to align the tangent line with the curve and compute the slope \(\frac{\Delta y}{\Delta t}\). Click <strong>Record Tangent Point</strong> (or <strong>Auto-Sample 10 Tangents</strong>).<br>
+            • <strong>The Tangent Slope Method:</strong> In algebra-based physics, vertical velocity is the slope of the position curve: \(v_y = \frac{\Delta y}{\Delta t}\). Move the <strong>Tangent Slider</strong> to align the tangent line with the curve and compute the slope \(\frac{\Delta y}{\Delta t}\). Click <strong>Record Tangent Point</strong> to record each slope. Sample at least 10 points across the flight.<br>
             • <strong>Vertical Velocity [v_y(t)]:</strong> Plots the 10 tangent slopes and fits a line whose slope is vertical acceleration \(a_y = \frac{\Delta v_y}{\Delta t}\) (theoretically \(-9.80\text{ m/s}^2\)).
           </p>
         </div>
@@ -388,7 +388,7 @@
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <input type="range" id="tangentSlider" class="scrub-slider" min="0" max="100" value="0" style="width: 180px;">
           <button id="btnRecordTangent" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">Record Tangent Point</button>
-          <button id="btnAutoSampleTangents" class="btn" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">Auto-Sample 10 Tangents</button>
+          <button id="btnClearTangents" class="btn btn-ghost" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Clear sampled tangent points and start over">↺ Reset Tangents</button>
         </div>
       </div>
 
@@ -878,7 +878,7 @@
             <select id="teacherSelect" class="input-control" style="width: 150px; font-weight: 500;">
               <option value="Mr. Lopez">Mr. Lopez</option>
               <option value="Ms. Cross">Ms. Cross</option>
-              <option value="Dr. Robinson">Dr. Robinson</option>
+              <option value="Mr. Tipton">Mr. Tipton</option>
               <option value="Physics Teacher">Physics Teacher</option>
             </select>
           </div>
@@ -1080,7 +1080,7 @@
               <li><strong>Vertical Apex Height:</strong> Use \(v_{fy}^2 = v_{iy}^2 + 2a_y\Delta y\) with \(v_{fy} = 0\text{ m/s}\) at the apex.</li>
               <li><strong>Flight Hang Time:</strong> Use \(y_f = y_0 + v_{iy}t + \frac{1}{2}a_y t^2\) and solve for \(t\).</li>
               <li><strong>Horizontal Range:</strong> Use \(\Delta x = v_{ix}t + \frac{1}{2}a_x t^2\) with \(a_x = 0\text{ m/s}^2\).</li>
-              <li><strong>Percent Difference Formula:</strong> \[\text{\% Diff} = \frac{|\text{Measured} - \text{Calculated}|}{\frac{\text{Measured} + \text{Calculated}}{2}} \times 100\%\]</li>
+              <li><strong>Percent Difference Formula:</strong> \[\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%\]</li>
             </ul>
           </div>
           <p><strong>Show Your Work:</strong> For each problem, state the base equation, show numerical substitution with units, and show algebraic solution steps in the provided derivation textareas.</p>
