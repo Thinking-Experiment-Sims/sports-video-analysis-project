@@ -85,10 +85,10 @@
       <div id="stepGuidanceBar" class="guidance-banner" style="margin-bottom: 0.75rem;">
         <div class="guidance-icon">🧭</div>
         <div class="guidance-content">
-          <strong id="guidanceTitle">Step 1: Calibration &amp; Coordinate Setup</strong>
+          <strong id="guidanceTitle" class="guidance-title">Step 1: Calibration &amp; Coordinate Setup</strong>
           <p id="guidanceText">
-            1. Select <strong>Set Origin</strong> and click on the ground or projectile release point.
-            2. Select <strong>Set Scale</strong> and drag across the amber 1.00 m reference stick on the floor.
+            1. Select <strong>Set Origin</strong> and click on the ground or projectile release point.<br>
+            2. Select <strong>Set Scale</strong> and drag across the amber 1.00 m reference stick on the floor.<br>
             3. Verify the scale readout in meters before advancing to Step 2.
           </p>
         </div>
@@ -355,11 +355,11 @@
       <div class="guidance-banner" style="margin-bottom: 1rem;">
         <div class="guidance-icon">📈</div>
         <div class="guidance-content">
-          <strong>Step 3: 6 Kinematics Graphs &amp; Tangent Slope Method</strong>
+          <strong class="guidance-title">Step 3: 6 Kinematics Graphs &amp; Tangent Slope Method (\(\Delta y / \Delta t\))</strong>
           <p>
-            1. <strong>Vertical Position [y(t)]</strong>: Fits a parabolic curve \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).<br>
-            2. <strong>The Tangent Slope Method</strong>: In high school physics, vertical velocity is constructed from 10 tangent slopes along the \(y(t)\) position curve. Move the <strong>Tangent Slider</strong> to see the tangent line touch the curve and compute \(\frac{dy}{dt}\). Click <strong>Record Tangent Point</strong> (or <strong>Auto-Sample 10 Tangents</strong>).<br>
-            3. <strong>Vertical Velocity [v_y(t)]</strong>: Plots the 10 tangent slopes and fits a line whose slope is vertical acceleration \(a_y\) (theoretically \(-9.80\text{ m/s}^2\)).
+            • <strong>Vertical Position [y(t)]:</strong> Fits a parabolic curve \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).<br>
+            • <strong>The Tangent Slope Method:</strong> In algebra-based physics, vertical velocity is the slope of the position curve: \(v_y = \frac{\Delta y}{\Delta t}\). Move the <strong>Tangent Slider</strong> to align the tangent line with the curve and compute the slope \(\frac{\Delta y}{\Delta t}\). Click <strong>Record Tangent Point</strong> (or <strong>Auto-Sample 10 Tangents</strong>).<br>
+            • <strong>Vertical Velocity [v_y(t)]:</strong> Plots the 10 tangent slopes and fits a line whose slope is vertical acceleration \(a_y = \frac{\Delta v_y}{\Delta t}\) (theoretically \(-9.80\text{ m/s}^2\)).
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -527,7 +527,7 @@
       <div class="guidance-banner" style="margin-top: 1rem; margin-bottom: 1.25rem;">
         <div class="guidance-icon">🧮</div>
         <div class="guidance-content">
-          <strong>Step 4: Theoretical Calculations &amp; Model Comparison</strong>
+          <strong class="guidance-title">Step 4: Theoretical Calculations &amp; Model Comparison</strong>
           <p>
             Derive and calculate theoretical projectile values using fundamental kinematic equations. Show your full algebraic steps and substitutions (no shortcuts or pre-derived formulas). Compare your calculated values against graph-extracted parameters in the comparison table below, and verify percent differences. Finally, write your 5+ sentence reflection.
           </p>
@@ -855,9 +855,9 @@
       <div class="guidance-banner" style="margin-bottom: 1rem;">
         <div class="guidance-icon">📊</div>
         <div class="guidance-content">
-          <strong>Step 5: Classroom Presentation &amp; Report Submission</strong>
+          <strong class="guidance-title">Step 5: Classroom Presentation &amp; Report Submission</strong>
           <p>
-            Review all 8 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves and video trajectory capture, or print your lab report.
+            Review all 8 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves and video trajectory capture showing all tracked points, the scale stick, and the origin.
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -1040,14 +1040,18 @@
             Why does the rubric ask for <strong>10 tangent slopes</strong> on the vertical position curve?
           </p>
           <div class="help-callout">
-            <strong>The Physics of Tangent Lines:</strong>
+            <strong>The Physics of Tangent Lines (Algebra-Based):</strong>
             <p style="margin: 0.25rem 0;">
-              By definition, instantaneous velocity is the derivative (slope) of the position-time curve:
-              \[v_y(t) = \frac{dy}{dt}\]
-              When you fit a quadratic curve \(y(t) = At^2 + Bt + C\) to your vertical position data, the tangent line touching the curve at time \(t\) has slope \(m = 2At + B\).
+              In algebra-based physics, instantaneous velocity at any point is the slope of the tangent line touching the position-time curve:
+              \[v_y = \text{slope} = \frac{\Delta y}{\Delta t}\]
+              When you fit a quadratic curve \(y(t) = At^2 + Bt + C\) to your vertical position data, the tangent line touching the curve at time \(t\) has instantaneous slope \(m = 2At + B\).
             </p>
             <p style="margin: 0.25rem 0;">
-              By sampling 10 points along the trajectory, recording their tangent slopes, and plotting those slopes versus time on Graph 3, you construct the vertical velocity graph \(v_y(t)\)!
+              Similarly, acceleration is the slope of the velocity-time graph:
+              \[a_y = \text{slope} = \frac{\Delta v_y}{\Delta t}\]
+            </p>
+            <p style="margin: 0.25rem 0;">
+              By sampling 10 points along the trajectory, recording their tangent slopes \(\frac{\Delta y}{\Delta t}\), and plotting those slopes versus time on Graph 3, you construct the vertical velocity graph \(v_y(t)\)!
             </p>
             <p style="margin: 0.25rem 0;">
               The linear fit to these 10 tangent velocity points yields:
@@ -1059,7 +1063,7 @@
           <ol style="margin-left: 1.2rem; line-height: 1.6;">
             <li><strong>Graph 1: Vertical Position \(y(t)\)</strong> — Parabolic curve of best fit \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).</li>
             <li><strong>Graph 2: Horizontal Position \(x(t)\)</strong> — Linear fit \(x(t) = v_{0x}t + x_0\) (slope = constant horizontal velocity).</li>
-            <li><strong>Graph 3: Vertical Velocity \(v_y(t)\)</strong> — Linear fit through the 10 tangent slopes (slope = \(a_y\)).</li>
+            <li><strong>Graph 3: Vertical Velocity \(v_y(t)\)</strong> — Linear fit through the 10 tangent slopes (slope = \(a_y = \frac{\Delta v_y}{\Delta t}\)).</li>
             <li><strong>Graph 4: Horizontal Velocity \(v_x(t)\)</strong> — Linear fit showing zero acceleration (\(a_x \approx 0\)).</li>
             <li><strong>Graph 5: Vertical Acceleration \(a_y(t)\)</strong> — Horizontal constant line at \(a_y\) compared against standard \(g = -9.80\text{ m/s}^2\).</li>
             <li><strong>Graph 6: Horizontal Acceleration \(a_x(t)\)</strong> — Horizontal constant line at \(a_x \approx 0.00\text{ m/s}^2\).</li>
@@ -1068,32 +1072,31 @@
 
         <!-- Tab 5: Step 4 Calculations -->
         <div id="help-step4" class="help-tab-panel">
-          <h4>🧮 Step 4: Theoretical Calculations &amp; Percent Differences</h4>
-          <p>Using the coefficients from your curve fits, verify the theoretical models:</p>
+          <h4>🧮 Step 4: Theoretical Calculations &amp; Model Comparison</h4>
+          <p>Use fundamental kinematic equations from first principles (no shortcuts):</p>
           <div class="help-callout">
             <ul style="margin: 0.25rem 0 0 1.2rem; line-height: 1.7;">
-              <li><strong>Initial Speed:</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\)</li>
-              <li><strong>Launch Angle:</strong> \(\theta = \arctan\left(\frac{v_{0y}}{v_{0x}}\right)\)</li>
-              <li><strong>Calculated Hang Time:</strong> \(t_{\text{hang}} = \frac{-v_{0y} - \sqrt{v_{0y}^2 - 2a_y(y_{\text{final}} - y_0)}}{a_y}\)</li>
-              <li><strong>Calculated Range:</strong> \(\Delta x = v_{0x} \cdot t_{\text{hang}}\)</li>
-              <li><strong>Calculated Max Height:</strong> \(y_{\max} = y_0 - \frac{v_{0y}^2}{2a_y}\)</li>
+              <li><strong>Launch Vector:</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), \(\tan\theta = \frac{v_{0y}}{v_{0x}}\)</li>
+              <li><strong>Vertical Apex Height:</strong> Use \(v_{fy}^2 = v_{iy}^2 + 2a_y\Delta y\) with \(v_{fy} = 0\text{ m/s}\) at the apex.</li>
+              <li><strong>Flight Hang Time:</strong> Use \(y_f = y_0 + v_{iy}t + \frac{1}{2}a_y t^2\) and solve for \(t\).</li>
+              <li><strong>Horizontal Range:</strong> Use \(\Delta x = v_{ix}t + \frac{1}{2}a_x t^2\) with \(a_x = 0\text{ m/s}^2\).</li>
               <li><strong>Percent Difference Formula:</strong> \[\text{\% Diff} = \frac{|\text{Measured} - \text{Calculated}|}{\frac{\text{Measured} + \text{Calculated}}{2}} \times 100\%\]</li>
             </ul>
           </div>
-          <p><strong>Reflection Rubric:</strong> Write at least 5 complete sentences describing real-world applications in sports analytics (e.g. MLB Statcast exit velocity and launch angles, NBA shooting arcs, or soccer aerodynamics).</p>
+          <p><strong>Show Your Work:</strong> For each problem, state the base equation, show numerical substitution with units, and show algebraic solution steps in the provided derivation textareas.</p>
         </div>
 
         <!-- Tab 6: Step 5 Presentation -->
         <div id="help-step5" class="help-tab-panel">
           <h4>📊 Step 5: PowerPoint Deck Format (8 Slides)</h4>
-          <p>The 1-click exporter generates a presentation aligned with the high school physics rubric:</p>
+          <p>The 1-click exporter generates an 8-slide presentation aligned with the high school physics rubric:</p>
           <ul>
-            <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Course, Honor Code pledge, and Video Trajectory snapshot.</li>
-            <li><strong>Slide 2:</strong> Vertical Position Graph \(y(t)\), quadratic general &amp; particular equations with units, and analysis notes.</li>
-            <li><strong>Slide 3:</strong> Vertical Velocity Graph \(v_y(t)\), linear equations with units, documentation of 10 tangent slopes.</li>
+            <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Course, Honor Code pledge, and Calibrated Video Trajectory Snapshot showing all tracked points, the scale stick, and the coordinate origin.</li>
+            <li><strong>Slide 2:</strong> Vertical Position Graph \(y(t)\), quadratic equations with units, and analysis notes.</li>
+            <li><strong>Slide 3:</strong> Vertical Velocity Graph \(v_y(t)\), linear equations with units, documentation of 10 tangent slopes (\(\Delta y / \Delta t\)).</li>
             <li><strong>Slide 4:</strong> Vertical Acceleration Graph \(a_y(t)\), comparison with \(g = -9.80\text{ m/s}^2\), and percent difference.</li>
-            <li><strong>Slide 5:</strong> Horizontal Position Graph \(x(t)\), linear equations with units, and horizontal velocity analysis.</li>
-            <li><strong>Slide 6:</strong> Horizontal Velocity Graph \(v_x(t)\), verification of uniform velocity with negligible horizontal force.</li>
+            <li><strong>Slide 5:</strong> Horizontal Position Graph \(x(t)\), linear equations with units, and velocity analysis.</li>
+            <li><strong>Slide 6:</strong> Horizontal Velocity Graph \(v_x(t)\), verification of uniform velocity with zero horizontal force.</li>
             <li><strong>Slide 7:</strong> Horizontal Acceleration Graph \(a_x(t)\), comparison with \(0\text{ m/s}^2\).</li>
             <li><strong>Slide 8:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
           </ul>
@@ -1101,14 +1104,64 @@
 
         <!-- Tab 7: Rubric & Pro Tips -->
         <div id="help-rubric" class="help-tab-panel">
-          <h4>🏆 Scoring Rubric &amp; Pro Tips for High Marks</h4>
-          <div class="help-callout">
-            <ul style="margin: 0.25rem 0 0 1.2rem; line-height: 1.7;">
-              <li><strong>Explicit Units:</strong> Every particular equation MUST include units (e.g., \(\text{m/s}^2\), \(\text{m/s}\), \(\text{m}\)). Raw numbers without units lose rubric points.</li>
-              <li><strong>Tangents Visualized:</strong> Verify that 10 tangent slopes are recorded. Notice how the tangent line slope becomes zero at the apex of flight.</li>
-              <li><strong>Low Percent Difference:</strong> Careful calibration of the 1.00 m scale stick and consistent reticle placement at the ball's center keep percent differences under 5%.</li>
-              <li><strong>Session Saving:</strong> Click <strong>💾 Save Lab Progress</strong> anytime to save a JSON file so you can resume your lab later on any computer.</li>
-            </ul>
+          <h4>🏆 Scoring Rubric (100 Points Total)</h4>
+          <p style="font-size: 0.88rem; color: #4b6570; margin-bottom: 0.75rem;">
+            <em>Important Note on Grading:</em> In this project, <strong>points are NOT awarded for the plotting correctness of the graphs</strong> because all 6 kinematic curves and fits are generated automatically by the computer. Scoring is based on your experimental technique, understanding of tangent slopes, complete step-by-step algebraic derivations, and scientific reflection.
+          </p>
+          <div style="overflow-x: auto; margin-bottom: 1rem;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+              <thead>
+                <tr style="background: var(--surface-alt); border-bottom: 2px solid var(--primary-teal);">
+                  <th style="padding: 0.6rem; text-align: left; color: var(--primary-teal);">Rubric Category</th>
+                  <th style="padding: 0.6rem; text-align: center; color: var(--primary-teal);">Points</th>
+                  <th style="padding: 0.6rem; text-align: left; color: var(--primary-teal);">Expectations &amp; Evaluation Criteria</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">1. Video Calibration &amp; Tracking</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">25 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • Coordinate origin placed accurately at release/ground level (5 pts)<br>
+                    • Scale calibrated precisely to the 1.00 m reference stick (5 pts)<br>
+                    • Consistent frame-by-frame tracking centered on the ball (15+ frames) (15 pts)
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">2. Tangent Slope Method (\(\Delta y / \Delta t\))</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">20 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • Conceptual understanding that velocity is the slope of position: \(v_y = \frac{\Delta y}{\Delta t}\) (10 pts)<br>
+                    • 10 tangent slopes recorded across the flight demonstrating positive slope on ascent, zero slope at apex, and negative slope on descent (10 pts)
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">3. Step-by-Step Algebraic Derivations</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">30 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • Complete derivation shown in "Show Your Work" workspaces without shortcut formulas (15 pts)<br>
+                    • States fundamental kinematic equation, substitution with units, and clear algebra (10 pts)<br>
+                    • Accurate calculations for \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\) (5 pts)
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">4. Comparison &amp; Percent Error Analysis</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">15 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • Master Kinematic Comparison Table completed comparing graph vs. calculated values (5 pts)<br>
+                    • Accurate percent difference calculation and discussion of experimental error sources (air resistance, camera angle, click uncertainty) (10 pts)
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.6rem; font-weight: 700;">5. Reflection &amp; Authenticity</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">10 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • 5+ complete, well-reasoned sentences discussing real-world projectile mechanics in sports analytics (8 pts)<br>
+                    • Verified Originality Token and signed Honor Code pledge (2 pts)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

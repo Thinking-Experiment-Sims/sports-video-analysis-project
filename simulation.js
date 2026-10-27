@@ -1385,7 +1385,7 @@ function autoFitAllGraphs() {
     state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
   }
 
-  // 4. xVel: The horizontal position curve x(t) = v0x*t + x0 has constant derivative dx/dt = v0x
+  // 4. xVel: The horizontal position curve x(t) = v0x*t + x0 has constant slope Δx/Δt = v0x
   const v0x = state.fitResults.xPos ? state.fitResults.xPos.slope : (pts[pts.length - 1].x - pts[0].x) / (pts[pts.length - 1].time - pts[0].time);
   state.fitResults.xVel = { slope: 0.0, intercept: v0x, r2: 1.0000 };
 
@@ -1489,7 +1489,7 @@ function renderStudioGraph(graphType) {
     chartData.datasets = [
       { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
       { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false },
-      { label: `Active Tangent (Slope dy/dt = ${slope_tan.toFixed(2)} m/s)`, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
+      { label: `Active Tangent (Slope Δy/Δt = ${slope_tan.toFixed(2)} m/s)`, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
       { label: 'Active Touchpoint', data: [{ x: t0, y: y0_tan }], backgroundColor: '#0f7e9b', borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 10 },
       { label: 'Sampled Tangents (10 Points)', data: touchpoints, backgroundColor: '#0284c7', borderColor: '#0369a1', pointRadius: 6, pointStyle: 'rectRot' }
     ];
@@ -1546,7 +1546,7 @@ function renderStudioGraph(graphType) {
     ];
 
     chartData.datasets = [
-      { label: '10 Tangent Velocities (dy/dt)', data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
+      { label: '10 Tangent Velocities (Δy/Δt)', data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
       { label: `Linear Fit (Slope ay = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'x-vel') {
@@ -1562,7 +1562,7 @@ function renderStudioGraph(graphType) {
     ySuggestedMin = 0;
     ySuggestedMax = Math.max(3.5, v0x * 1.4);
 
-    // 10 Sampled points representing tangent slope dx/dt along the linear position fit
+    // 10 Sampled points representing tangent slope Δx/Δt along the linear position fit
     const vxSamples = [];
     for (let i = 1; i <= 10; i++) {
       const t = tMin + (tMax - tMin) * (i / 11);
@@ -1575,13 +1575,13 @@ function renderStudioGraph(graphType) {
     ];
 
     chartData.datasets = [
-      { label: 'Sampled Tangent Slopes (dx/dt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'rectRot' },
+      { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'rectRot' },
       { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'y-acc') {
     title = '5. Vertical Acceleration vs. Time [ay(t)]';
     const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : (state.fitResults.yVel ? state.fitResults.yVel.slope : -9.8);
-    generalEq = '\\[a_y(t) = \\frac{dv_y}{dt} = a_y = \\text{constant}\\]';
+    generalEq = '\\[a_y(t) = \\frac{\\Delta v_y}{\\Delta t} = a_y = \\text{constant}\\]';
     particularEq = `\\[a_y(t) = ${meanAy.toFixed(3)}\\text{ m/s}^2 \\quad (\\text{Ref } g = -9.80\\text{ m/s}^2)\\]`;
     yAxisLabel = 'Vertical Acc ay (m/s²)';
 
@@ -1595,14 +1595,14 @@ function renderStudioGraph(graphType) {
     }
 
     chartData.datasets = [
-      { label: 'Slope of Velocity Graph (dvᵧ/dt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 6, pointStyle: 'circle' },
+      { label: 'Slope of Velocity Graph (Δvᵧ/Δt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 6, pointStyle: 'circle' },
       { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false },
       { label: 'Standard Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false }
     ];
   } else if (graphType === 'x-acc') {
     title = '6. Horizontal Acceleration vs. Time [ax(t)]';
     const meanAx = 0.0;
-    generalEq = '\\[a_x(t) = \\frac{dv_x}{dt} = 0\\text{ m/s}^2\\]';
+    generalEq = '\\[a_x(t) = \\frac{\\Delta v_x}{\\Delta t} = 0\\text{ m/s}^2\\]';
     particularEq = `\\[a_x(t) = 0.000\\text{ m/s}^2 \\quad (\\text{Ref } a_x = 0.00\\text{ m/s}^2)\\]`;
     yAxisLabel = 'Horizontal Acc ax (m/s²)';
 
@@ -1616,7 +1616,7 @@ function renderStudioGraph(graphType) {
     }
 
     chartData.datasets = [
-      { label: 'Slope of Velocity Graph (dvₓ/dt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'circle' },
+      { label: 'Slope of Velocity Graph (Δvₓ/Δt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'circle' },
       { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
     ];
   }
@@ -1792,7 +1792,7 @@ function renderAllGridGraphs() {
         aySamples.push({ x: t, y: meanAy });
       }
       datasets = [
-        { label: 'dvᵧ/dt', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5 },
+        { label: 'Δvᵧ/Δt', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5 },
         { label: 'Acc Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false },
         { label: 'Ref g (-9.80)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false }
       ];
@@ -1805,7 +1805,7 @@ function renderAllGridGraphs() {
         axSamples.push({ x: t, y: 0.0 });
       }
       datasets = [
-        { label: 'dvₓ/dt', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5 },
+        { label: 'Δvₓ/Δt', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5 },
         { label: 'Zero Fit', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2, pointRadius: 0, fill: false }
       ];
       sugMin = -2;
@@ -1853,7 +1853,7 @@ function updateTangentTool(sliderVal) {
   state.activeTangentTime = t;
 
   const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  // Instantaneous slope dy/dt = 2A*t + B
+  // Instantaneous slope Δy/Δt = 2A*t + B
   const slope = fit ? (2 * fit.A * t + fit.B) : 0;
 
   if (tangentTimeDisplay) tangentTimeDisplay.textContent = `${t.toFixed(3)} s`;
@@ -2332,7 +2332,7 @@ function updateReflectionCounter() {
 // Step 5: Presentation Deck Preview & 1-Click PPTX Exporter
 // ============================================================================
 
-// High-Resolution Offscreen Video + Trajectory Snapshot (independent of DOM visibility)
+// High-Resolution Offscreen Video + Trajectory Snapshot (shows all points, scale stick, and origin)
 function getVideoSnapshotData() {
   const w = 960;
   const h = 540;
@@ -2360,7 +2360,7 @@ function getVideoSnapshotData() {
   }
 
   if (!drewBackground) {
-    // Beautiful default sports turf & sky backdrop
+    // Sports turf & sky backdrop
     const grad = offCtx.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, '#e0f2fe');
     grad.addColorStop(0.7, '#f0fdf4');
@@ -2379,52 +2379,178 @@ function getVideoSnapshotData() {
     offCtx.stroke();
   }
 
-  // 2. Trajectory points overlay scaled from viewport coordinates
-  const pts = state.series[state.activeSeries] || [];
   const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : (video && video.videoWidth > 0 ? video.videoWidth : w);
   const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : (video && video.videoHeight > 0 ? video.videoHeight : h);
   const scaleX = w / srcW;
   const scaleY = h / srcH;
 
+  // 2. Draw Calibrated Coordinate Origin Axes
+  if (state.origin) {
+    const ox = state.origin.x * scaleX;
+    const oy = state.origin.y * scaleY;
+    const angle = state.originAngle || 0;
+
+    offCtx.save();
+    offCtx.translate(ox, oy);
+    offCtx.rotate(-angle);
+
+    // +x axis (Teal)
+    offCtx.strokeStyle = '#0f7e9b';
+    offCtx.lineWidth = 3;
+    offCtx.beginPath();
+    offCtx.moveTo(-35, 0);
+    offCtx.lineTo(135, 0);
+    offCtx.stroke();
+
+    // +x arrow
+    offCtx.fillStyle = '#0f7e9b';
+    offCtx.beginPath();
+    offCtx.moveTo(135, -5);
+    offCtx.lineTo(146, 0);
+    offCtx.lineTo(135, 5);
+    offCtx.fill();
+
+    // +y axis (Amber)
+    offCtx.strokeStyle = '#d67b19';
+    offCtx.lineWidth = 3;
+    offCtx.beginPath();
+    offCtx.moveTo(0, 35);
+    offCtx.lineTo(0, -135);
+    offCtx.stroke();
+
+    // +y arrow
+    offCtx.fillStyle = '#d67b19';
+    offCtx.beginPath();
+    offCtx.moveTo(-5, -135);
+    offCtx.lineTo(0, -146);
+    offCtx.lineTo(5, -135);
+    offCtx.fill();
+
+    // Origin point reticle
+    offCtx.fillStyle = '#0f7e9b';
+    offCtx.beginPath();
+    offCtx.arc(0, 0, 8, 0, Math.PI * 2);
+    offCtx.fill();
+    offCtx.strokeStyle = '#ffffff';
+    offCtx.lineWidth = 2.5;
+    offCtx.stroke();
+
+    // Labels
+    offCtx.font = 'bold 13px -apple-system, sans-serif';
+    offCtx.fillStyle = '#0f7e9b';
+    offCtx.fillText('+x', 150, 5);
+    offCtx.fillStyle = '#d67b19';
+    offCtx.fillText('+y', -10, -150);
+
+    // Origin (0,0) label box
+    offCtx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    offCtx.fillRect(10, 10, 88, 22);
+    offCtx.strokeStyle = '#0f7e9b';
+    offCtx.lineWidth = 1;
+    offCtx.strokeRect(10, 10, 88, 22);
+    offCtx.fillStyle = '#0f7e9b';
+    offCtx.font = 'bold 11px monospace';
+    offCtx.fillText('Origin (0,0)', 14, 25);
+
+    offCtx.restore();
+  }
+
+  // 3. Draw Calibrated Scale Reference Stick
+  if (state.scaleStick && state.scaleStick.start && state.scaleStick.end) {
+    const sx = state.scaleStick.start.x * scaleX;
+    const sy = state.scaleStick.start.y * scaleY;
+    const ex = state.scaleStick.end.x * scaleX;
+    const ey = state.scaleStick.end.y * scaleY;
+
+    offCtx.save();
+    offCtx.strokeStyle = '#d67b19';
+    offCtx.lineWidth = 3.5;
+    offCtx.beginPath();
+    offCtx.moveTo(sx, sy);
+    offCtx.lineTo(ex, ey);
+    offCtx.stroke();
+
+    // Endcap handles
+    [{ x: sx, y: sy }, { x: ex, y: ey }].forEach(p => {
+      offCtx.fillStyle = '#ffffff';
+      offCtx.strokeStyle = '#d67b19';
+      offCtx.lineWidth = 2.5;
+      offCtx.beginPath();
+      offCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      offCtx.fill();
+      offCtx.stroke();
+
+      offCtx.fillStyle = '#d67b19';
+      offCtx.beginPath();
+      offCtx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+      offCtx.fill();
+    });
+
+    // Scale label badge
+    const midX = (sx + ex) / 2;
+    const midY = (sy + ey) / 2;
+    const scaleLabel = `Scale: ${state.scaleStick.lengthMeters.toFixed(2)} m`;
+    offCtx.font = 'bold 12px -apple-system, sans-serif';
+    const textW = offCtx.measureText(scaleLabel).width;
+
+    offCtx.fillStyle = '#ffffff';
+    offCtx.fillRect(midX - textW / 2 - 8, midY - 24, textW + 16, 20);
+    offCtx.strokeStyle = '#d67b19';
+    offCtx.lineWidth = 1.5;
+    offCtx.strokeRect(midX - textW / 2 - 8, midY - 24, textW + 16, 20);
+
+    offCtx.fillStyle = '#d67b19';
+    offCtx.fillText(scaleLabel, midX - textW / 2, midY - 10);
+    offCtx.restore();
+  }
+
+  // 4. Draw Trajectory Spline & All Tracked Points
+  const pts = state.series[state.activeSeries] || [];
   if (pts.length > 0) {
     // Trajectory spline
     offCtx.strokeStyle = 'rgba(15, 126, 155, 0.85)';
     offCtx.lineWidth = 3;
     offCtx.beginPath();
     pts.forEach((pt, idx) => {
-      const px = pt.canvasX * scaleX;
-      const py = pt.canvasY * scaleY;
+      const px = (pt.videoX !== undefined ? pt.videoX : (pt.canvasX || 0)) * scaleX;
+      const py = (pt.videoY !== undefined ? pt.videoY : (pt.canvasY || 0)) * scaleY;
       if (idx === 0) offCtx.moveTo(px, py);
       else offCtx.lineTo(px, py);
     });
     offCtx.stroke();
 
-    // Data points with sequence numbers
+    // Data points with sequence numbers and status colors
     pts.forEach((pt, idx) => {
-      const px = pt.canvasX * scaleX;
-      const py = pt.canvasY * scaleY;
-      const isApex = idx === Math.floor(pts.length / 2);
+      const px = (pt.videoX !== undefined ? pt.videoX : (pt.canvasX || 0)) * scaleX;
+      const py = (pt.videoY !== undefined ? pt.videoY : (pt.canvasY || 0)) * scaleY;
+      const isStart = idx === 0;
       const isEnd = idx === pts.length - 1;
+      const isApex = idx === Math.floor(pts.length / 2);
 
       offCtx.beginPath();
-      offCtx.arc(px, py, isApex || isEnd ? 8 : 6, 0, 2 * Math.PI);
-      offCtx.fillStyle = isApex ? '#d67b19' : (isEnd ? '#0f7e9b' : '#0284c7');
+      offCtx.arc(px, py, isStart || isEnd || isApex ? 8 : 6, 0, 2 * Math.PI);
+      offCtx.fillStyle = isStart ? '#16a34a' : (isEnd ? '#0f7e9b' : (isApex ? '#d67b19' : '#0284c7'));
       offCtx.fill();
       offCtx.strokeStyle = '#ffffff';
       offCtx.lineWidth = 2;
       offCtx.stroke();
+
+      // Sequence number
+      offCtx.fillStyle = '#0c3644';
+      offCtx.font = 'bold 11px monospace';
+      offCtx.fillText(`${idx + 1}`, px + 8, py - 6);
     });
   }
 
-  // Header badge on snapshot
-  offCtx.fillStyle = 'rgba(15, 126, 155, 0.92)';
-  offCtx.fillRect(20, 20, 310, 38);
+  // 5. Header banner on snapshot
+  offCtx.fillStyle = 'rgba(15, 126, 155, 0.94)';
+  offCtx.fillRect(20, 20, 500, 42);
   offCtx.strokeStyle = '#c8dbe3';
   offCtx.lineWidth = 1;
-  offCtx.strokeRect(20, 20, 310, 38);
+  offCtx.strokeRect(20, 20, 500, 42);
   offCtx.fillStyle = '#ffffff';
-  offCtx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  offCtx.fillText('🎯 MotionTracker: Trajectory Capture', 32, 44);
+  offCtx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  offCtx.fillText(`🎯 MotionTracker: Calibrated Video Capture (${pts.length} Points • Scale & Origin Set)`, 32, 46);
 
   return offCanvas.toDataURL('image/png');
 }
@@ -2542,7 +2668,7 @@ function generateChartImageData(graphType) {
       type: 'scatter',
       data: {
         datasets: [
-          { label: '10 Tangent Velocities (dy/dt)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
+          { label: '10 Tangent Velocities (Δy/Δt)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
           { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
@@ -2585,7 +2711,7 @@ function generateChartImageData(graphType) {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Sampled Tangent Slopes (dx/dt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'rectRot' },
+          { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'rectRot' },
           { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
@@ -2623,7 +2749,7 @@ function generateChartImageData(graphType) {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Slope of Velocity Graph (dvᵧ/dt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'circle' },
+          { label: 'Slope of Velocity Graph (Δvᵧ/Δt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'circle' },
           { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false },
           { label: 'Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.80 }, { x: tMax, y: -9.80 }], type: 'line', borderColor: '#64748b', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }
         ]
@@ -2661,7 +2787,7 @@ function generateChartImageData(graphType) {
       type: 'scatter',
       data: {
         datasets: [
-          { label: 'Slope of Velocity Graph (dvₓ/dt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'circle' },
+          { label: 'Slope of Velocity Graph (Δvₓ/Δt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'circle' },
           { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
         ]
       },
@@ -2765,7 +2891,7 @@ function renderSlideDeckPreview(slideIdx) {
         title: 'Vertical Velocity Graph [vy(t)]',
         gen: 'vy(t) = ay·t + v₀y',
         part: `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
-        notes: `• Includes 10 points derived directly from tangent slopes (dy/dt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`
+        notes: `• Includes 10 points derived directly from tangent slopes (Δy/Δt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`
       },
       4: {
         graphType: 'y-acc',
