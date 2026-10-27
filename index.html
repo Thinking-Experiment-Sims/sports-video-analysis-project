@@ -904,8 +904,13 @@
             <div style="font-size: 0.78rem; color: var(--muted);">Unique cryptographic signature generated from student name, timestamp, and frame tracking coordinates. Digitally embedded in all exported slides &amp; PDF reports to guarantee original work.</div>
           </div>
         </div>
-        <div id="authenticityBadge" style="font-family: monospace; font-weight: 700; font-size: 0.9rem; padding: 0.4rem 0.85rem; background: #eef7fa; border: 1px solid var(--primary-teal); border-radius: 4px; color: var(--primary-teal); letter-spacing: 0.5px;">
-          PK-SPORTS-PENDING
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <div id="authenticityBadge" style="font-family: monospace; font-weight: 700; font-size: 0.9rem; padding: 0.4rem 0.85rem; background: #eef7fa; border: 1px solid var(--primary-teal); border-radius: 4px; color: var(--primary-teal); letter-spacing: 0.5px;">
+            PK-SPORTS-PENDING
+          </div>
+          <button id="btnOpenVerifierModal" class="btn btn-ghost" style="font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.75rem;" title="Teacher Originality &amp; Anti-Plagiarism Token Verifier">
+            🔍 Verify a Token
+          </button>
         </div>
       </div>
 
@@ -1110,6 +1115,53 @@
 
       <div class="help-modal-footer">
         <button id="btnModalCloseDone" class="btn btn-amber">Close Guide</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teacher Originality Token Verifier Modal -->
+  <div id="verifierModal" class="help-modal-backdrop" style="display: none;" aria-hidden="true" role="dialog" aria-labelledby="verifierModalTitle">
+    <div class="help-modal-card" style="width: min(650px, 94vw); max-height: 85vh;">
+      <div class="help-modal-header" style="background: linear-gradient(135deg, #0f7e9b 0%, #095f76 100%);">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.4rem;">🛡️</span>
+          <div>
+            <h3 id="verifierModalTitle" style="margin: 0; font-size: 1.15rem; color: #ffffff; font-weight: 700;">Teacher Originality &amp; Anti-Plagiarism Verifier</h3>
+            <span style="font-size: 0.78rem; color: #d4ecf4;">Authenticate Student Tokens &amp; Verify Lab Submission Integrity</span>
+          </div>
+        </div>
+        <button id="btnVerifierClose" class="help-close-btn" aria-label="Close Token Verifier">✕</button>
+      </div>
+
+      <div class="help-modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.88rem; color: #4b6570; margin-top: 0;">
+          Paste any student's token below to verify its mathematical parity checksum, or inspect their <code>.json</code> session file to recalculate their original token and confirm tracking integrity.
+        </p>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="inputVerifyToken" style="font-weight: 700; font-size: 0.85rem; color: var(--primary-teal); display: block; margin-bottom: 0.35rem;">Enter or Paste Token:</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="inputVerifyToken" class="input-control" placeholder="e.g. PK-SPORTS-7B4F-A19C-3E82" style="flex: 1; font-family: monospace; font-weight: 600; font-size: 0.95rem; text-transform: uppercase;">
+            <button id="btnRunTokenCheck" class="btn btn-amber">Check Token</button>
+          </div>
+        </div>
+
+        <!-- Verification Feedback Box -->
+        <div id="verifyResultBox" style="display: none; padding: 0.9rem; border-radius: 6px; font-size: 0.88rem; margin-bottom: 1.25rem; line-height: 1.5;"></div>
+
+        <div style="border-top: 1px dashed var(--border); padding-top: 1rem;">
+          <strong style="color: var(--primary-teal); font-size: 0.88rem; display: block; margin-bottom: 0.35rem;">Inspect Student Session File (.json):</strong>
+          <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 0.6rem 0;">Upload a student's downloaded lab file to inspect their raw frame clicks and confirm the generated token matches their presentation.</p>
+          <input type="file" id="verifySessionFileInput" accept=".json" style="display: none;">
+          <button id="btnTriggerVerifySessionFile" class="btn btn-primary" style="font-size: 0.85rem;">
+            📂 Select Student .json File to Inspect
+          </button>
+          <div id="verifySessionResultBox" style="display: none; margin-top: 0.75rem; padding: 0.85rem; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;"></div>
+        </div>
+      </div>
+
+      <div class="help-modal-footer">
+        <button id="btnVerifierCloseDone" class="btn btn-primary">Done</button>
       </div>
     </div>
   </div>
