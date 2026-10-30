@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher &amp; Department Guide — Sports Analytics Video Project | The Thinking Experiment</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --teal: #0f7e9b;
+      --teal-dark: #095f76;
+      --teal-soft: #eef7fa;
+      --amber: #d67b19;
+      --amber-dark: #b06210;
+      --amber-soft: #fff7ed;
+      --bg: #ffffff;
+      --surface: #f8fafc;
+      --border: #c8dbe3;
+      --text: #123140;
+      --muted: #4b6570;
+      --green: #1a7f37;
+      --green-soft: #e6f8ea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+    }
+    .page-shell {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+    }
+    .nav-links {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.95rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .btn-teal {
+      background: var(--teal);
+      color: #ffffff;
+      border-color: var(--teal-dark);
+    }
+    .btn-amber {
+      background: var(--amber);
+      color: #ffffff;
+      border-color: var(--amber-dark);
+    }
+    .hero-card {
+      background: linear-gradient(135deg, #f0f9fc 0%, #ffffff 60%, #fff7ed 100%);
+      border: 2px solid var(--teal);
+      border-radius: 12px;
+      padding: 1.75rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 14px rgba(15, 126, 155, 0.08);
+    }
+    .kicker {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--amber);
+      margin: 0 0 0.3rem 0;
+    }
+    h1 {
+      font-size: 2rem;
+      color: var(--teal);
+      margin: 0 0 0.5rem 0;
+      line-height: 1.2;
+    }
+    h2 {
+      font-size: 1.35rem;
+      color: var(--teal);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.4rem;
+      margin-top: 2.2rem;
+      margin-bottom: 1rem;
+    }
+    h3 {
+      font-size: 1.05rem;
+      color: var(--teal-dark);
+      margin: 1.1rem 0 0.4rem 0;
+    }
+    .callout {
+      background: var(--teal-soft);
+      border-left: 4px solid var(--teal);
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+    .callout-amber {
+      background: var(--amber-soft);
+      border-left: 4px solid var(--amber);
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.88rem;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: var(--teal);
+      color: #ffffff;
+      text-align: left;
+      padding: 0.65rem 0.8rem;
+      font-weight: 700;
+    }
+    td {
+      padding: 0.65rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: var(--surface);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.15rem;
+      margin: 1rem 0;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem 1.3rem;
+      box-shadow: 0 2px 6px rgba(15, 126, 155, 0.05);
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      background: var(--amber-soft);
+      color: var(--amber-dark);
+      border: 1px solid #fdba74;
+    }
+    .badge-teal {
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+      border-color: var(--border);
+    }
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .page-shell { padding: 0; max-width: 100%; }
+      h2 { page-break-after: avoid; }
+      .card, table { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <div class="top-bar no-print">
+      <div class="nav-links">
+        <a href="index.html" class="btn btn-teal">← Back to Sports Video Simulation</a>
+        <a href="student-guide.html" class="btn">📘 View Student Guide</a>
+      </div>
+      <button onclick="window.print()" class="btn btn-amber">🖨️ Print / Save Teacher Guide PDF</button>
+    </div>
+
+    <div class="hero-card">
+      <p class="kicker">The Thinking Experiment &bull; Physics Department Reference</p>
+      <h1>Teacher &amp; Department Guide: Physics of Sports Analytics Video Project</h1>
+      <p style="margin: 0.4rem 0 0; color: var(--muted); font-size: 0.96rem;">
+        A complete instructional guide explaining how this project replaces Logger Pro, enforces algebra-based kinematics derivations without shortcuts, verifies academic integrity, and directly remediates <strong>Unit 2: Constant Acceleration &amp; Motion Graphing</strong> (Exam Problems 1, 3, and 4).
+      </p>
+    </div>
+
+    <h2>1. Why We Designed &amp; Upgraded This Project</h2>
+    <p>
+      In our algebra-based Physics course, the <strong>Sports Analytics Video Project</strong> serves two instructional goals:
+      (1) applying 2D projectile kinematics to real athletic motion recorded by students, and
+      (2) reinforcing and reassessing the exact <strong>Unit 2 Motion Graphing skills</strong> where students struggled on the Fall Constant Acceleration Exam.
+    </p>
+    <div class="callout-amber">
+      <strong>Four Core Pedagogical Rules Built into the Simulation:</strong>
+      <ol style="margin: 0.4rem 0 0; padding-left: 1.3rem;">
+        <li><strong>Algebra-Based $\Delta$ Notation Only (No Calculus):</strong> Every formula and explanation uses $\frac{\Delta y}{\Delta t}$, $\frac{\Delta v_y}{\Delta t}$, and geometric triangle/rectangle area ($\sum \text{Area}$)—never derivatives or integrals.</li>
+        <li><strong>No Points for Computer-Plotted Graphs:</strong> Because the software plots the points and regression lines automatically, the 100-point rubric awards <strong>0 points for graph plotting</strong>. Instead, Step 3 grades <strong>manual two-point tangent slope calculations</strong>, <strong>graph shape translations</strong>, and <strong>physical interval analysis</strong>.</li>
+        <li><strong>No "Auto-Populate Tangents" Shortcut:</strong> Students cannot click a button to have the computer fill in tangent slopes. On Graph 1 [$y(t)$], the simulation plots two distinct points $P_1(t_1, y_1)$ and $P_2(t_2, y_2)$ on the tangent line and <strong>hides the numerical slope</strong> until the student manually calculates and verifies at least <strong>3 two-point tangent slopes</strong> using $v_y = \frac{y_2 - y_1}{t_2 - t_1}$.</li>
+        <li><strong>No Pre-Derived Textbook Shortcuts:</strong> In Step 4, students must show their full algebraic substitutions starting from fundamental kinematics equations ($y(t) = y_0 + v_{0y}t + \frac{1}{2}a_y t^2$, $v_y(t) = v_{0y} + a_y t$, $v_{fy}^2 = v_{0y}^2 + 2a_y\Delta y$).</li>
+      </ol>
+    </div>
+
+    <h2>2. Direct Alignment to the Unit 2 Constant Acceleration Exam</h2>
+    <p>
+      The table below shows how each section of the simulation targets specific student misconceptions identified on the Unit 2 Exam:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 20%;">Unit 2 Exam Problem</th>
+          <th style="width: 30%;">Common Student Misconception on the Exam</th>
+          <th style="width: 35%;">How the Sports Video Simulation Remediates &amp; Assesses It</th>
+          <th style="width: 15%;">Linked Practice Sim in Step 3</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Exam Problem 1:</strong><br>Translating $x$-$t$, $v$-$t$, &amp; $a$-$t$ Graphs</td>
+          <td>Students confused the <em>height</em> of a graph with its <em>slope</em> (e.g., drawing a parabola for $v(t)$ or a slanted line for $a(t)$).</td>
+          <td><strong>Step 3 Part A (Graph Shape Translation):</strong> Students match and justify why a concave-down parabola $y(t)$ produces a linear $v_y(t)$ with negative slope crossing $0$ at $t_{\text{apex}}$, and why that produces a horizontal negative line $a_y(t) \approx -9.8\text{ m/s}^2$.</td>
+          <td><a href="https://thinking-experiment-sims.github.io/graph-sprint/" target="_blank" rel="noopener"><strong>Graph Sprint</strong></a></td>
+        </tr>
+        <tr>
+          <td><strong>Exam Problem 3a &amp; 3b:</strong><br>Reading $v(t)$ &amp; Slope $a = \frac{\Delta v}{\Delta t}$</td>
+          <td>Students plugged in a single coordinate $(t, v)$ instead of using two points $\frac{v_2 - v_1}{t_2 - t_1}$ or dropped the negative sign.</td>
+          <td><strong>Step 4 Section 1B:</strong> Students compute $a_y = \frac{\Delta v_y}{\Delta t} = \frac{v_{y2} - v_{y1}}{t_2 - t_1}$ directly from two points on their $v_y(t)$ linear fit and verify its negative sign.</td>
+          <td><a href="https://thinking-experiment-sims.github.io/kinematics-multistage-sim/" target="_blank" rel="noopener"><strong>Multi-Stage Motion</strong></a></td>
+        </tr>
+        <tr>
+          <td><strong>Exam Problem 3c &amp; 3d:</strong><br>Signed Area Under $v$-$t$ ($\Delta y = \sum\text{Area}$) &amp; Final Position</td>
+          <td>Students added the absolute values of triangles below the time axis (computing distance instead of net displacement) or forgot to add initial position $y_0$.</td>
+          <td><strong>Step 3 Signed-Area Shading &amp; Step 4 Section 1B:</strong> Graph 3 [$v_y(t)$] shades the positive ascent triangle ($\text{Area}_1 = +\Delta y_{\text{up}} &gt; 0$) in <strong>Teal</strong> and the negative descent triangle ($\text{Area}_2 = \Delta y_{\text{down}} &lt; 0$) in <strong>Amber</strong>. Students compute $\Delta y_{\text{up}}$, $\Delta y_{\text{down}}$, $\Delta y_{\text{total}} = \text{Area}_1 + \text{Area}_2$, $y_{\text{max}} = y_0 + \Delta y_{\text{up}}$, and $y_{\text{final}} = y_0 + \Delta y_{\text{total}}$.</td>
+          <td><a href="https://thinking-experiment-sims.github.io/kinematics-multistage-sim/" target="_blank" rel="noopener"><strong>Multi-Stage Motion</strong></a></td>
+        </tr>
+        <tr>
+          <td><strong>Exam Problem 3e, 3f &amp; 3g:</strong><br>Stopping ($v=0$), Direction Intervals, &amp; Sign of Acceleration</td>
+          <td>Students thought stopping meant $a = 0$, confused moving downward ($v_y &lt; 0$) with negative acceleration ($a_y &lt; 0$), or thought $a_y &gt; 0$ on the way up.</td>
+          <td><strong>Step 3 Part B (Physical Motion Intervals):</strong> Students identify $t_{\text{apex}}$ where $v_y = 0$ (while explaining why $v_x \neq 0$), enter time intervals $[t_{\text{start}}, t_{\text{end}}]$ for upward motion ($v_y &gt; 0$) and downward motion ($v_y &lt; 0$), and prove why $a_y &lt; 0$ across the <strong>entire flight</strong> $[0, t_{\text{end}}]$.</td>
+          <td><a href="https://thinking-experiment-sims.github.io/graph-that-motion-sim/" target="_blank" rel="noopener"><strong>Graph That Motion!</strong></a></td>
+        </tr>
+        <tr>
+          <td><strong>Exam Problem 4:</strong><br>Instantaneous Velocity from a Tangent Line on a Parabola</td>
+          <td>Students divided $y/t$ at a single point on the curve instead of reading two distinct points on the drawn tangent line.</td>
+          <td><strong>Step 3 Two-Point Tangent Slope Worksheet:</strong> The tangent tool plots two reference points $P_1(t_1, y_1)$ and $P_2(t_2, y_2)$ on the tangent line and hides the slope answer until the student manually computes $v_y = \frac{y_2 - y_1}{t_2 - t_1}$ for 3 points.</td>
+          <td><a href="https://thinking-experiment-sims.github.io/uniform-acceleration-ramp-lab/" target="_blank" rel="noopener"><strong>Ramp Lab Sim</strong></a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Step-by-Step Teacher Walkthrough of the 5 Stages</h2>
+    <div class="grid-2">
+      <div class="card">
+        <span class="badge-teal badge">Stage 1 &amp; Stage 2</span>
+        <h3>Video Calibration &amp; Free-Flight Tracking</h3>
+        <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.9rem;">
+          <li><strong>Teachers Available in Dropdown:</strong> Mr. Lopez, Ms. Chen, and Mr. Tipton.</li>
+          <li><strong>Origin $(0,0)$:</strong> Students place the origin on the ground directly below the release point (or at the launch point).</li>
+          <li><strong>Scale Stick:</strong> Students drag the orange bar across a known length in the video plane and click <strong>Apply</strong>.</li>
+          <li><strong>Free Flight Only:</strong> Students step frame-by-frame (<code>|&lt;</code> and <code>&gt;|</code> or arrow keys) and track 10–15 points <em>after</em> release and <em>before</em> landing, then click <strong>Set $t = 0$ at 1st Pt</strong>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="badge">Stage 3</span>
+        <h3>6-Graph Studio, Two-Point Tangents &amp; Intervals</h3>
+        <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.9rem;">
+          <li><strong>3 Manual Two-Point Slopes Required:</strong> Students use $P_1(t_1, y_1)$ and $P_2(t_2, y_2)$ on the tangent line to compute $v_y = \frac{y_2 - y_1}{t_2 - t_1}$ 3 times before quick-logging unlocks for the remaining 7 points (10 total).</li>
+          <li><strong>Signed $v$-$t$ Area Shading:</strong> Graph 3 [$v_y(t)$] shades $+\Delta y_{\text{up}}$ (Teal) and $\Delta y_{\text{down}} &lt; 0$ (Amber).</li>
+          <li><strong>Part A &amp; Part B Checks:</strong> Students verify their graph translations and physical intervals ($t_{\text{apex}}$, upward/downward intervals, and $a_y &lt; 0$ on $[0, t_{\text{end}}]$).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="badge">Stage 4</span>
+        <h3>Guided Calculations &amp; Master Comparison Table</h3>
+        <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.9rem;">
+          <li><strong>Section 1B:</strong> Verifies $a_y = \frac{\Delta v_y}{\Delta t}$, $\Delta y_{\text{up}}$, $\Delta y_{\text{down}}$, $\Delta y_{\text{total}}$, $y_{\text{max}} = y_0 + \Delta y_{\text{up}}$, and $y_{\text{final}} = y_0 + \Delta y_{\text{total}}$.</li>
+          <li><strong>Sections 2–6:</strong> Students show algebraic derivations for $\Delta x$, $t_{\text{hang}}$, $y_{\text{max}}$, $v_0$, and $\theta$.</li>
+          <li><strong>Percent Difference Formula:</strong> Uses $\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%$.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="badge-teal badge">Stage 5</span>
+        <h3>11-Slide PowerPoint, 4-Page PDF &amp; JSON Session</h3>
+        <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.9rem;">
+          <li><strong>Slide 1 Screenshot:</strong> Automatically embeds the calibrated video frame showing all tracked points, the orange scale stick, and the $(0,0)$ origin axes.</li>
+          <li><strong>Slide 8 (New):</strong> Summarizes the student's Graph Translation, Physical Intervals, and Signed-Area calculations.</li>
+          <li><strong>Slide 9 &amp; 10:</strong> Shows algebraic derivations and the Master Comparison Table.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>4. Academic Integrity: How the Originality Token Works</h2>
+    <div class="callout">
+      <strong>Format:</strong> <code>PK-SPORTS-XXXX-YYYY-ZZZZ</code> (e.g., <code>PK-SPORTS-7A3F-9C12-E62D</code>)<br>
+      <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem; font-size: 0.9rem;">
+        <li><strong>How It Is Generated:</strong> Blocks 1 (<code>XXXX</code>) and 2 (<code>YYYY</code>) are 16-bit hexadecimal hashes computed from the student's name, teacher, calibrated scale factor, and every tracked $(t, x, y)$ coordinate. Block 3 (<code>ZZZZ</code>) is the mathematical XOR parity checksum: $\text{Block}_3 = \text{Block}_1 \oplus \text{Block}_2$.</li>
+        <li><strong>What If a Student Makes Up a Token or Asks ChatGPT?</strong> Any made-up or manually altered token will fail the bitwise parity check ($\text{Block}_1 \oplus \text{Block}_2 \neq \text{Block}_3$). Click the <strong>🔍 Verify</strong> button next to the token badge in Step 4 to paste any token and test its mathematical validity in 1 second.</li>
+        <li><strong>Full Session Verification:</strong> Have students submit their <code>.json</code> lab file along with their PowerPoint or PDF. Inside the <strong>🔍 Verify</strong> modal, click <strong>Upload &amp; Inspect Student .json File</strong> to recompute the exact token from their raw coordinate data and verify 100% authenticity.</li>
+      </ul>
+    </div>
+
+    <h2>5. Updated 100-Point Grading Rubric</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 28%;">Rubric Category</th>
+          <th style="width: 58%;">Expectations &amp; Grading Criteria</th>
+          <th style="width: 14%; text-align: center;">Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Title Slide, Honor Code &amp; Video Screenshot</strong></td>
+          <td>Includes student name, teacher, honor code, originality token, and a calibrated video screenshot showing <strong>all tracked points, scale stick, and origin axes</strong>.</td>
+          <td style="text-align: center; font-weight: 700;">10 pts</td>
+        </tr>
+        <tr>
+          <td><strong>2. Particular Equations &amp; Units (6 Graphs)</strong></td>
+          <td>Correct general and particular equations with proper units ($\text{m}$, $\text{m/s}$, $\text{m/s}^2$) for all 6 motion graphs. <em>(0 pts for computer plotting; 2 pts per equation).</em></td>
+          <td style="text-align: center; font-weight: 700;">12 pts</td>
+        </tr>
+        <tr>
+          <td><strong>3. Two-Point Tangent Slopes ($v_y = \Delta y / \Delta t$)</strong></td>
+          <td>Manually calculates at least 3 tangent slopes using two distinct points on the tangent line ($v_y = \frac{y_2 - y_1}{t_2 - t_1}$) and logs 10 total tangent points across the trajectory.</td>
+          <td style="text-align: center; font-weight: 700;">14 pts</td>
+        </tr>
+        <tr>
+          <td><strong>4. Motion Graph Translation &amp; Physical Intervals</strong></td>
+          <td>Correctly translates $y(t)\to v_y(t)\to a_y(t)$ and $x(t)\to v_x(t)\to a_x(t)$; identifies $t_{\text{apex}}$ ($v_y = 0, v_x \neq 0$); identifies upward ($v_y &gt; 0$) and downward ($v_y &lt; 0$) intervals; explains why $a_y &lt; 0$ across the <strong>entire flight</strong> $[0, t_{\text{end}}]$.</td>
+          <td style="text-align: center; font-weight: 700;">14 pts</td>
+        </tr>
+        <tr>
+          <td><strong>5. Signed $v$-$t$ Area &amp; Algebraic Kinematics</strong></td>
+          <td>Computes $+\Delta y_{\text{up}}$, $\Delta y_{\text{down}} &lt; 0$, $\Delta y_{\text{total}}$, and $y_{\text{max}} = y_0 + \Delta y_{\text{up}}$ from shaded $v$-$t$ areas; shows full step-by-step algebraic derivations (no shortcut formulas) for $v_0, \theta, y_{\text{max}}, t_{\text{hang}}, \Delta x$.</td>
+          <td style="text-align: center; font-weight: 700;">25 pts</td>
+        </tr>
+        <tr>
+          <td><strong>6. Model Comparison &amp; Percent Difference</strong></td>
+          <td>Completes the Master Comparison Table comparing measured values vs. theoretical values using $\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%$.</td>
+          <td style="text-align: center; font-weight: 700;">15 pts</td>
+        </tr>
+        <tr>
+          <td><strong>7. Real-World Reflection (5+ Sentences)</strong></td>
+          <td>Writes at least 5 thoughtful sentences analyzing sources of experimental error, air resistance, and sports biomechanics.</td>
+          <td style="text-align: center; font-weight: 700;">10 pts</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: right; font-weight: 800; color: var(--teal);">TOTAL SCORE</td>
+          <td style="text-align: center; font-weight: 800; color: var(--teal); font-size: 1rem;">100 pts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
