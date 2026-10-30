@@ -341,13 +341,50 @@
   <!-- Stage 3: 6-Graph Kinematics Studio Stage -->
   <section id="stepView3" class="step-view" style="padding: 1.25rem 1.5rem; max-width: 1500px; margin: 0 auto;">
     <div class="card" style="padding: 1.25rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
         <div>
-          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Kinematics Studio: 6 Required Graphs &amp; Tangents</h2>
-          <p style="font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0 0 0;">Inspect each motion graph, view general and particular equations with explicit units, and use the tangent tool to sample 10 points for velocity.</p>
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Kinematics Studio: 6 Required Graphs, Graph Translation &amp; Tangents</h2>
+          <p style="font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0 0 0;">Translate between position, velocity, and acceleration graphs, analyze motion intervals (stopping, direction, acceleration sign), and calculate two-point tangent slopes \(\frac{\Delta y}{\Delta t}\).</p>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--primary-teal); background: #eef7fa; padding: 0.35rem 0.7rem; border-radius: 6px; border: 1px solid var(--primary-teal-border); cursor: pointer;">
+            <input type="checkbox" id="chkShowSignedArea" checked>
+            📐 Show Signed \(v\)-\(t\) Area (\(\Delta y\) &amp; \(\Delta x\))
+          </label>
           <button id="btnAutoFitAll" class="btn btn-amber" style="font-size: 0.8rem;">Auto-Fit All 6 Graphs</button>
+        </div>
+      </div>
+
+      <!-- Unit 2 Motion Graph Mastery & Practice Hub -->
+      <div class="remediation-hub-bar" aria-label="Unit 2 Motion Graph Mastery Practice Hub">
+        <div class="remediation-hub-header">
+          <div class="remediation-hub-title">
+            <span>🎯 Unit 2 Motion Graph Mastery &amp; Remediation Hub</span>
+            <span class="exam-skill-pill">Review for Test Problems 1, 3 &amp; 4</span>
+          </div>
+          <span style="font-size: 0.76rem; color: var(--muted);">Practice translating graphs, signed \(v\)-\(t\) areas, and turnaround motion in these companion labs:</span>
+        </div>
+        <div class="remediation-links-grid">
+          <a href="https://thinking-experiment-sims.github.io/graph-sprint/" target="_blank" rel="noopener" class="remediation-sim-card">
+            <div class="remediation-sim-name"><span>⚡ Graph Sprint</span> <span>↗</span></div>
+            <div class="remediation-sim-desc">Timed fluency drill translating between \(x\)-\(t\), \(v\)-\(t\), and \(a\)-\(t\) graphs (Pick &amp; Build modes).</div>
+            <span class="remediation-exam-tag">Targets Exam Prob 1 &amp; 3a</span>
+          </a>
+          <a href="https://thinking-experiment-sims.github.io/kinematics-multistage-sim/" target="_blank" rel="noopener" class="remediation-sim-card">
+            <div class="remediation-sim-name"><span>📐 Kinematics Stagecrafter</span> <span>↗</span></div>
+            <div class="remediation-sim-desc">Master signed \(v\)-\(t\) triangle/rectangle areas (\(\Delta x = \sum\text{Area}\)) and \(x_f = x_0 + \Delta x\).</div>
+            <span class="remediation-exam-tag">Targets Exam Prob 3b, 3c, 3d</span>
+          </a>
+          <a href="https://thinking-experiment-sims.github.io/uniform-acceleration-ramp-lab/" target="_blank" rel="noopener" class="remediation-sim-card">
+            <div class="remediation-sim-name"><span>⛰️ Ramp &amp; Cart Turnaround Lab</span> <span>↗</span></div>
+            <div class="remediation-sim-desc">Explore 1D turnaround motion (\(v=0\) at apex while \(a<0\) throughout) and tangent slopes.</div>
+            <span class="remediation-exam-tag">Targets Exam Prob 3e–g &amp; 4</span>
+          </a>
+          <a href="https://thinking-experiment-sims.github.io/graph-that-motion-sim/" target="_blank" rel="noopener" class="remediation-sim-card">
+            <div class="remediation-sim-name"><span>🐕 Coco's Motion Lab</span> <span>↗</span></div>
+            <div class="remediation-sim-desc">Connect physical direction and speed changes to position slope and velocity sign in real time.</div>
+            <span class="remediation-exam-tag">Targets Graph Interpretation</span>
+          </a>
         </div>
       </div>
 
@@ -355,11 +392,10 @@
       <div class="guidance-banner" style="margin-bottom: 1rem;">
         <div class="guidance-icon">📈</div>
         <div class="guidance-content">
-          <strong class="guidance-title">Step 3: 6 Kinematics Graphs &amp; Tangent Slope Method (\(\Delta y / \Delta t\))</strong>
+          <strong class="guidance-title">Step 3: Two-Point Tangent Slope Method (\(\Delta y / \Delta t\)) &amp; Motion Graph Interpretation</strong>
           <p>
-            • <strong>Vertical Position [y(t)]:</strong> Fits a parabolic curve \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).<br>
-            • <strong>The Tangent Slope Method:</strong> In algebra-based physics, vertical velocity is the slope of the position curve: \(v_y = \frac{\Delta y}{\Delta t}\). Move the <strong>Tangent Slider</strong> to align the tangent line with the curve and compute the slope \(\frac{\Delta y}{\Delta t}\). Click <strong>Record Tangent Point</strong> to record each slope. Sample at least 10 points across the flight.<br>
-            • <strong>Vertical Velocity [v_y(t)]:</strong> Plots the 10 tangent slopes and fits a line whose slope is vertical acceleration \(a_y = \frac{\Delta v_y}{\Delta t}\) (theoretically \(-9.80\text{ m/s}^2\)).
+            • <strong>Why Vertical Motion Mirrors Test Problem 3 (\(t = 2\text{–}6\text{ s}\)):</strong> Your projectile launches upward from \(y_0\) (\(v_y > 0\), slowing down), stops vertically for an instant at the apex (\(v_y = 0\)), and falls back down (\(v_y < 0\), speeding up)—all with constant negative acceleration \(a_y \approx -9.80\text{ m/s}^2\).<br>
+            • <strong>Two-Point Tangent Line Rule (Exam Problem 4):</strong> Instantaneous velocity is the slope of the tangent line \(v_y = \frac{\Delta y}{\Delta t} = \frac{y_2 - y_1}{t_2 - t_1}\). Move the <strong>Tangent Slider</strong>, read two widely separated points \((t_1, y_1)\) and \((t_2, y_2)\) <em>on the tangent line itself</em>, verify your two-point slope calculation, and record 10 tangent points across the flight!
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -371,24 +407,83 @@
       <div class="graph-subnav">
         <button class="graph-nav-btn active" data-graph="y-pos">1. Vertical Pos y(t)</button>
         <button class="graph-nav-btn" data-graph="x-pos">2. Horizontal Pos x(t)</button>
-        <button class="graph-nav-btn" data-graph="y-vel">3. Vertical Vel vy(t) [Tangents]</button>
-        <button class="graph-nav-btn" data-graph="x-vel">4. Horizontal Vel vx(t)</button>
+        <button class="graph-nav-btn" data-graph="y-vel">3. Vertical Vel vy(t) [Tangents &amp; Area]</button>
+        <button class="graph-nav-btn" data-graph="x-vel">4. Horizontal Vel vx(t) [Area]</button>
         <button class="graph-nav-btn" data-graph="y-acc">5. Vertical Acc ay(t)</button>
         <button class="graph-nav-btn" data-graph="x-acc">6. Horizontal Acc ax(t)</button>
         <button class="graph-nav-btn" data-graph="grid-all" style="margin-left: auto;">▦ All 6 Graphs Grid</button>
       </div>
 
-      <!-- Interactive Tangent Tool Bar (Shown when y-pos or y-vel is selected) -->
-      <div id="tangentStudioBar" class="tangent-studio-bar">
-        <div class="tangent-stats-wrap">
-          <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-amber-dark);">Tangent Line Sampler:</span>
-          <span class="tangent-pill" id="tangentPointCountBadge">Sampled: 0 / 10 Tangent Points</span>
-          <span style="font-size: 0.82rem; color: var(--ink);">Time: <strong id="tangentTimeDisplay">0.00 s</strong> | Slope (\(v_y\)): <strong id="tangentSlopeDisplay">0.00 m/s</strong></span>
+      <!-- Interactive Tangent Tool Bar & Two-Point Slope Calculator (Exam Problem 4 Method) -->
+      <div id="tangentStudioBar" class="tangent-studio-bar" style="flex-direction: column; align-items: stretch;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div class="tangent-stats-wrap" style="flex-wrap: wrap;">
+            <span style="font-weight: 700; font-size: 0.88rem; color: var(--accent-amber-dark);">📐 Two-Point Tangent Slope Sampler (Exam Problem 4 Method):</span>
+            <span class="tangent-pill" id="tangentPointCountBadge">Sampled: 0 / 10 Tangent Points</span>
+            <span class="tangent-pill" id="twoPointVerifiedBadge" style="background: #eef7fa; border-color: var(--primary-teal-border); color: var(--primary-teal-dark);">Two-Point Hand Calculations Verified: 0 / 3 Min</span>
+            <span style="font-size: 0.82rem; color: var(--ink);">Touchpoint Time \(t\): <strong id="tangentTimeDisplay">0.000 s</strong> | Touchpoint \(y(t)\): <strong id="tangentYDisplay">0.000 m</strong></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <label for="tangentSlider" style="font-size: 0.78rem; font-weight: 600; color: var(--muted);">Slide Tangent Time \(t\):</label>
+            <input type="range" id="tangentSlider" class="scrub-slider" min="0" max="100" value="0" style="width: 190px;">
+            <button id="btnClearTangents" class="btn btn-ghost" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Clear sampled tangent points and start over">↺ Reset Tangents</button>
+          </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <input type="range" id="tangentSlider" class="scrub-slider" min="0" max="100" value="0" style="width: 180px;">
-          <button id="btnRecordTangent" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;">Record Tangent Point</button>
-          <button id="btnClearTangents" class="btn btn-ghost" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" title="Clear sampled tangent points and start over">↺ Reset Tangents</button>
+
+        <!-- Two-Point Slope Calculation Box (Directly models Exam Problem 4 Rubric) -->
+        <div class="two-point-tangent-box">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div style="font-size: 0.8rem; color: var(--ink);">
+              <strong>Step 1 (Symbolic Formula):</strong> \(v_y = \text{slope of tangent} = \frac{\Delta y}{\Delta t} = \frac{y_2 - y_1}{t_2 - t_1}\) &nbsp;&bull;&nbsp;
+              <span style="color: var(--muted);">Read two points <strong>\(P_1(t_1, y_1)\)</strong> and <strong>\(P_2(t_2, y_2)\)</strong> marked on the dashed teal tangent line below (NOT raw data points!) and calculate the slope:</span>
+            </div>
+            <span id="tangentReadoutCoordsHint" style="font-family: monospace; font-size: 0.78rem; font-weight: 700; color: var(--primary-teal); background: #eef7fa; padding: 0.2rem 0.55rem; border-radius: 4px; border: 1px solid var(--primary-teal-border);">
+              Line Points: P₁(0.00 s, 0.00 m) → P₂(0.40 s, 1.50 m)
+            </span>
+          </div>
+
+          <div class="two-point-grid">
+            <div class="coord-pair-box">
+              <div class="coord-pair-title"><span>Point 1 on Tangent Line \(P_1(t_1, y_1)\)</span></div>
+              <div class="coord-inputs-row">
+                <span>\(t_1\):</span>
+                <input type="number" id="inpTanT1" class="input-control" step="0.001" style="width: 78px;" placeholder="t₁ (s)">
+                <span>s, &nbsp;\(y_1\):</span>
+                <input type="number" id="inpTanY1" class="input-control" step="0.001" style="width: 78px;" placeholder="y₁ (m)">
+                <span>m</span>
+              </div>
+            </div>
+
+            <div class="coord-pair-box">
+              <div class="coord-pair-title"><span>Point 2 on Tangent Line \(P_2(t_2, y_2)\)</span></div>
+              <div class="coord-inputs-row">
+                <span>\(t_2\):</span>
+                <input type="number" id="inpTanT2" class="input-control" step="0.001" style="width: 78px;" placeholder="t₂ (s)">
+                <span>s, &nbsp;\(y_2\):</span>
+                <input type="number" id="inpTanY2" class="input-control" step="0.001" style="width: 78px;" placeholder="y₂ (m)">
+                <span>m</span>
+              </div>
+            </div>
+
+            <div class="coord-pair-box" style="border-color: var(--accent-amber-border); background: var(--accent-amber-light);">
+              <div class="coord-pair-title"><span style="color: var(--accent-amber-dark);">Calculated Slope \(v_y = \frac{y_2 - y_1}{t_2 - t_1}\)</span></div>
+              <div class="coord-inputs-row">
+                <span>\(v_y =\)</span>
+                <input type="number" id="inpTanStudentSlope" class="input-control" step="0.01" style="width: 95px; font-weight: 700;" placeholder="Δy / Δt">
+                <span>m/s</span>
+                <button id="btnVerifyAndRecordTangent" class="btn btn-amber" style="font-size: 0.76rem; padding: 0.35rem 0.65rem; margin-left: auto;">✓ Verify \(\Delta y/\Delta t\) &amp; Record</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+              <button id="btnRecordTangent" class="btn" style="font-size: 0.76rem; padding: 0.4rem 0.65rem;" title="Record tangent point at current slider time (complete at least 3 manual two-point calculations first!)">
+                + Quick-Log Tangent Point (<span id="tangentSlopeDisplay">Verify 3 pts first</span>)
+              </button>
+              <div id="tanFeedbackMsg" style="font-size: 0.74rem; color: var(--muted); min-height: 1.1em;">
+                Enter \(P_1\), \(P_2\), and \(v_y = (y_2-y_1)/(t_2-t_1)\) to verify your tangent slope!
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -451,7 +546,7 @@
         <!-- Card 3: Vertical Velocity -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
-            <span class="grid-graph-title">3. Vertical Velocity vy(t) [Tangents]</span>
+            <span class="grid-graph-title">3. Vertical Velocity vy(t) [Tangents &amp; Signed Area]</span>
             <span class="grid-graph-badge" id="gridBadgeYVel">10 Tangent Slopes</span>
           </div>
           <div style="flex: 1; min-height: 220px; position: relative;">
@@ -466,7 +561,7 @@
         <!-- Card 4: Horizontal Velocity -->
         <div class="grid-graph-card">
           <div class="grid-graph-header">
-            <span class="grid-graph-title">4. Horizontal Velocity vx(t)</span>
+            <span class="grid-graph-title">4. Horizontal Velocity vx(t) [Signed Area]</span>
             <span class="grid-graph-badge" id="gridBadgeXVel">Uniform Velocity</span>
           </div>
           <div style="flex: 1; min-height: 220px; position: relative;">
@@ -505,6 +600,162 @@
           <div class="grid-graph-footer">
             <div class="grid-eq-gen" id="gridGenXAcc">General: aₓ(t) = 0 m/s²</div>
             <div class="grid-eq-part" id="gridPartXAcc">Particular: aₓ(t) = 0.000 m/s² (Ref aₓ = 0.00)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW: Module A & B — Graph Translation & Physical Interval Interpretation (Unit 2 Exam Problem 1 & Problem 3a, 3e, 3f, 3g) -->
+      <div class="interval-analysis-section" id="graphInterpretationModule">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+          <div>
+            <h3 style="font-size: 1.12rem; font-weight: 700; color: var(--primary-teal); margin: 0;">
+              🧠 Motion Graph Translation &amp; Physical Interval Analysis (Required Rubric Section — 25 pts)
+            </h3>
+            <p style="font-size: 0.83rem; color: var(--muted); margin: 0.2rem 0 0 0;">
+              Because the computer generates the plots, your grade depends on <strong>translating between \(x\)-\(t\), \(v\)-\(t\), and \(a\)-\(t\) graphs</strong> and <strong>interpreting physical intervals</strong> (Exam Problems 1 &amp; 3).
+            </p>
+          </div>
+          <button id="btnVerifyGraphInterpretation" class="btn btn-amber" style="font-size: 0.82rem;">
+            ✓ Check &amp; Verify Graph Interpretation
+          </button>
+        </div>
+
+        <div class="interval-grid-2">
+          <!-- Card A: Graph Translation Check (Exam Problem 1 & 3a) -->
+          <div class="interval-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: var(--primary-teal); font-size: 0.95rem;">Part A: Graph Shape Translation (\(x\)-\(t \leftrightarrow v\)-\(t \leftrightarrow a\)-\(t\))</strong>
+              <span class="pct-diff-badge" id="badgeGraphTransStatus">Awaiting Check</span>
+            </div>
+
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>1. Vertical Position \(y(t)\) \(\rightarrow\) Velocity \(v_y(t)\) Translation</span>
+                <span class="exam-skill-pill">Exam Prob 1 &amp; 3a</span>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">
+                Your \(y(t)\) graph starts at \(y_0\) and forms a downward-opening parabola (curving down). What does the <strong>slope</strong> of \(y(t)\) do from launch to landing, and what shape must \(v_y(t)\) have?
+              </p>
+              <select id="selTransYtoVy" class="input-control">
+                <option value="">-- Select the correct translation from y(t) to vᵧ(t) --</option>
+                <option value="parabola">vᵧ(t) is also a parabola curving downward</option>
+                <option value="linear_neg_cross">Slope of y(t) goes from + to 0 (at apex) to −, so vᵧ(t) is a straight line with negative slope crossing vᵧ = 0 at t_apex</option>
+                <option value="const_neg">vᵧ(t) is a horizontal line below the zero axis</option>
+                <option value="v_shape">vᵧ(t) is a V-shaped graph that stays positive the whole time</option>
+              </select>
+            </div>
+
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>2. Vertical Velocity \(v_y(t)\) \(\rightarrow\) Acceleration \(a_y(t)\) Translation</span>
+                <span class="exam-skill-pill">Exam Prob 3a &amp; 3b</span>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">
+                Since \(v_y(t)\) is a single straight line sloping downward from \(+v_{0y}\) through \(0\) to \(-v_{fy}\), what must \(a_y(t)\) look like across the entire flight?
+              </p>
+              <select id="selTransVytoAy" class="input-control">
+                <option value="">-- Select the correct translation from vᵧ(t) to aᵧ(t) --</option>
+                <option value="pos_then_neg">aᵧ(t) is positive on the way up and negative on the way down</option>
+                <option value="zero_at_apex">aᵧ(t) is negative except at t_apex where aᵧ becomes 0 m/s²</option>
+                <option value="const_neg_line">Because vᵧ(t) has a constant negative slope Δvᵧ/Δt, aᵧ(t) is a constant horizontal line below the zero axis (≈ −9.8 m/s²) the entire time</option>
+                <option value="sloping_line">aᵧ(t) is a downward-sloping diagonal line</option>
+              </select>
+            </div>
+
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>3. Horizontal \(x(t)\) \(\rightarrow\) \(v_x(t)\) \(\rightarrow\) \(a_x(t)\) Translation</span>
+                <span class="exam-skill-pill">Exam Prob 1 &amp; 3a</span>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">
+                Your horizontal position \(x(t)\) is a straight line with constant positive slope. What are the shapes of \(v_x(t)\) and \(a_x(t)\)?
+              </p>
+              <select id="selTransX" class="input-control">
+                <option value="">-- Select the correct horizontal graph translation --</option>
+                <option value="correct_x">vₓ(t) is a horizontal line at +v₀ₓ (constant velocity) and aₓ(t) is a horizontal line on the zero axis (aₓ = 0 m/s²)</option>
+                <option value="diag_vx">vₓ(t) is a diagonal line sloping upward and aₓ(t) is a positive horizontal line</option>
+                <option value="zero_vx">Both vₓ(t) and aₓ(t) are zero throughout the flight</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Card B: Physical Motion Interval Analysis (Exam Problem 3e, 3f, 3g) -->
+          <div class="interval-card amber-top">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: var(--accent-amber-dark); font-size: 0.95rem;">Part B: Physical Motion Interval Analysis (Stopping, Direction &amp; Sign of \(a\))</strong>
+              <span class="pct-diff-badge" id="badgeIntervalStatus">Awaiting Check</span>
+            </div>
+
+            <!-- 3e: Stopping Analysis -->
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>3e. Stopping Analysis (\(v_y = 0\) vs. 2D Velocity)</span>
+                <span class="exam-skill-pill">Exam Prob 3e</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: 0.8rem;">
+                <span>Vertical stop behavior:</span>
+                <select id="selStopBehavior" class="input-control" style="flex: 1; min-width: 210px;">
+                  <option value="">-- Does it stop vertically? --</option>
+                  <option value="instant_apex">Stops vertically for a single instant at t_apex (where vᵧ crosses 0 and y-t tangent slope = 0)</option>
+                  <option value="interval_apex">Stops and hovers at rest for a time interval at the top</option>
+                  <option value="never_stops_y">Never stops vertically at any instant</option>
+                </select>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: 0.8rem; margin-top: 0.25rem;">
+                <label for="inpStopTimeApex">Exact time of vertical stop \(t_{\text{apex}}\) (where \(v_y = 0\)):</label>
+                <input type="number" id="inpStopTimeApex" class="input-control" step="0.001" style="width: 95px; font-weight: 700;" placeholder="t_apex (s)">
+                <span>s</span>
+                <span id="hintApexTimeRange" style="font-size: 0.74rem; color: var(--muted);">(Read zero-crossing on Graph 3)</span>
+              </div>
+              <textarea id="txtStopExplanation" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem;" placeholder="Explain how BOTH the y(t) slope and the vᵧ(t) zero-crossing show this vertical stop, and explain why the ball is NOT completely stopped in 2D space (check vₓ)..."></textarea>
+            </div>
+
+            <!-- 3f: Direction of Motion Intervals -->
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>3f. Direction of Vertical Motion Intervals (\(v_y > 0\) vs. \(v_y < 0\))</span>
+                <span class="exam-skill-pill">Exam Prob 3f</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.78rem;">
+                <div style="background: #ffffff; padding: 0.4rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
+                  <strong style="color: var(--primary-teal);">Moving in \(+y\) Direction (\(v_y > 0\)):</strong>
+                  <div style="display: flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem;">
+                    <span>From \(t =\)</span>
+                    <input type="number" id="inpPosDirStart" class="input-control" step="0.01" style="width: 64px;" placeholder="0.00">
+                    <span>to</span>
+                    <input type="number" id="inpPosDirEnd" class="input-control" step="0.01" style="width: 64px;" placeholder="t_apex">
+                    <span>s</span>
+                  </div>
+                </div>
+                <div style="background: #ffffff; padding: 0.4rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
+                  <strong style="color: var(--accent-amber-dark);">Moving in \(-y\) Direction (\(v_y < 0\)):</strong>
+                  <div style="display: flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem;">
+                    <span>From \(t =\)</span>
+                    <input type="number" id="inpNegDirStart" class="input-control" step="0.01" style="width: 64px;" placeholder="t_apex">
+                    <span>to</span>
+                    <input type="number" id="inpNegDirEnd" class="input-control" step="0.01" style="width: 64px;" placeholder="t_final">
+                    <span>s</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3g: Sign of Acceleration & Concavity -->
+            <div class="interval-q-block">
+              <div class="interval-q-title">
+                <span>3g. Negative Vertical Acceleration Interval (\(a_y < 0\)) &amp; Concavity</span>
+                <span class="exam-skill-pill">Exam Prob 3g</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 0.78rem;">
+                <span>Interval where \(a_y < 0\): From \(t =\)</span>
+                <input type="number" id="inpNegAccStart" class="input-control" step="0.01" style="width: 68px;" placeholder="0.00">
+                <span>s to \(t =\)</span>
+                <input type="number" id="inpNegAccEnd" class="input-control" step="0.01" style="width: 68px;" placeholder="t_final">
+                <span>s</span>
+                <span style="color: var(--muted); font-size: 0.73rem;">(Hint: Check slope of \(v_y\) &amp; concavity of \(y\)!)</span>
+              </div>
+              <textarea id="txtAccSignExplanation" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem;" placeholder="Explain why aᵧ is negative during ascent (0 < t < t_apex) even though vᵧ > 0, and connect the downward concavity of y(t) to the negative slope of vᵧ(t)..."></textarea>
+            </div>
           </div>
         </div>
       </div>
@@ -689,6 +940,73 @@
         </div>
       </div>
 
+      <!-- NEW Section 1B: Acceleration from v-t Slope & Displacement from Signed v-t Area (Unit 2 Exam Problem 3b, 3c, 3d) -->
+      <div class="worksheet-card" style="border: 2px solid var(--accent-amber);">
+        <div class="worksheet-card-header" style="background: var(--accent-amber-light); border-bottom: 2px solid var(--accent-amber);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="worksheet-card-title" style="color: var(--accent-amber-dark);">1B. Velocity-Time Slope (\(\Delta v_y / \Delta t\)) &amp; Signed-Area Displacement Method (\(\Delta y = \sum \text{Area}\))</span>
+            <span class="exam-skill-pill">Unit 2 Exam Problem 3b, 3c, 3d</span>
+          </div>
+          <span class="pct-diff-badge" id="badgeSignedAreaVerify">Awaiting Input</span>
+        </div>
+        <div class="worksheet-card-body">
+          <div class="calc-guidance-box" style="margin-bottom: 0.9rem; background: #fdf3e8; border-left: 4px solid var(--accent-amber); color: #123140;">
+            <strong>Unit 2 Exam Graph Rules (No Calculus — Algebra Slope &amp; Signed Geometry Only):</strong>
+            <ul style="margin: 0.3rem 0 0 1.2rem;">
+              <li><strong>Exam 3b (Acceleration from \(v_y\)-\(t\) Slope):</strong> Write the symbolic equation \(a_y = \frac{\Delta v_y}{\Delta t} = \frac{v_{y,f} - v_{0y}}{t_f - t_0}\) first, then substitute two points from your linear \(v_y(t)\) graph with units (\(\text{m/s}^2\)).</li>
+              <li><strong>Exam 3c (Displacement from Signed \(v_y\)-\(t\) Area):</strong> On a \(v\)-\(t\) graph, displacement equals the <strong>signed area</strong> between the velocity line and the zero time axis:
+                \[\Delta y_{\text{up}} = \text{Area}_{\text{above}} = +\frac{1}{2} b_1 h_1 = +\frac{1}{2} t_{\text{apex}} v_{0y} > 0, \qquad \Delta y_{\text{down}} = \text{Area}_{\text{below}} = \frac{1}{2} b_2 h_2 = \frac{1}{2}(t_{\text{hang}} - t_{\text{apex}})v_{fy} < 0\]
+                Net vertical displacement is \(\Delta y_{\text{total}} = \text{Area}_{\text{above}} + \text{Area}_{\text{below}}\).
+              </li>
+              <li><strong>Exam 3d (Position vs. Displacement — Don't Forget \(y_0\)!):</strong> Area under \(v\)-\(t\) gives <em>displacement</em> \(\Delta y\), NOT position! To find position, always add initial position \(y_0\):
+                \[y_{\max} = y_0 + \Delta y_{\text{up}}, \qquad y_{\text{final}} = y_0 + \Delta y_{\text{total}}\]
+              </li>
+            </ul>
+          </div>
+
+          <div class="calc-grid-2" style="margin-bottom: 0.85rem;">
+            <!-- Left Box: 3b Slope & 3c Signed Areas -->
+            <div style="background: var(--surface-alt); padding: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 0.55rem;">
+              <h4 style="font-size: 0.88rem; color: var(--primary-teal); margin: 0;">Part I: \(v_y\)-\(t\) Slope (3b) &amp; Signed Triangle Areas (3c)</h4>
+              <div class="calc-field-group">
+                <label>1. Slope of \(v_y(t)\) Line: \(a_y = \frac{\Delta v_y}{\Delta t} = \frac{v_{y,f} - v_{0y}}{t_f - 0}\) (m/s²):</label>
+                <input type="number" id="inpSlopeAyFromVt" class="input-control" step="0.001" placeholder="Calculate (v_yf - v_0y) / t_f">
+              </div>
+              <div class="calc-field-group">
+                <label>2. Positive Triangle Area Above Axis \(\Delta y_{\text{up}} = +\frac{1}{2} t_{\text{apex}} v_{0y}\) (m):</label>
+                <input type="number" id="inpAreaUp" class="input-control" step="0.001" placeholder="Positive area (0 to t_apex)">
+              </div>
+              <div class="calc-field-group">
+                <label>3. Negative Triangle Area Below Axis \(\Delta y_{\text{down}} = \frac{1}{2}(t_{\text{hang}} - t_{\text{apex}})v_{fy}\) (m):</label>
+                <input type="number" id="inpAreaDown" class="input-control" step="0.001" placeholder="Negative area (must be ≤ 0)">
+              </div>
+            </div>
+
+            <!-- Right Box: 3d Net Displacement & Positions with y0 -->
+            <div style="background: var(--surface-alt); padding: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 0.55rem;">
+              <h4 style="font-size: 0.88rem; color: var(--accent-amber-dark); margin: 0;">Part II: Net Displacement &amp; Positions Including \(y_0\) (3d)</h4>
+              <div class="calc-field-group">
+                <label>4. Net Vertical Displacement \(\Delta y_{\text{total}} = \Delta y_{\text{up}} + \Delta y_{\text{down}}\) (m):</label>
+                <input type="number" id="inpNetDyArea" class="input-control" step="0.001" placeholder="Area_above + Area_below">
+              </div>
+              <div class="calc-field-group">
+                <label>5. Apex Position from Signed Area \(y_{\max,\text{area}} = y_0 + \Delta y_{\text{up}}\) (m):</label>
+                <input type="number" id="inpYMaxFromArea" class="input-control" step="0.001" placeholder="Don't forget + y_0!">
+              </div>
+              <div class="calc-field-group">
+                <label>6. Final Landing Position \(y_{f,\text{area}} = y_0 + \Delta y_{\text{total}}\) (m):</label>
+                <input type="number" id="inpYFinalFromArea" class="input-control" step="0.001" placeholder="y_0 + Δy_total">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-weight: 600; font-size: 0.82rem; color: var(--primary-teal);">Show Your Full Symbolic &amp; Signed-Area Work (Exam Problem 3b, 3c, 3d Format):</label>
+            <textarea id="workSignedArea" class="input-control" rows="3" style="width: 100%; box-sizing: border-box; margin-top: 0.25rem; font-family: monospace; font-size: 0.85rem;" placeholder="3b. Symbolic slope: a_y = Δv_y / Δt = (v_yf - v_0y) / (t_f - 0) = ... m/s²&#10;3c. Signed areas: Δy_up = +½·t_apex·v_0y = ... m;  Δy_down = ½·(t_f - t_apex)·v_fy = -... m;  Δy_total = Δy_up + Δy_down = ... m&#10;3d. Positions with y_0: y_max = y_0 + Δy_up = ... m;  y_final = y_0 + Δy_total = ... m"></textarea>
+          </div>
+        </div>
+      </div>
+
       <!-- Section 2: Maximum Height Derivation & Calculation -->
       <div class="worksheet-card">
         <div class="worksheet-card-header">
@@ -855,9 +1173,9 @@
       <div class="guidance-banner" style="margin-bottom: 1rem;">
         <div class="guidance-icon">📊</div>
         <div class="guidance-content">
-          <strong class="guidance-title">Step 5: Classroom Presentation &amp; Report Submission</strong>
+          <strong class="guidance-title">Step 5: Classroom Presentation &amp; Report Submission (11 Slides + 4-Page PDF)</strong>
           <p>
-            Review all 10 presentation slides matching the classroom grading rubric. Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck with embedded high-resolution kinematics curves, theoretical calculations, comparison tables, and video trajectory capture.
+            Review all 11 presentation slides matching the classroom grading rubric (including Slide 8 on Motion Graph Translation, Interval Analysis &amp; Signed-Area Displacement). Enter your student name and teacher. Download your ready-to-present PowerPoint (.pptx) deck or print your 4-page PDF report.
           </p>
         </div>
         <button class="btn btn-ghost btn-help-trigger" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">
@@ -918,7 +1236,7 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
         <div>
           <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Presentation &amp; Deliverables</h2>
-          <p style="font-size: 0.82rem; color: var(--muted); margin: 0.2rem 0 0 0;">Export your complete 10-slide presentation deck matching the classroom rubric, print your comprehensive lab report, and copy form responses.</p>
+          <p style="font-size: 0.82rem; color: var(--muted); margin: 0.2rem 0 0 0;">Export your complete 11-slide presentation deck matching the classroom rubric, print your comprehensive 4-page lab report, and copy form responses.</p>
         </div>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
           <button id="btnDownloadPptx" class="btn btn-amber" style="font-weight: 700;">
@@ -937,7 +1255,7 @@
       <div class="slide-deck-preview">
         <!-- Slide Header Controls -->
         <div style="padding: 0.6rem 1rem; background: var(--surface-alt); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 600; font-size: 0.85rem; color: var(--primary-teal);" id="slidePreviewTitle">Slide 1 of 10: Title &amp; Honor Code</span>
+          <span style="font-weight: 600; font-size: 0.85rem; color: var(--primary-teal);" id="slidePreviewTitle">Slide 1 of 11: Title &amp; Honor Code</span>
           <div style="display: flex; gap: 0.35rem;">
             <button id="btnPrevSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">‹</button>
             <button id="btnNextSlide" class="btn btn-icon-only" style="padding: 0.25rem 0.5rem;">›</button>
@@ -958,9 +1276,10 @@
           <div class="slide-thumb" data-slide-idx="5">Slide 5<br><small>x(t)</small></div>
           <div class="slide-thumb" data-slide-idx="6">Slide 6<br><small>vx(t)</small></div>
           <div class="slide-thumb" data-slide-idx="7">Slide 7<br><small>ax(t)</small></div>
-          <div class="slide-thumb" data-slide-idx="8">Slide 8<br><small>Calculations</small></div>
-          <div class="slide-thumb" data-slide-idx="9">Slide 9<br><small>Comparison</small></div>
-          <div class="slide-thumb" data-slide-idx="10">Slide 10<br><small>Reflection</small></div>
+          <div class="slide-thumb" data-slide-idx="8">Slide 8<br><small>Graph Mastery</small></div>
+          <div class="slide-thumb" data-slide-idx="9">Slide 9<br><small>Calculations</small></div>
+          <div class="slide-thumb" data-slide-idx="10">Slide 10<br><small>Comparison</small></div>
+          <div class="slide-thumb" data-slide-idx="11">Slide 11<br><small>Reflection</small></div>
         </div>
       </div>
     </div>
@@ -978,7 +1297,7 @@
           <span style="font-size: 1.4rem;">📖</span>
           <div>
             <h3 id="helpModalTitle" style="margin: 0; font-size: 1.2rem; color: #ffffff; font-weight: 700;">Physics of Sports Analytics: Complete Project Guide</h3>
-            <span style="font-size: 0.78rem; color: #d4ecf4;">Video Analysis Lab Rubric, Kinematic Formulas &amp; Step-by-Step Instructions</span>
+            <span style="font-size: 0.78rem; color: #d4ecf4;">Video Analysis Lab Rubric, Motion Graph Translation &amp; Step-by-Step Instructions</span>
           </div>
         </div>
         <button id="btnCloseHelpModal" class="help-close-btn" aria-label="Close Help Guide">✕</button>
@@ -990,28 +1309,34 @@
         <button class="help-tab-btn" data-help-tab="help-step1">📏 Step 1: Scale &amp; Origin</button>
         <button class="help-tab-btn" data-help-tab="help-step2">🎯 Step 2: Tracking</button>
         <button class="help-tab-btn" data-help-tab="help-step3">📈 Step 3: Graphs &amp; Tangents</button>
-        <button class="help-tab-btn" data-help-tab="help-step4">🧮 Step 4: Calculations</button>
+        <button class="help-tab-btn" data-help-tab="help-step4">🧮 Step 4: Calculations &amp; Area</button>
         <button class="help-tab-btn" data-help-tab="help-step5">📊 Step 5: Presentation (.pptx)</button>
-        <button class="help-tab-btn" data-help-tab="help-rubric">🏆 Rubric &amp; Tips</button>
+        <button class="help-tab-btn" data-help-tab="help-rubric">🏆 Rubric (100 pts)</button>
       </div>
 
       <!-- Help Content Body -->
       <div class="help-modal-body">
         <!-- Tab 1: Overview -->
         <div id="help-overview" class="help-tab-panel active">
-          <h4>🎯 Project Objective &amp; Workflow</h4>
+          <h4>🎯 Project Objective &amp; Unit 2 Motion Graph Mastery</h4>
           <p>
-            In this laboratory project, you act as a sports analytics biomechanist analyzing the two-dimensional projectile motion of a sports ball. You will track the projectile frame-by-frame, construct 6 kinematics graphs, use the <strong>tangent slope method</strong> to construct vertical velocity, verify theoretical kinematic models with percent differences, and export a 10-slide presentation deck.
+            In this laboratory project, you act as a sports analytics biomechanist analyzing the two-dimensional projectile motion of a sports ball. In addition to analyzing your video, this project serves as a comprehensive mastery application of <strong>Unit 2: Constant Acceleration &amp; Graphing Motion (Test Problems 1, 3, and 4)</strong>.
           </p>
           <div class="help-callout">
-            <strong>The 5 Project Stages:</strong>
-            <ol style="margin: 0.4rem 0 0 1.2rem; line-height: 1.6;">
-              <li><strong>Step 1: Video &amp; Scale</strong> — Calibrate the coordinate origin \((0, 0)\) and real-world meter scale stick.</li>
-              <li><strong>Step 2: Track Motion</strong> — Step through frames and mark the projectile's center of mass with circular reticles.</li>
-              <li><strong>Step 3: 6-Graph Studio &amp; Tangents</strong> — Inspect the 6 kinematics curves and sample 10 tangent slopes along \(y(t)\) to construct \(v_y(t)\).</li>
-              <li><strong>Step 4: Guided Calculations</strong> — Compute launch speed \(v_0\), release angle \(\theta\), \(y_{\max}\), \(t_{\text{hang}}\), \(\Delta x\), and percent differences. Write a 5-sentence reflection.</li>
-              <li><strong>Step 5: Presentation &amp; Reports</strong> — Generate a 10-slide PowerPoint (.pptx) deck matching classroom grading rubrics and print a 4-page lab report.</li>
-            </ol>
+            <strong>How Your Projectile's Motion Directly Mirrors Unit 2 Exam Problem 3:</strong>
+            <ul style="margin: 0.35rem 0 0 1.2rem; line-height: 1.6;">
+              <li><strong>Vertical Motion (\(y, v_y, a_y\)) = Exam Problem 3 Turnaround (\(t = 2\text{–}6\text{ s}\)):</strong> The ball starts at initial height \(y_0 \neq 0\), moves upward in the \(+y\) direction while slowing down (\(v_y > 0, a_y < 0\)), stops vertically for an instant at the apex (\(v_y = 0\) where \(y(t)\) tangent slope is zero), and moves downward in the \(-y\) direction while speeding up (\(v_y < 0, a_y < 0\)).</li>
+              <li><strong>Horizontal Motion (\(x, v_x, a_x\)) = Exam Problem 3 Constant Velocity (\(t = 0\text{–}2\text{ s}\)):</strong> Linear position \(x(t)\), constant positive horizontal velocity \(v_x(t) = v_{0x}\), and zero horizontal acceleration \(a_x(t) = 0\text{ m/s}^2\).</li>
+            </ul>
+          </div>
+          <div class="help-callout">
+            <strong>Companion Graphing Simulations for Practice:</strong>
+            <ul style="margin: 0.35rem 0 0 1.2rem; line-height: 1.6;">
+              <li><a href="https://thinking-experiment-sims.github.io/graph-sprint/" target="_blank" rel="noopener"><strong>Graph Sprint</strong></a> — Practice translating between \(x\)-\(t\), \(v\)-\(t\), and \(a\)-\(t\) graphs (Exam Problem 1 &amp; 3a).</li>
+              <li><a href="https://thinking-experiment-sims.github.io/kinematics-multistage-sim/" target="_blank" rel="noopener"><strong>Kinematics Stagecrafter</strong></a> — Practice signed \(v\)-\(t\) triangle/rectangle areas (\(\Delta x = \sum\text{Area}\)) and \(x_f = x_0 + \Delta x\) (Exam Problem 3c &amp; 3d).</li>
+              <li><a href="https://thinking-experiment-sims.github.io/uniform-acceleration-ramp-lab/" target="_blank" rel="noopener"><strong>Uniform Acceleration Ramp Lab</strong></a> — Practice turnaround motion (\(v = 0\) at apex while \(a < 0\)) and tangent slopes (Exam Problem 3e–g &amp; Problem 4).</li>
+              <li><a href="https://thinking-experiment-sims.github.io/graph-that-motion-sim/" target="_blank" rel="noopener"><strong>Coco's Motion Lab</strong></a> — Match real-time motion to position and velocity graphs.</li>
+            </ul>
           </div>
         </div>
 
@@ -1020,7 +1345,7 @@
           <h4>📏 Step 1: Setting Scale &amp; Coordinate Origin</h4>
           <p>Accurate kinematics depends entirely on correct spatial calibration.</p>
           <ul>
-            <li><strong>Setting the Coordinate Origin (0, 0):</strong> Click <strong>Set Origin</strong> in the toolbar. Click anywhere on the video (typically the launch point or ground level directly below release) to place the axes. You can drag the origin point anytime.</li>
+            <li><strong>Setting the Coordinate Origin (0, 0):</strong> Click <strong>Set Origin</strong> in the toolbar. Click anywhere on the video (typically the launch point or ground level directly below release) to place the axes. Notice how if you place \((0,0)\) on the floor and release the ball above the floor, your initial vertical position \(y_0 > 0\text{ m}\) (just like \(x_0 = 10\text{ m}\) on Exam Problem 3!).</li>
             <li><strong>Setting the Scale Stick:</strong> Click <strong>Set Scale</strong>. Click and drag across a known reference length in the frame (such as the 1.00 m reference stick on the floor, a meter stick, or athlete's height).</li>
             <li><strong>Calibrate Input:</strong> In the right sidebar under <em>Scale &amp; Calibration</em>, enter the known length in meters (e.g. <code>1.00</code>) and click <strong>Calibrate</strong>.</li>
           </ul>
@@ -1033,90 +1358,81 @@
           <ul>
             <li><strong>Select Tool:</strong> Click <strong>Add Points</strong> in the toolbar.</li>
             <li><strong>Reticle Placement:</strong> Place the crosshair/circle directly at the center of the ball on each frame.</li>
-            <li><strong>Auto-Advancing:</strong> By default, each click advances the video by 2 frames. You can change this to 1 frame using the <em>Step</em> dropdown.</li>
+            <li><strong>Auto-Advancing:</strong> By default, each click advances the video by 2 frames. You can change this to 1 frame using the <em>Step</em> dropdown or step manually with the Left/Right arrow keys.</li>
             <li><strong>Time Zero (\(t_0\)):</strong> After tracking, click <strong>Set \(t_0\) at First Pt</strong> so that the release frame corresponds to \(t = 0.000\text{ s}\).</li>
           </ul>
         </div>
 
         <!-- Tab 4: Step 3 Graphs & Tangents -->
         <div id="help-step3" class="help-tab-panel">
-          <h4>📈 Step 3: The 6 Kinematics Graphs &amp; Tangent Slope Method</h4>
-          <p>
-            Why does the rubric ask for <strong>10 tangent slopes</strong> on the vertical position curve?
-          </p>
+          <h4>📈 Step 3: Two-Point Tangent Slopes (Exam Problem 4) &amp; Graph Interpretation (Exam Problem 3)</h4>
           <div class="help-callout">
-            <strong>The Physics of Tangent Lines (Algebra-Based):</strong>
+            <strong>1. Two-Point Tangent Slope Rule (Exam Problem 4 Format):</strong>
             <p style="margin: 0.25rem 0;">
-              In algebra-based physics, instantaneous velocity at any point is the slope of the tangent line touching the position-time curve:
-              \[v_y = \text{slope} = \frac{\Delta y}{\Delta t}\]
-              When you fit a quadratic curve \(y(t) = At^2 + Bt + C\) to your vertical position data, the tangent line touching the curve at time \(t\) has instantaneous slope \(m = 2At + B\).
+              In algebra-based physics, instantaneous velocity at any instant \(t\) is the slope of the tangent line touching the position-time curve:
+              \[v_y = \text{slope of tangent} = \frac{\Delta y}{\Delta t} = \frac{y_2 - y_1}{t_2 - t_1}\]
+              To earn full credit (just like Exam Problem 4):
             </p>
-            <p style="margin: 0.25rem 0;">
-              Similarly, acceleration is the slope of the velocity-time graph:
-              \[a_y = \text{slope} = \frac{\Delta v_y}{\Delta t}\]
-            </p>
-            <p style="margin: 0.25rem 0;">
-              By sampling 10 points along the trajectory, recording their tangent slopes \(\frac{\Delta y}{\Delta t}\), and plotting those slopes versus time on Graph 3, you construct the vertical velocity graph \(v_y(t)\)!
-            </p>
-            <p style="margin: 0.25rem 0;">
-              The linear fit to these 10 tangent velocity points yields:
-              \[v_y(t) = a_y t + v_{0y}\]
-              The slope of this line directly reveals the vertical acceleration of gravity \(a_y\) (theoretically \(-9.80\text{ m/s}^2\)), while the y-intercept reveals the initial vertical speed \(v_{0y}\).
-            </p>
+            <ol style="margin: 0.25rem 0 0 1.2rem;">
+              <li>Align the tangent line at time \(t\) using the Tangent Slider.</li>
+              <li>Read <strong>two widely separated points \(P_1(t_1, y_1)\) and \(P_2(t_2, y_2)\) lying ON the drawn tangent line</strong> (do NOT pick raw data points on the curve!).</li>
+              <li>Substitute into \(v_y = \frac{y_2 - y_1}{t_2 - t_1}\) with units (\(\text{m/s}\)) and click <strong>Verify \(\Delta y / \Delta t\) &amp; Record</strong>. Complete at least 3 verified two-point calculations (ascent, near apex, descent) and 10 total tangent samples.</li>
+            </ol>
           </div>
-          <h4>The 6 Required Project Graphs:</h4>
-          <ol style="margin-left: 1.2rem; line-height: 1.6;">
-            <li><strong>Graph 1: Vertical Position \(y(t)\)</strong> — Parabolic curve of best fit \(y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0\).</li>
-            <li><strong>Graph 2: Horizontal Position \(x(t)\)</strong> — Linear fit \(x(t) = v_{0x}t + x_0\) (slope = constant horizontal velocity).</li>
-            <li><strong>Graph 3: Vertical Velocity \(v_y(t)\)</strong> — Linear fit through the 10 tangent slopes (slope = \(a_y = \frac{\Delta v_y}{\Delta t}\)).</li>
-            <li><strong>Graph 4: Horizontal Velocity \(v_x(t)\)</strong> — Linear fit showing zero acceleration (\(a_x \approx 0\)).</li>
-            <li><strong>Graph 5: Vertical Acceleration \(a_y(t)\)</strong> — Horizontal constant line at \(a_y\) compared against standard \(g = -9.80\text{ m/s}^2\).</li>
-            <li><strong>Graph 6: Horizontal Acceleration \(a_x(t)\)</strong> — Horizontal constant line at \(a_x \approx 0.00\text{ m/s}^2\).</li>
-          </ol>
+          <div class="help-callout">
+            <strong>2. Physical Motion Interval Analysis (Exam Problem 3e, 3f, 3g):</strong>
+            <ul style="margin: 0.25rem 0 0 1.2rem;">
+              <li><strong>Stopping (\(v_y = 0\)):</strong> The projectile stops vertically for a <em>single instant</em> at \(t = t_{\text{apex}}\) where \(v_y(t)\) crosses the zero axis and \(y(t)\) has a horizontal tangent (slope \(= 0\)). However, it is NOT stopped in 2D space because \(v_x = v_{0x} \neq 0\)!</li>
+              <li><strong>Moving in \(+y\) vs. \(-y\) Direction:</strong> Direction of motion is determined by the <strong>sign of velocity</strong> (\(v_y > 0\) above the zero axis on \(v_y\)-\(t\) / positive slope on \(y\)-\(t\)), NOT the sign of position or acceleration!</li>
+              <li><strong>Sign of Acceleration (\(a_y < 0\)):</strong> Vertical acceleration is negative across the <em>entire flight</em> (\(0 < t < t_{\text{final}}\)) because gravity pulls downward continuously—causing the \(y(t)\) parabola to curve downward (concave down) and the \(v_y(t)\) line to have a constant negative slope \(\frac{\Delta v_y}{\Delta t} \approx -9.8\text{ m/s}^2\).</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Tab 5: Step 4 Calculations -->
         <div id="help-step4" class="help-tab-panel">
-          <h4>🧮 Step 4: Theoretical Calculations &amp; Model Comparison</h4>
-          <p>Use fundamental kinematic equations from first principles (no shortcuts):</p>
+          <h4>🧮 Step 4: Signed \(v\)-\(t\) Area Method (Exam Problem 3c–d) &amp; Kinematic Derivations</h4>
+          <p>In Step 4, you will verify your projectile's motion using <strong>both</strong> the <strong>Signed \(v\)-\(t\) Area Method</strong> (Exam Problem 3b, 3c, 3d) and <strong>Fundamental Kinematic Equations</strong> (no shortcuts):</p>
           <div class="help-callout">
             <ul style="margin: 0.25rem 0 0 1.2rem; line-height: 1.7;">
-              <li><strong>Launch Vector:</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), \(\tan\theta = \frac{v_{0y}}{v_{0x}}\)</li>
-              <li><strong>Vertical Apex Height:</strong> Use \(v_{fy}^2 = v_{iy}^2 + 2a_y\Delta y\) with \(v_{fy} = 0\text{ m/s}\) at the apex.</li>
-              <li><strong>Flight Hang Time:</strong> Use \(y_f = y_0 + v_{iy}t + \frac{1}{2}a_y t^2\) and solve for \(t\).</li>
-              <li><strong>Horizontal Range:</strong> Use \(\Delta x = v_{ix}t + \frac{1}{2}a_x t^2\) with \(a_x = 0\text{ m/s}^2\).</li>
+              <li><strong>Acceleration from \(v_y\)-\(t\) Slope (Exam 3b):</strong> State \(a_y = \frac{\Delta v_y}{\Delta t} = \frac{v_{y,f} - v_{0y}}{t_f - 0}\) symbolically first, then substitute two points from your \(v_y(t)\) line with units (\(\text{m/s}^2\)).</li>
+              <li><strong>Displacement from Signed \(v_y\)-\(t\) Triangle Areas (Exam 3c):</strong>
+                \[\Delta y_{\text{up}} = \text{Area}_{\text{above}} = +\frac{1}{2} t_{\text{apex}} v_{0y}, \qquad \Delta y_{\text{down}} = \text{Area}_{\text{below}} = \frac{1}{2}(t_{\text{hang}} - t_{\text{apex}})v_{fy} < 0\]
+                \[\Delta y_{\text{total}} = \Delta y_{\text{up}} + \Delta y_{\text{down}}\]
+              </li>
+              <li><strong>Position from Initial Position + Signed Area (Exam 3d):</strong> Never forget initial height \(y_0\)!
+                \[y_{\max} = y_0 + \Delta y_{\text{up}}, \qquad y_{\text{final}} = y_0 + \Delta y_{\text{total}}\]
+              </li>
+              <li><strong>Fundamental Kinematic Equations:</strong>
+                \[v_{fy}^2 = v_{iy}^2 + 2a_y(y_{\max} - y_0), \qquad y_f = y_0 + v_{0y}t + \frac{1}{2}a_y t^2, \qquad \Delta x = v_{0x}t + \frac{1}{2}a_x t^2\]
+              </li>
               <li><strong>Percent Difference Formula:</strong> \[\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%\]</li>
             </ul>
           </div>
-          <p><strong>Show Your Work:</strong> For each problem, state the base equation, show numerical substitution with units, and show algebraic solution steps in the provided derivation textareas.</p>
         </div>
 
         <!-- Tab 6: Step 5 Presentation -->
         <div id="help-step5" class="help-tab-panel">
-          <h4>📊 Step 5: PowerPoint Deck Format (10 Slides)</h4>
-          <p>The 1-click exporter generates a 10-slide presentation aligned with the high school physics rubric:</p>
+          <h4>📊 Step 5: PowerPoint Deck Format (11 Slides) &amp; 4-Page PDF Report</h4>
+          <p>The 1-click exporter generates an 11-slide presentation and 4-page printable PDF report aligned with the updated rubric:</p>
           <ul>
-            <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Course, Honor Code pledge, and Calibrated Video Trajectory Snapshot showing all tracked points, the scale stick, and the coordinate origin.</li>
-            <li><strong>Slide 2:</strong> Vertical Position Graph \(y(t)\), quadratic equations with units, and analysis notes.</li>
-            <li><strong>Slide 3:</strong> Vertical Velocity Graph \(v_y(t)\), linear equations with units, documentation of 10 tangent slopes (\(\Delta y / \Delta t\)).</li>
-            <li><strong>Slide 4:</strong> Vertical Acceleration Graph \(a_y(t)\), comparison with \(g = -9.80\text{ m/s}^2\), and percent difference.</li>
-            <li><strong>Slide 5:</strong> Horizontal Position Graph \(x(t)\), linear equations with units, and velocity analysis.</li>
-            <li><strong>Slide 6:</strong> Horizontal Velocity Graph \(v_x(t)\), verification of uniform velocity with zero horizontal force.</li>
-            <li><strong>Slide 7:</strong> Horizontal Acceleration Graph \(a_x(t)\), comparison with \(0\text{ m/s}^2\).</li>
-            <li><strong>Slide 8:</strong> Kinematic Calculations &amp; Predictions — Algebraic derivations of \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\).</li>
-            <li><strong>Slide 9:</strong> Model Verification &amp; Comparison Table — Full comparison table of measured vs. theoretical values and percent differences.</li>
-            <li><strong>Slide 10:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
+            <li><strong>Slide 1:</strong> Title, Student Name, Teacher, Honor Code pledge, Originality Token, and Calibrated Video Trajectory Snapshot showing all tracked points, scale stick, and coordinate origin.</li>
+            <li><strong>Slides 2–7:</strong> The 6 Kinematics Graphs (\(y, v_y, a_y, x, v_x, a_x\)) with general &amp; particular equations with units and signed-area shading.</li>
+            <li><strong>Slide 8 (NEW — Unit 2 Graph Mastery):</strong> Motion Graph Translation (\(x\)-\(t \leftrightarrow v\)-\(t \leftrightarrow a\)-\(t\)), Physical Interval Interpretation (Stopping at \(t_{\text{apex}}\), \(+y/-y\) direction intervals, why \(a_y < 0\) throughout), and Signed \(v\)-\(t\) Area calculations (\(\Delta y_{\text{up}}, \Delta y_{\text{down}}, y_0 + \Delta y\)).</li>
+            <li><strong>Slide 9:</strong> Kinematic Calculations &amp; Predictions — Full algebraic derivations of \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\).</li>
+            <li><strong>Slide 10:</strong> Model Verification &amp; Comparison Table — Full comparison of measured vs. calculated values and percent differences.</li>
+            <li><strong>Slide 11:</strong> Real-World Reflection paragraph (5+ sentences) on sports analytics applications.</li>
           </ul>
         </div>
 
         <!-- Tab 7: Rubric & Pro Tips -->
         <div id="help-rubric" class="help-tab-panel">
-          <h4>🏆 Scoring Rubric (100 Points Total)</h4>
+          <h4>🏆 Scoring Rubric (100 Points Total — Aligned with Unit 2 Motion Graphing Standards)</h4>
           <p style="font-size: 0.88rem; color: #4b6570; margin-bottom: 0.75rem;">
-            <em>Important Note on Grading:</em> In this project, <strong>points are NOT awarded for the plotting correctness of the graphs</strong> because all 6 kinematic curves and fits are generated automatically by the computer. Scoring is based on your experimental technique, understanding of tangent slopes, complete step-by-step algebraic derivations, and scientific reflection.
+            <em>Important Note on Grading:</em> Because the computer plots the data points and curve fits, <strong>points are NOT awarded for the computer plotting the graphs</strong>. Instead, points are awarded for your calibration/tracking, <strong>translating and physically interpreting the motion graphs (Unit 2 Exam Problem 1 &amp; 3)</strong>, <strong>calculating two-point tangent slopes \(\frac{\Delta y}{\Delta t}\) (Exam Problem 4)</strong>, and <strong>signed-area &amp; kinematic derivations</strong>.
           </p>
           <div style="overflow-x: auto; margin-bottom: 1rem;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
               <thead>
                 <tr style="background: var(--surface-alt); border-bottom: 2px solid var(--primary-teal);">
                   <th style="padding: 0.6rem; text-align: left; color: var(--primary-teal);">Rubric Category</th>
@@ -1126,45 +1442,45 @@
               </thead>
               <tbody>
                 <tr style="border-bottom: 1px solid var(--border-light);">
-                  <td style="padding: 0.6rem; font-weight: 700;">1. Video Calibration &amp; Tracking</td>
-                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">25 pts</td>
-                  <td style="padding: 0.6rem;">
-                    • Coordinate origin placed accurately at release/ground level (5 pts)<br>
-                    • Scale calibrated precisely to the 1.00 m reference stick (5 pts)<br>
-                    • Consistent frame-by-frame tracking centered on the ball (15+ frames) (15 pts)
-                  </td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-light);">
-                  <td style="padding: 0.6rem; font-weight: 700;">2. Tangent Slope Method (\(\Delta y / \Delta t\))</td>
-                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">20 pts</td>
-                  <td style="padding: 0.6rem;">
-                    • Conceptual understanding that velocity is the slope of position: \(v_y = \frac{\Delta y}{\Delta t}\) (10 pts)<br>
-                    • 10 tangent slopes recorded across the flight demonstrating positive slope on ascent, zero slope at apex, and negative slope on descent (10 pts)
-                  </td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-light);">
-                  <td style="padding: 0.6rem; font-weight: 700;">3. Step-by-Step Algebraic Derivations</td>
-                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">30 pts</td>
-                  <td style="padding: 0.6rem;">
-                    • Complete derivation shown in "Show Your Work" workspaces without shortcut formulas (15 pts)<br>
-                    • States fundamental kinematic equation, substitution with units, and clear algebra (10 pts)<br>
-                    • Accurate calculations for \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\) (5 pts)
-                  </td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--border-light);">
-                  <td style="padding: 0.6rem; font-weight: 700;">4. Comparison &amp; Percent Error Analysis</td>
+                  <td style="padding: 0.6rem; font-weight: 700;">1. Video Calibration, Origin &amp; Multi-Point Tracking</td>
                   <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">15 pts</td>
                   <td style="padding: 0.6rem;">
-                    • Master Kinematic Comparison Table completed comparing graph vs. calculated values (5 pts)<br>
-                    • Accurate percent difference calculation and discussion of experimental error sources (air resistance, camera angle, click uncertainty) (10 pts)
+                    • Coordinate origin \((0,0)\) and 1.00 m scale stick accurately calibrated and visible in Slide 1 snapshot (5 pts)<br>
+                    • Consistent frame-by-frame tracking centered on the projectile across its trajectory with \(t_0 = 0\text{ s}\) set at release (10 pts)
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">2. Motion Graph Translation &amp; Physical Interval Interpretation <span class="exam-skill-pill">Exam Prob 1 &amp; 3a, 3e–g</span></td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">25 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • <strong>Graph Translation (9 pts):</strong> Correctly explains how parabolic \(y(t)\) translates to linear \(v_y(t)\) (crossing 0 at \(t_{\text{apex}}\)) and constant negative \(a_y(t)\), and how linear \(x(t)\) translates to constant \(v_x(t)\) and \(a_x = 0\).<br>
+                    • <strong>Stopping Analysis — 3e (6 pts):</strong> Identifies the exact instantaneous vertical stop at \(t = t_{\text{apex}}\) from both the zero slope of \(y(t)\) and zero-crossing of \(v_y(t)\), and explains why 2D velocity is non-zero (\(v_x \neq 0\)).<br>
+                    • <strong>Direction &amp; Acceleration Sign Intervals — 3f &amp; 3g (10 pts):</strong> Identifies exact time intervals for \(+y\) motion (\(v_y > 0\)), \(-y\) motion (\(v_y < 0\)), and negative acceleration (\(a_y < 0\) across the entire flight, explaining why \(a_y < 0\) even during upward motion).
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">3. Two-Point Tangent Slope Method (\(\Delta y / \Delta t\)) <span class="exam-skill-pill">Exam Prob 4</span></td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">20 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • States symbolic slope relation \(v_y = \frac{\Delta y}{\Delta t} = \frac{y_2 - y_1}{t_2 - t_1}\) without numbers first (4 pts)<br>
+                    • Selects two widely separated points \((t_1, y_1)\) and \((t_2, y_2)\) lying <strong>on the tangent line itself (not raw curve data points)</strong> and manually verifies at least 3 tangent slopes (ascent, apex, descent) with units (\(\text{m/s}\)) (10 pts)<br>
+                    • Records 10 total tangent points to construct the linear \(v_y(t)\) graph (6 pts)
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-light);">
+                  <td style="padding: 0.6rem; font-weight: 700;">4. Signed \(v\)-\(t\) Area Displacement, \(y_0 + \Delta y\), &amp; Kinematic Derivations <span class="exam-skill-pill">Exam Prob 3b–d</span></td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">25 pts</td>
+                  <td style="padding: 0.6rem;">
+                    • <strong>Slope &amp; Signed Area Method (10 pts):</strong> Computes \(a_y = \frac{\Delta v_y}{\Delta t}\) from \(v_y\)-\(t\) slope, calculates positive ascent triangle area (\(\Delta y_{\text{up}} > 0\)) and negative descent triangle area (\(\Delta y_{\text{down}} < 0\)), and adds initial height \(y_0\) (\(y_{\max} = y_0 + \Delta y_{\text{up}}\), \(y_f = y_0 + \Delta y_{\text{total}}\)).<br>
+                    • <strong>Step-by-Step Kinematic Derivations &amp; Comparison (15 pts):</strong> Shows full algebraic steps (equation, substitution with units, answer) for \(v_0, \theta, y_{\max}, t_{\text{hang}}, \Delta x\) and computes \(\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%\).
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 0.6rem; font-weight: 700;">5. Reflection &amp; Authenticity</td>
-                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">10 pts</td>
+                  <td style="padding: 0.6rem; font-weight: 700;">5. Real-World Sports Synthesis &amp; Academic Integrity</td>
+                  <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: var(--accent-amber);">15 pts</td>
                   <td style="padding: 0.6rem;">
-                    • 5+ complete, well-reasoned sentences discussing real-world projectile mechanics in sports analytics (8 pts)<br>
-                    • Verified Originality Token and signed Honor Code pledge (2 pts)
+                    • Thoughtful 5+ sentence reflection connecting projectile graphs and kinematics to real-world sports coaching/analytics and experimental error sources (12 pts)<br>
+                    • Verified Originality Token and signed Honor Code pledge (3 pts)
                   </td>
                 </tr>
               </tbody>

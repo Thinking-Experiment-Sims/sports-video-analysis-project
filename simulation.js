@@ -51,9 +51,11 @@ const state = {
     B: []
   },
 
-  // Tangent tool state (rubric requires 10 points from slopes of tangents)
-  tangentPoints: [], // { time, vy, slope, x, y }
+  // Tangent tool state (rubric requires 10 points from slopes of tangents & 3 manual two-point calculations)
+  tangentPoints: [], // { time, vy, slope, x, y, t1, y1, t2, y2, manualVerified }
   activeTangentTime: 0,
+  manualTangentCount: 0,
+  showSignedArea: true,
 
   // 6-Graph Studio state
   activeGraphTab: 'y-pos', // 'y-pos', 'x-pos', 'y-vel', 'x-vel', 'y-acc', 'x-acc', 'grid-all'
@@ -64,6 +66,36 @@ const state = {
     xVel: null,
     yAcc: null,
     xAcc: null
+  },
+
+  // Module A & B: Graph Translation & Physical Interval Interpretation (Unit 2 Exam Problem 1 & 3)
+  graphInterpretation: {
+    transYtoVy: '',
+    transVytoAy: '',
+    transX: '',
+    stopBehavior: '',
+    stopTimeApex: '',
+    stopExplanation: '',
+    posDirStart: '',
+    posDirEnd: '',
+    negDirStart: '',
+    negDirEnd: '',
+    negAccStart: '',
+    negAccEnd: '',
+    accSignExplanation: '',
+    verifiedTrans: false,
+    verifiedIntervals: false
+  },
+
+  // Section 1B: Signed v-t Area & Position Values (Unit 2 Exam Problem 3b, 3c, 3d)
+  signedAreaValues: {
+    slopeAyFromVt: '',
+    areaUp: '',
+    areaDown: '',
+    netDyArea: '',
+    yMaxFromArea: '',
+    yFinalFromArea: '',
+    workSignedArea: ''
   },
 
   // Calculations & Reflection
@@ -165,10 +197,21 @@ const btnFitVelocity = document.getElementById('btnFitVelocity');
 
 // 6-Graph Studio Elements
 const graphNavBtns = document.querySelectorAll('.graph-nav-btn');
+const chkShowSignedArea = document.getElementById('chkShowSignedArea');
 const tangentStudioBar = document.getElementById('tangentStudioBar');
 const tangentPointCountBadge = document.getElementById('tangentPointCountBadge');
+const twoPointVerifiedBadge = document.getElementById('twoPointVerifiedBadge');
 const tangentTimeDisplay = document.getElementById('tangentTimeDisplay');
+const tangentYDisplay = document.getElementById('tangentYDisplay');
 const tangentSlopeDisplay = document.getElementById('tangentSlopeDisplay');
+const tangentReadoutCoordsHint = document.getElementById('tangentReadoutCoordsHint');
+const inpTanT1 = document.getElementById('inpTanT1');
+const inpTanY1 = document.getElementById('inpTanY1');
+const inpTanT2 = document.getElementById('inpTanT2');
+const inpTanY2 = document.getElementById('inpTanY2');
+const inpTanStudentSlope = document.getElementById('inpTanStudentSlope');
+const btnVerifyAndRecordTangent = document.getElementById('btnVerifyAndRecordTangent');
+const tanFeedbackMsg = document.getElementById('tanFeedbackMsg');
 const tangentSlider = document.getElementById('tangentSlider');
 const btnRecordTangent = document.getElementById('btnRecordTangent');
 const btnClearTangents = document.getElementById('btnClearTangents');
@@ -181,6 +224,25 @@ const activeGeneralEq = document.getElementById('activeGeneralEq');
 const activeParticularEq = document.getElementById('activeParticularEq');
 const activeGraphCanvas = document.getElementById('activeGraphCanvas');
 
+// Graph Translation & Physical Interval Elements (Step 3)
+const btnVerifyGraphInterpretation = document.getElementById('btnVerifyGraphInterpretation');
+const badgeGraphTransStatus = document.getElementById('badgeGraphTransStatus');
+const selTransYtoVy = document.getElementById('selTransYtoVy');
+const selTransVytoAy = document.getElementById('selTransVytoAy');
+const selTransX = document.getElementById('selTransX');
+const badgeIntervalStatus = document.getElementById('badgeIntervalStatus');
+const selStopBehavior = document.getElementById('selStopBehavior');
+const inpStopTimeApex = document.getElementById('inpStopTimeApex');
+const hintApexTimeRange = document.getElementById('hintApexTimeRange');
+const txtStopExplanation = document.getElementById('txtStopExplanation');
+const inpPosDirStart = document.getElementById('inpPosDirStart');
+const inpPosDirEnd = document.getElementById('inpPosDirEnd');
+const inpNegDirStart = document.getElementById('inpNegDirStart');
+const inpNegDirEnd = document.getElementById('inpNegDirEnd');
+const inpNegAccStart = document.getElementById('inpNegAccStart');
+const inpNegAccEnd = document.getElementById('inpNegAccEnd');
+const txtAccSignExplanation = document.getElementById('txtAccSignExplanation');
+
 // Calculations Workspace Elements
 const btnCheckWorksheet = document.getElementById('btnCheckWorksheet');
 const authenticityBadge = document.getElementById('authenticityBadge');
@@ -192,6 +254,16 @@ const inpY0 = document.getElementById('inpY0');
 const inpVy0 = document.getElementById('inpVy0');
 const inpAy = document.getElementById('inpAy');
 const badgeAyPctDiff = document.getElementById('badgeAyPctDiff');
+
+// Section 1B Signed Area & Slope Elements
+const badgeSignedAreaVerify = document.getElementById('badgeSignedAreaVerify');
+const inpSlopeAyFromVt = document.getElementById('inpSlopeAyFromVt');
+const inpAreaUp = document.getElementById('inpAreaUp');
+const inpAreaDown = document.getElementById('inpAreaDown');
+const inpNetDyArea = document.getElementById('inpNetDyArea');
+const inpYMaxFromArea = document.getElementById('inpYMaxFromArea');
+const inpYFinalFromArea = document.getElementById('inpYFinalFromArea');
+const workSignedArea = document.getElementById('workSignedArea');
 const inpCalcRange = document.getElementById('inpCalcRange');
 const inpMeasRange = document.getElementById('inpMeasRange');
 const badgeRangePctDiff = document.getElementById('badgeRangePctDiff');
@@ -1491,17 +1563,46 @@ function renderStudioGraph(graphType) {
       fitLine.push({ x: t, y: yFit });
     }
 
-    // 2. Active Tangent Line at state.activeTangentTime
+    // 2. Active Tangent Line at state.activeTangentTime & Two Distinct Points P1(t1, y1), P2(t2, y2)
     const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime || tMin));
     const y0_tan = fit ? (fit.A * t0 * t0 + fit.B * t0 + fit.C) : (y0 + v0y * t0 + 0.5 * ay * t0 * t0);
     const slope_tan = fit ? (2 * fit.A * t0 + fit.B) : (v0y + ay * t0);
     const span = Math.max(0.1, (tMax - tMin) * 0.22);
     const tStart = Math.max(0, t0 - span);
     const tEnd = t0 + span;
+    const yStart = y0_tan + slope_tan * (tStart - t0);
+    const yEnd = y0_tan + slope_tan * (tEnd - t0);
     const tangentLineData = [
-      { x: tStart, y: y0_tan + slope_tan * (tStart - t0) },
-      { x: tEnd, y: y0_tan + slope_tan * (tEnd - t0) }
+      { x: tStart, y: yStart },
+      { x: tEnd, y: yEnd }
     ];
+
+    // Two distinct reference points P1(t1, y1) and P2(t2, y2) on the active tangent line
+    const p1Span = span * 0.65;
+    const t1_ref = Math.max(0, t0 - p1Span);
+    const t2_ref = t0 + p1Span;
+    const y1_ref = y0_tan + slope_tan * (t1_ref - t0);
+    const y2_ref = y0_tan + slope_tan * (t2_ref - t0);
+    const twoPointsData = [
+      { x: t1_ref, y: y1_ref },
+      { x: t2_ref, y: y2_ref }
+    ];
+
+    // Update Two-Point Readout in Tangent Bar
+    if (tangentTimeDisplay) tangentTimeDisplay.textContent = `${t0.toFixed(3)} s`;
+    if (tangentYDisplay) tangentYDisplay.textContent = `${y0_tan.toFixed(3)} m`;
+    if (tangentReadoutCoordsHint) {
+      tangentReadoutCoordsHint.textContent = `P₁(${t1_ref.toFixed(3)} s, ${y1_ref.toFixed(3)} m)  •  P₂(${t2_ref.toFixed(3)} s, ${y2_ref.toFixed(3)} m)`;
+    }
+    if (tangentSlopeDisplay) {
+      if ((state.manualTangentCount || 0) >= 3) {
+        tangentSlopeDisplay.textContent = `${slope_tan.toFixed(3)} m/s (Unlocked)`;
+        tangentSlopeDisplay.style.color = '#1a7f37';
+      } else {
+        tangentSlopeDisplay.textContent = `Compute (y₂−y₁)/(t₂−t₁) below (${state.manualTangentCount || 0}/3 verified)`;
+        tangentSlopeDisplay.style.color = '#d67b19';
+      }
+    }
 
     // 3. Recorded tangent touchpoints along the trajectory
     const touchpoints = (state.tangentPoints || []).map(p => ({
@@ -1509,11 +1610,16 @@ function renderStudioGraph(graphType) {
       y: fit ? (fit.A * p.time * p.time + fit.B * p.time + fit.C) : (y0 + v0y * p.time + 0.5 * ay * p.time * p.time)
     }));
 
+    const tangentLegendLabel = ((state.manualTangentCount || 0) >= 3)
+      ? `Active Tangent (Slope Δy/Δt = ${slope_tan.toFixed(2)} m/s)`
+      : `Active Tangent Line (Use P₁ & P₂ to compute Δy/Δt)`;
+
     chartData.datasets = [
       { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
       { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false },
-      { label: `Active Tangent (Slope Δy/Δt = ${slope_tan.toFixed(2)} m/s)`, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
-      { label: 'Active Touchpoint', data: [{ x: t0, y: y0_tan }], backgroundColor: '#0f7e9b', borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 10 },
+      { label: tangentLegendLabel, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
+      { label: 'Tangent Line Points P₁ & P₂', data: twoPointsData, backgroundColor: '#ffffff', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 6, pointStyle: 'circle' },
+      { label: 'Active Touchpoint (t, y)', data: [{ x: t0, y: y0_tan }], backgroundColor: '#0f7e9b', borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 10 },
       { label: 'Sampled Tangents (10 Points)', data: touchpoints, backgroundColor: '#0284c7', borderColor: '#0369a1', pointRadius: 6, pointStyle: 'rectRot' }
     ];
   } else if (graphType === 'x-pos') {
@@ -1564,13 +1670,57 @@ function renderStudioGraph(graphType) {
     const fitLine = fit ? [
       { x: tMin, y: fit.slope * tMin + fit.intercept },
       { x: tMax, y: fit.slope * tMax + fit.intercept }
-    ] : [];
+    ] : [
+      { x: tMin, y: ay * tMin + v0y },
+      { x: tMax, y: ay * tMax + v0y }
+    ];
+
+    const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
+    const areaUpVal = 0.5 * Math.max(0, v0y + ay * tMin) * Math.max(0, tApex - tMin);
+    const vFinal = ay * tMax + v0y;
+    const areaDownVal = 0.5 * Math.min(0, vFinal) * Math.max(0, tMax - tApex);
+
+    if (hintApexTimeRange) {
+      hintApexTimeRange.textContent = `Flight window: t = ${tMin.toFixed(3)} s to t = ${tMax.toFixed(3)} s  •  Zero crossing (vᵧ = 0): t_apex ≈ ${tApex.toFixed(3)} s`;
+    }
 
     chartData.datasets = [
       { label: `Sampled Tangents (${tangPts.length} / 10 Points)`, data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' }
     ];
-    if (fitLine.length > 0) {
-      chartData.datasets.push({ label: `Linear Fit (Slope ay = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false });
+    if (fit || state.fitResults.yPos) {
+      chartData.datasets.push({ label: `Linear Fit (Slope aᵧ = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false });
+    }
+    if (state.showSignedArea) {
+      const areaUpLine = [
+        { x: tMin, y: ay * tMin + v0y },
+        { x: tApex, y: 0 }
+      ];
+      const areaDownLine = [
+        { x: tApex, y: 0 },
+        { x: tMax, y: ay * tMax + v0y }
+      ];
+      chartData.datasets.push(
+        {
+          label: `Area₁ (+Δy_up = +${areaUpVal.toFixed(3)} m, Ascent)`,
+          data: areaUpLine,
+          type: 'line',
+          borderColor: 'rgba(15, 126, 155, 0.7)',
+          backgroundColor: 'rgba(15, 126, 155, 0.22)',
+          borderWidth: 1.5,
+          pointRadius: 4,
+          fill: 'origin'
+        },
+        {
+          label: `Area₂ (Δy_down = ${areaDownVal.toFixed(3)} m, Descent)`,
+          data: areaDownLine,
+          type: 'line',
+          borderColor: 'rgba(214, 123, 25, 0.7)',
+          backgroundColor: 'rgba(214, 123, 25, 0.22)',
+          borderWidth: 1.5,
+          pointRadius: 4,
+          fill: 'origin'
+        }
+      );
     }
   } else if (graphType === 'x-vel') {
     title = '4. Horizontal Velocity vs. Time [vx(t)]';
@@ -1596,10 +1746,22 @@ function renderStudioGraph(graphType) {
       { x: tMin, y: v0x },
       { x: tMax, y: v0x }
     ];
+    const dxRectArea = v0x * (tMax - tMin);
 
     chartData.datasets = [
       { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'rectRot' },
-      { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
+      {
+        label: state.showSignedArea
+          ? `Constant Fit (v₀ₓ = ${v0x.toFixed(3)} m/s • Shaded Area Δx = ${dxRectArea.toFixed(3)} m)`
+          : `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`,
+        data: fitLine,
+        type: 'line',
+        borderColor: '#0f7e9b',
+        backgroundColor: state.showSignedArea ? 'rgba(15, 126, 155, 0.18)' : 'transparent',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        fill: state.showSignedArea ? 'origin' : false
+      }
     ];
   } else if (graphType === 'y-acc') {
     title = '5. Vertical Acceleration vs. Time [ay(t)]';
@@ -1794,6 +1956,13 @@ function renderAllGridGraphs() {
         { label: '10 Tangents', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5, pointStyle: 'rectRot' },
         { label: 'Linear Fit', data: fitLineYVel, type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false }
       ];
+      if (state.showSignedArea) {
+        const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
+        datasets.push(
+          { label: '+Δy_up', data: [{ x: tMin, y: ay * tMin + v0y }, { x: tApex, y: 0 }], type: 'line', borderColor: 'rgba(15, 126, 155, 0.5)', backgroundColor: 'rgba(15, 126, 155, 0.2)', borderWidth: 1, pointRadius: 0, fill: 'origin' },
+          { label: 'Δy_down', data: [{ x: tApex, y: 0 }, { x: tMax, y: ay * tMax + v0y }], type: 'line', borderColor: 'rgba(214, 123, 25, 0.5)', backgroundColor: 'rgba(214, 123, 25, 0.2)', borderWidth: 1, pointRadius: 0, fill: 'origin' }
+        );
+      }
       sugMin = -8;
       sugMax = 8;
     } else if (cfg.type === 'x-vel') {
@@ -1804,7 +1973,16 @@ function renderAllGridGraphs() {
       }
       datasets = [
         { label: 'Sampled Slopes', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5, pointStyle: 'rectRot' },
-        { label: 'Constant Fit', data: [{ x: tMin, y: v0x }, { x: tMax, y: v0x }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2, pointRadius: 0, fill: false }
+        {
+          label: 'Constant Fit',
+          data: [{ x: tMin, y: v0x }, { x: tMax, y: v0x }],
+          type: 'line',
+          borderColor: '#0f7e9b',
+          backgroundColor: state.showSignedArea ? 'rgba(15, 126, 155, 0.16)' : 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: state.showSignedArea ? 'origin' : false
+        }
       ];
       sugMin = 0;
       sugMax = Math.max(3.5, v0x * 1.4);
@@ -1866,7 +2044,7 @@ function renderAllGridGraphs() {
   });
 }
 
-// Tangent Line Sampler
+// Tangent Line Sampler & Two-Point Tangent Slope Verification (Exam Problem 4)
 function updateTangentTool(sliderVal) {
   const pts = state.series[state.activeSeries];
   if (pts.length < 3) return;
@@ -1875,57 +2053,245 @@ function updateTangentTool(sliderVal) {
   const t = tMin + (tMax - tMin) * (sliderVal / 100);
   state.activeTangentTime = t;
 
-  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  // Instantaneous slope Δy/Δt = 2A*t + B
-  const slope = fit ? (2 * fit.A * t + fit.B) : 0;
-
-  if (tangentTimeDisplay) tangentTimeDisplay.textContent = `${t.toFixed(3)} s`;
-  if (tangentSlopeDisplay) tangentSlopeDisplay.textContent = `${slope.toFixed(3)} m/s`;
-
   if (state.activeGraphTab === 'y-pos') {
     renderStudioGraph('y-pos');
   }
 }
 
-function recordTangentPoint() {
+function updateTangentProgressBadges() {
+  if (tangentPointCountBadge) {
+    tangentPointCountBadge.textContent = `Sampled: ${state.tangentPoints.length} / 10 Tangent Points`;
+    if (state.tangentPoints.length >= 10) {
+      tangentPointCountBadge.style.background = '#e6f8ea';
+      tangentPointCountBadge.style.color = '#1a7f37';
+    } else {
+      tangentPointCountBadge.style.background = '#eef7fa';
+      tangentPointCountBadge.style.color = '#0f7e9b';
+    }
+  }
+  if (twoPointVerifiedBadge) {
+    const cnt = state.manualTangentCount || 0;
+    twoPointVerifiedBadge.textContent = `Manual Slopes: ${cnt} / 3 Verified ${cnt >= 3 ? '✓' : ''}`;
+    if (cnt >= 3) {
+      twoPointVerifiedBadge.style.background = '#e6f8ea';
+      twoPointVerifiedBadge.style.color = '#1a7f37';
+      twoPointVerifiedBadge.style.borderColor = '#1a7f37';
+    } else {
+      twoPointVerifiedBadge.style.background = '#fff7ed';
+      twoPointVerifiedBadge.style.color = '#d67b19';
+      twoPointVerifiedBadge.style.borderColor = '#fdba74';
+    }
+  }
+}
+
+function verifyAndRecordTwoPointTangent() {
   const pts = state.series[state.activeSeries];
   if (pts.length < 3) return;
-  const t = state.activeTangentTime || pts[0].time;
+  const t0 = state.activeTangentTime || pts[0].time;
   const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  const slope = fit ? (2 * fit.A * t + fit.B) : 0;
+  const trueSlope = fit ? (2 * fit.A * t0 + fit.B) : 0;
 
-  // Add to tangentPoints
-  state.tangentPoints.push({ time: t, vy: slope });
+  const t1 = inpTanT1 && inpTanT1.value !== '' ? parseFloat(inpTanT1.value) : NaN;
+  const y1 = inpTanY1 && inpTanY1.value !== '' ? parseFloat(inpTanY1.value) : NaN;
+  const t2 = inpTanT2 && inpTanT2.value !== '' ? parseFloat(inpTanT2.value) : NaN;
+  const y2 = inpTanY2 && inpTanY2.value !== '' ? parseFloat(inpTanY2.value) : NaN;
+  const sSlope = inpTanStudentSlope && inpTanStudentSlope.value !== '' ? parseFloat(inpTanStudentSlope.value) : NaN;
+
+  if ([t1, y1, t2, y2, sSlope].some(v => Number.isNaN(v))) {
+    if (tanFeedbackMsg) {
+      tanFeedbackMsg.style.color = '#dc2626';
+      tanFeedbackMsg.textContent = '⚠ Enter all two-point coordinates (t₁, y₁), (t₂, y₂) and your calculated slope vᵧ = (y₂ − y₁)/(t₂ − t₁).';
+    }
+    return;
+  }
+
+  if (Math.abs(t2 - t1) < 0.01) {
+    if (tanFeedbackMsg) {
+      tanFeedbackMsg.style.color = '#dc2626';
+      tanFeedbackMsg.textContent = '⚠ Points P₁ and P₂ must be at two distinct times (t₂ ≠ t₁). Use the P₁ and P₂ coordinates shown above!';
+    }
+    return;
+  }
+
+  const calcSlopeFromStudentPts = (y2 - y1) / (t2 - t1);
+  const diffFormula = Math.abs(sSlope - calcSlopeFromStudentPts);
+  const diffTrue = Math.abs(sSlope - trueSlope);
+
+  if (diffFormula > 0.25 || diffTrue > 0.45) {
+    if (tanFeedbackMsg) {
+      tanFeedbackMsg.style.color = '#dc2626';
+      tanFeedbackMsg.textContent = `✖ Check your two-point slope calculation! From your points, (y₂−y₁)/(t₂−t₁) = (${y2.toFixed(3)} − ${y1.toFixed(3)}) / (${t2.toFixed(3)} − ${t1.toFixed(3)}) = ${calcSlopeFromStudentPts.toFixed(3)} m/s. Make sure P₁ and P₂ lie on the active tangent line.`;
+    }
+    return;
+  }
+
+  // Valid manual two-point tangent slope!
+  state.manualTangentCount = (state.manualTangentCount || 0) + 1;
+  state.tangentPoints.push({
+    time: t0,
+    vy: sSlope,
+    t1, y1, t2, y2,
+    manualVerified: true
+  });
   state.tangentPoints.sort((a, b) => a.time - b.time);
 
   if (state.tangentPoints.length >= 2) {
     state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
   }
 
-  if (tangentPointCountBadge) {
-    tangentPointCountBadge.textContent = `Sampled: ${state.tangentPoints.length} / 10 Tangent Points`;
-    if (state.tangentPoints.length >= 10) {
-      tangentPointCountBadge.style.background = '#e6f8ea';
-      tangentPointCountBadge.style.color = '#1a7f37';
+  updateTangentProgressBadges();
+  renderStudioGraph(state.activeGraphTab);
+
+  if (tanFeedbackMsg) {
+    tanFeedbackMsg.style.color = '#1a7f37';
+    if (state.manualTangentCount >= 3) {
+      tanFeedbackMsg.textContent = `✓ Verified! vᵧ = (${y2.toFixed(3)} − ${y1.toFixed(3)})/(${t2.toFixed(3)} − ${t1.toFixed(3)}) = ${sSlope.toFixed(3)} m/s logged at t = ${t0.toFixed(3)} s. (${state.manualTangentCount}/3 manual slopes complete — Quick-Log unlocked for remaining points!)`;
+    } else {
+      tanFeedbackMsg.textContent = `✓ Verified! vᵧ = ${sSlope.toFixed(3)} m/s logged at t = ${t0.toFixed(3)} s. (${state.manualTangentCount}/3 manual two-point slopes verified — move slider to another time for point #${state.manualTangentCount + 1}).`;
     }
   }
+  updateStatus(`Verified two-point tangent slope: vy = ${sSlope.toFixed(3)} m/s at t = ${t0.toFixed(3)} s (${state.manualTangentCount}/3 manual).`);
+}
 
+function recordTangentPoint() {
+  const pts = state.series[state.activeSeries];
+  if (pts.length < 3) return;
+
+  if ((state.manualTangentCount || 0) < 3) {
+    if (tanFeedbackMsg) {
+      tanFeedbackMsg.style.color = '#d67b19';
+      tanFeedbackMsg.textContent = `🔒 Complete at least 3 manual Two-Point Tangent Slope calculations ((y₂−y₁)/(t₂−t₁)) on the left first (${state.manualTangentCount || 0}/3 done) before using Quick-Log!`;
+    }
+    return;
+  }
+
+  const t = state.activeTangentTime || pts[0].time;
+  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
+  const slope = fit ? (2 * fit.A * t + fit.B) : 0;
+
+  // Add to tangentPoints
+  state.tangentPoints.push({ time: t, vy: slope, manualVerified: false });
+  state.tangentPoints.sort((a, b) => a.time - b.time);
+
+  if (state.tangentPoints.length >= 2) {
+    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
+  }
+
+  updateTangentProgressBadges();
   renderStudioGraph(state.activeGraphTab);
+  if (tanFeedbackMsg) {
+    tanFeedbackMsg.style.color = '#0f7e9b';
+    tanFeedbackMsg.textContent = `✓ Quick-logged tangent point #${state.tangentPoints.length}: vᵧ = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s.`;
+  }
   updateStatus(`Recorded tangent slope: vy = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s`);
 }
 
 function clearTangentPoints() {
   state.tangentPoints = [];
+  state.manualTangentCount = 0;
   state.fitResults.yVel = null;
 
-  if (tangentPointCountBadge) {
-    tangentPointCountBadge.textContent = 'Sampled: 0 / 10 Tangent Points';
-    tangentPointCountBadge.style.background = '#eef7fa';
-    tangentPointCountBadge.style.color = '#0f7e9b';
+  updateTangentProgressBadges();
+  if (tanFeedbackMsg) {
+    tanFeedbackMsg.style.color = '#4b6570';
+    tanFeedbackMsg.textContent = 'Reset tangent points. Compute 3 manual two-point tangent slopes first to unlock quick-logging.';
   }
 
   renderStudioGraph(state.activeGraphTab);
-  updateStatus('Reset tangent points. Move the Tangent Slider and click Record Tangent Point to sample your 10 points.');
+  updateStatus('Reset tangent points. Use the Two-Point Tangent Slope inputs to verify 3 slopes first.');
+}
+
+// ============================================================================
+// Step 3 Module A & B: Graph Translation & Physical Interval Verification
+// ============================================================================
+function verifyGraphInterpretation() {
+  const pts = state.series[state.activeSeries];
+  if (pts.length < 3) return;
+  if (!state.fitResults.yPos) autoFitAllGraphs();
+
+  const tMin = pts[0].time;
+  const tMax = pts[pts.length - 1].time;
+  const fitY = state.fitResults.yPos;
+  const fitYVel = state.fitResults.yVel;
+  const ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.8);
+  const v0y = fitYVel ? fitYVel.intercept : (fitY ? fitY.B : 0);
+  const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
+
+  // Part A: Graph Shape Translation
+  const vYtoVy = selTransYtoVy ? selTransYtoVy.value : '';
+  const vVytoAy = selTransVytoAy ? selTransVytoAy.value : '';
+  const vTransX = selTransX ? selTransX.value : '';
+
+  const partACorrect = (vYtoVy === 'linear_neg_cross') && (vVytoAy === 'const_neg_line') && (vTransX === 'correct_x');
+  if (badgeGraphTransStatus) {
+    if (partACorrect) {
+      badgeGraphTransStatus.textContent = '✓ All 3 Graph Translations Verified!';
+      badgeGraphTransStatus.className = 'pct-diff-badge success';
+    } else if (!vYtoVy && !vVytoAy && !vTransX) {
+      badgeGraphTransStatus.textContent = 'Awaiting Selection';
+      badgeGraphTransStatus.className = 'pct-diff-badge';
+    } else {
+      badgeGraphTransStatus.textContent = '⚠ Check Graph Shape Rules (Slope → Value)';
+      badgeGraphTransStatus.className = 'pct-diff-badge warn';
+    }
+  }
+
+  // Part B: Physical Motion Interval Analysis (Exam Problem 3e, 3f, 3g)
+  const stopBeh = selStopBehavior ? selStopBehavior.value : '';
+  const stopT = inpStopTimeApex && inpStopTimeApex.value !== '' ? parseFloat(inpStopTimeApex.value) : NaN;
+  const stopExp = txtStopExplanation ? txtStopExplanation.value.trim() : '';
+
+  const posStart = inpPosDirStart && inpPosDirStart.value !== '' ? parseFloat(inpPosDirStart.value) : NaN;
+  const posEnd = inpPosDirEnd && inpPosDirEnd.value !== '' ? parseFloat(inpPosDirEnd.value) : NaN;
+  const negStart = inpNegDirStart && inpNegDirStart.value !== '' ? parseFloat(inpNegDirStart.value) : NaN;
+  const negEnd = inpNegDirEnd && inpNegDirEnd.value !== '' ? parseFloat(inpNegDirEnd.value) : NaN;
+
+  const accStart = inpNegAccStart && inpNegAccStart.value !== '' ? parseFloat(inpNegAccStart.value) : NaN;
+  const accEnd = inpNegAccEnd && inpNegAccEnd.value !== '' ? parseFloat(inpNegAccEnd.value) : NaN;
+  const accExp = txtAccSignExplanation ? txtAccSignExplanation.value.trim() : '';
+
+  const tol = Math.max(0.12, (tMax - tMin) * 0.15);
+  const stopOk = (stopBeh === 'instant_apex') && !Number.isNaN(stopT) && Math.abs(stopT - tApex) <= tol;
+  const dirOk = !Number.isNaN(posStart) && !Number.isNaN(posEnd) && !Number.isNaN(negStart) && !Number.isNaN(negEnd) &&
+    Math.abs(posStart - tMin) <= tol && Math.abs(posEnd - tApex) <= tol &&
+    Math.abs(negStart - tApex) <= tol && Math.abs(negEnd - tMax) <= tol;
+  const accOk = !Number.isNaN(accStart) && !Number.isNaN(accEnd) &&
+    Math.abs(accStart - tMin) <= tol && Math.abs(accEnd - tMax) <= tol;
+
+  if (badgeIntervalStatus) {
+    if (stopOk && dirOk && accOk) {
+      badgeIntervalStatus.textContent = `✓ All Intervals Verified (t_apex ≈ ${tApex.toFixed(2)} s, Full Flight [${tMin.toFixed(2)}s, ${tMax.toFixed(2)}s])`;
+      badgeIntervalStatus.className = 'pct-diff-badge success';
+    } else {
+      const issues = [];
+      if (!stopOk) issues.push(`3e Apex t ≈ ${tApex.toFixed(2)}s`);
+      if (!dirOk) issues.push(`3f Up [${tMin.toFixed(2)}, ${tApex.toFixed(2)}] & Down [${tApex.toFixed(2)}, ${tMax.toFixed(2)}]`);
+      if (!accOk) issues.push(`3g Accel < 0 on entire flight [${tMin.toFixed(2)}, ${tMax.toFixed(2)}]`);
+      badgeIntervalStatus.textContent = `⚠ Check: ${issues.join(' • ')}`;
+      badgeIntervalStatus.className = 'pct-diff-badge warn';
+    }
+  }
+
+  state.graphInterpretation = {
+    transYtoVy: vYtoVy,
+    transVytoAy: vVytoAy,
+    transX: vTransX,
+    stopBehavior: stopBeh,
+    stopTimeApex: !Number.isNaN(stopT) ? stopT : '',
+    stopExplanation: stopExp,
+    posDirStart: !Number.isNaN(posStart) ? posStart : '',
+    posDirEnd: !Number.isNaN(posEnd) ? posEnd : '',
+    negDirStart: !Number.isNaN(negStart) ? negStart : '',
+    negDirEnd: !Number.isNaN(negEnd) ? negEnd : '',
+    negAccStart: !Number.isNaN(accStart) ? accStart : '',
+    negAccEnd: !Number.isNaN(accEnd) ? accEnd : '',
+    accSignExplanation: accExp,
+    verifiedTrans: partACorrect,
+    verifiedIntervals: (stopOk && dirOk && accOk)
+  };
+
+  updateAuthenticityBadge();
+  updateStatus('Checked Graph Shape Translations and Physical Motion Intervals.');
 }
 
 // ============================================================================
@@ -2257,6 +2623,63 @@ function checkAndVerifyCalculations() {
       lblConsistencyCheck.textContent = 'Enter your v₀ and θ above, then click Check & Verify to verify vector components.';
     }
   }
+
+  // Section 1B: Velocity-Time Slope & Signed-Area Displacement Verification (Exam Problem 3b, 3c, 3d)
+  const tMin = pts[0].time;
+  const tMax = pts[pts.length - 1].time;
+  const tApex = Math.abs(exp_ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -exp_vy0 / exp_ay)) : (tMin + tMax) / 2;
+  const exp_areaUp = 0.5 * Math.max(0, exp_vy0 + exp_ay * tMin) * Math.max(0, tApex - tMin);
+  const exp_vFinal = exp_ay * tMax + exp_vy0;
+  const exp_areaDown = 0.5 * Math.min(0, exp_vFinal) * Math.max(0, tMax - tApex);
+  const exp_netDyArea = exp_areaUp + exp_areaDown;
+  const exp_yMaxArea = exp_y0 + exp_areaUp;
+  const exp_yFinalArea = exp_y0 + exp_netDyArea;
+
+  const sSlopeAy = inpSlopeAyFromVt && inpSlopeAyFromVt.value !== '' ? parseFloat(inpSlopeAyFromVt.value) : null;
+  const sAreaUp = inpAreaUp && inpAreaUp.value !== '' ? parseFloat(inpAreaUp.value) : null;
+  const sAreaDown = inpAreaDown && inpAreaDown.value !== '' ? parseFloat(inpAreaDown.value) : null;
+  const sNetDy = inpNetDyArea && inpNetDyArea.value !== '' ? parseFloat(inpNetDyArea.value) : null;
+  const sYMaxArea = inpYMaxFromArea && inpYMaxFromArea.value !== '' ? parseFloat(inpYMaxFromArea.value) : null;
+  const sYFinalArea = inpYFinalFromArea && inpYFinalFromArea.value !== '' ? parseFloat(inpYFinalFromArea.value) : null;
+
+  if (badgeSignedAreaVerify) {
+    if ([sSlopeAy, sAreaUp, sAreaDown, sNetDy, sYMaxArea, sYFinalArea].every(v => v === null)) {
+      badgeSignedAreaVerify.textContent = 'Awaiting Input';
+      badgeSignedAreaVerify.className = 'pct-diff-badge';
+    } else {
+      const okSlope = sSlopeAy !== null && Math.abs(sSlopeAy - exp_ay) < 1.2 && sSlopeAy < 0;
+      const okUp = sAreaUp !== null && Math.abs(sAreaUp - exp_areaUp) < 0.35 && sAreaUp >= 0;
+      const okDown = sAreaDown !== null && Math.abs(sAreaDown - exp_areaDown) < 0.35 && sAreaDown <= 0;
+      const okNet = sNetDy !== null && Math.abs(sNetDy - exp_netDyArea) < 0.35;
+      const okYMax = sYMaxArea !== null && Math.abs(sYMaxArea - exp_yMaxArea) < 0.35;
+      const okYFinal = sYFinalArea !== null && Math.abs(sYFinalArea - exp_yFinalArea) < 0.35;
+
+      if (okSlope && okUp && okDown && okNet && okYMax && okYFinal) {
+        badgeSignedAreaVerify.textContent = '✓ Signed-Area & Slope Verified!';
+        badgeSignedAreaVerify.className = 'pct-diff-badge success';
+      } else {
+        const errs = [];
+        if (!okSlope) errs.push('Slope aᵧ < 0');
+        if (!okUp) errs.push(`+Δy_up ≈ +${exp_areaUp.toFixed(2)}m`);
+        if (!okDown) errs.push(`Δy_down ≈ ${exp_areaDown.toFixed(2)}m (negative!)`);
+        if (!okNet) errs.push(`Δy_total ≈ ${exp_netDyArea.toFixed(2)}m`);
+        if (!okYMax) errs.push(`y_max = y₀+Δy_up ≈ ${exp_yMaxArea.toFixed(2)}m`);
+        if (!okYFinal) errs.push(`y_final = y₀+Δy_total ≈ ${exp_yFinalArea.toFixed(2)}m`);
+        badgeSignedAreaVerify.textContent = `⚠ Check: ${errs.slice(0, 3).join(' • ')}`;
+        badgeSignedAreaVerify.className = 'pct-diff-badge warn';
+      }
+    }
+  }
+
+  state.signedAreaValues = {
+    slopeAyFromVt: sSlopeAy !== null ? sSlopeAy : exp_ay,
+    areaUp: sAreaUp !== null ? sAreaUp : exp_areaUp,
+    areaDown: sAreaDown !== null ? sAreaDown : exp_areaDown,
+    netDyArea: sNetDy !== null ? sNetDy : exp_netDyArea,
+    yMaxFromArea: sYMaxArea !== null ? sYMaxArea : exp_yMaxArea,
+    yFinalFromArea: sYFinalArea !== null ? sYFinalArea : exp_yFinalArea,
+    workSignedArea: workSignedArea ? workSignedArea.value : ''
+  };
 
   // Save student's values to state
   state.calcValues = {
@@ -2655,20 +3078,26 @@ function generateChartImageData(graphType) {
   } else if (graphType === 'y-vel') {
     const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
     const fit = state.fitResults.yVel || linearRegression(tangPts.map(p => ({ x: p.time, y: p.vy })));
-    const ay = fit ? fit.slope : -9.8;
-    const v0y = fit ? fit.intercept : 0;
+    const ay = fit ? fit.slope : (state.fitResults.yPos ? 2 * state.fitResults.yPos.A : -9.8);
+    const v0y = fit ? fit.intercept : (state.fitResults.yPos ? state.fitResults.yPos.B : 0);
     const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
 
     const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
+      { x: tMin, y: ay * tMin + v0y },
+      { x: tMax, y: ay * tMax + v0y }
     ];
+    const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
+    const areaUpVal = 0.5 * Math.max(0, v0y + ay * tMin) * Math.max(0, tApex - tMin);
+    const areaDownVal = 0.5 * Math.min(0, ay * tMax + v0y) * Math.max(0, tMax - tApex);
+
     chartConfig = {
       type: 'scatter',
       data: {
         datasets: [
           { label: '10 Tangent Velocities (Δy/Δt)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
-          { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false }
+          { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false },
+          { label: `Area₁ (+Δy_up = +${areaUpVal.toFixed(2)} m)`, data: [{ x: tMin, y: ay * tMin + v0y }, { x: tApex, y: 0 }], type: 'line', borderColor: 'rgba(15, 126, 155, 0.7)', backgroundColor: 'rgba(15, 126, 155, 0.22)', borderWidth: 1.5, pointRadius: 4, fill: 'origin' },
+          { label: `Area₂ (Δy_down = ${areaDownVal.toFixed(2)} m)`, data: [{ x: tApex, y: 0 }, { x: tMax, y: ay * tMax + v0y }], type: 'line', borderColor: 'rgba(214, 123, 25, 0.7)', backgroundColor: 'rgba(214, 123, 25, 0.22)', borderWidth: 1.5, pointRadius: 4, fill: 'origin' }
         ]
       },
       options: {
@@ -2689,7 +3118,7 @@ function generateChartImageData(graphType) {
           }
         },
         plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
+          legend: { position: 'top', labels: { font: { size: 13, weight: 'bold' } } }
         }
       }
     };
@@ -2699,6 +3128,7 @@ function generateChartImageData(graphType) {
       { x: tMin, y: v0x },
       { x: tMax, y: v0x }
     ];
+    const dxRectArea = v0x * (tMax - tMin);
 
     const vxSamples = [];
     for (let i = 1; i <= 10; i++) {
@@ -2711,7 +3141,7 @@ function generateChartImageData(graphType) {
       data: {
         datasets: [
           { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'rectRot' },
-          { label: `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
+          { label: `Constant Fit (v₀ₓ = ${v0x.toFixed(3)} m/s • Area Δx = ${dxRectArea.toFixed(2)} m)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', backgroundColor: 'rgba(15, 126, 155, 0.18)', borderWidth: 3.5, pointRadius: 0, fill: 'origin' }
         ]
       },
       options: {
@@ -2838,7 +3268,7 @@ function renderSlideDeckPreview(slideIdx) {
 
   let slideHTML = '';
   if (slideIdx === 1) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 10: Title & Honor Code';
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 11: Title & Honor Code';
     let videoPreviewImg = '';
     try {
       const snap = getVideoSnapshotData();
@@ -2869,12 +3299,12 @@ function renderSlideDeckPreview(slideIdx) {
     `;
   } else if (slideIdx >= 2 && slideIdx <= 7) {
     const titles = {
-      2: 'Slide 2 of 10: Vertical Position Graph',
-      3: 'Slide 3 of 10: Vertical Velocity Graph',
-      4: 'Slide 4 of 10: Vertical Acceleration Graph',
-      5: 'Slide 5 of 10: Horizontal Position Graph',
-      6: 'Slide 6 of 10: Horizontal Velocity Graph',
-      7: 'Slide 7 of 10: Horizontal Acceleration Graph'
+      2: 'Slide 2 of 11: Vertical Position Graph',
+      3: 'Slide 3 of 11: Vertical Velocity Graph',
+      4: 'Slide 4 of 11: Vertical Acceleration Graph',
+      5: 'Slide 5 of 11: Horizontal Position Graph',
+      6: 'Slide 6 of 11: Horizontal Velocity Graph',
+      7: 'Slide 7 of 11: Horizontal Acceleration Graph'
     };
     if (slidePreviewTitle) slidePreviewTitle.textContent = titles[slideIdx];
 
@@ -2891,7 +3321,7 @@ function renderSlideDeckPreview(slideIdx) {
         title: 'Vertical Velocity Graph [vy(t)]',
         gen: 'vy(t) = ay·t + v₀y',
         part: `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
-        notes: `• Includes 10 points derived directly from tangent slopes (Δy/Δt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`
+        notes: `• Includes 10 points derived directly from two-point tangent slopes (Δy/Δt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Shaded triangles show +Δy_up (ascent) and Δy_down (descent).`
       },
       4: {
         graphType: 'y-acc',
@@ -2912,7 +3342,7 @@ function renderSlideDeckPreview(slideIdx) {
         title: 'Horizontal Velocity Graph [vx(t)]',
         gen: 'vx(t) = v₀x',
         part: `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
-        notes: `• Velocity remains essentially constant throughout flight.<br>• Measured horizontal acceleration: ax = ${cVals.ax.toFixed(3)} m/s².<br>• Negligible air resistance allows ideal projectile modeling.`
+        notes: `• Velocity remains essentially constant throughout flight.<br>• Shaded rectangle area under vx(t) equals horizontal range Δx = v₀x·Δt.<br>• Measured horizontal acceleration: ax = ${cVals.ax.toFixed(3)} m/s².`
       },
       7: {
         graphType: 'x-acc',
@@ -2944,7 +3374,60 @@ function renderSlideDeckPreview(slideIdx) {
       </div>
     `;
   } else if (slideIdx === 8) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 10: Kinematic Calculations & Predictions';
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 11: Motion Graph Translation, Intervals & Signed Area';
+    const pts = state.series[state.activeSeries] || [];
+    const tMin = pts.length > 0 ? pts[0].time : 0;
+    const tMax = pts.length > 1 ? pts[pts.length - 1].time : 1;
+    const tApex = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -cVals.vy0 / cVals.ay)) : (tMin + tMax) / 2;
+    const gi = state.graphInterpretation || {};
+    const sa = state.signedAreaValues || {};
+    const areaUp = sa.areaUp !== undefined && sa.areaUp !== '' ? Number(sa.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApex - tMin);
+    const areaDown = sa.areaDown !== undefined && sa.areaDown !== '' ? Number(sa.areaDown) : 0.5 * Math.min(0, cVals.ay * tMax + cVals.vy0) * Math.max(0, tMax - tApex);
+    const netDy = sa.netDyArea !== undefined && sa.netDyArea !== '' ? Number(sa.netDyArea) : (areaUp + areaDown);
+    const yMaxArea = sa.yMaxFromArea !== undefined && sa.yMaxFromArea !== '' ? Number(sa.yMaxFromArea) : (cVals.y0 + areaUp);
+    const yFinalArea = sa.yFinalFromArea !== undefined && sa.yFinalFromArea !== '' ? Number(sa.yFinalArea) : (cVals.y0 + netDy);
+
+    slideHTML = `
+      <div style="flex: 1; display: flex; flex-direction: column;">
+        <h2 style="font-size: 1.32rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Motion Graph Translation, Physical Intervals &amp; Signed-Area Method</h2>
+        <p style="font-size: 0.78rem; color: #4b6570; margin: 0 0 0.55rem 0;">Connecting position tangent slopes (Δy/Δt), velocity-time signed area (∑Area), and physical intervals of motion.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; flex: 1;">
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">1. Graph Shape Translation &amp; Two-Point Tangents</div>
+            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
+              • <strong>Two-Point Tangent Slope:</strong> vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual slopes verified, ${state.tangentPoints.length}/10 total).<br>
+              • <strong>Vertical Chain:</strong> Concave-down parabola y(t) → linear vᵧ(t) crossing 0 at t_apex → constant negative aᵧ(t) = ${cVals.ay.toFixed(2)} m/s².<br>
+              • <strong>Horizontal Chain:</strong> Linear x(t) → constant positive vₓ(t) = ${cVals.vx0.toFixed(2)} m/s → zero acceleration aₓ(t) = 0.
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">2. Stopping &amp; Direction of Motion Intervals</div>
+            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
+              • <strong>Vertical Stopping (vᵧ = 0):</strong> Instantaneously at apex <strong>t_apex = ${(gi.stopTimeApex !== '' && gi.stopTimeApex !== undefined) ? Number(gi.stopTimeApex).toFixed(3) : tApex.toFixed(3)} s</strong> (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0).<br>
+              • <strong>Moving Up (+y, vᵧ &gt; 0):</strong> [${tMin.toFixed(2)} s, ${tApex.toFixed(2)} s]<br>
+              • <strong>Moving Down (−y, vᵧ &lt; 0):</strong> [${tApex.toFixed(2)} s, ${tMax.toFixed(2)} s]
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">3. Sign of Acceleration Across Flight</div>
+            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
+              • <strong>Negative Accel Interval (aᵧ &lt; 0):</strong> Entire flight <strong>[${tMin.toFixed(2)} s, ${tMax.toFixed(2)} s]</strong>.<br>
+              • <strong>Physical Justification:</strong> ${gi.accSignExplanation || 'Slope Δvᵧ/Δt is constant and negative throughout ascent, apex, and descent because gravity pulls downward the entire flight.'}
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #d67b19; text-transform: uppercase;">4. Signed Area Under vᵧ(t) Graph (Δy = ∑Area)</div>
+            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
+              • <strong>Ascent Area₁ (+Δy_up):</strong> +${areaUp.toFixed(3)} m | <strong>Descent Area₂ (Δy_down):</strong> ${areaDown.toFixed(3)} m<br>
+              • <strong>Net Displacement (Δy_total):</strong> ${netDy.toFixed(3)} m<br>
+              • <strong>Apex Height (y₀ + Δy_up):</strong> <strong style="color:#0f7e9b;">${yMaxArea.toFixed(3)} m</strong> | <strong>Final y:</strong> ${yFinalArea.toFixed(3)} m
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (slideIdx === 9) {
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 9 of 11: Kinematic Calculations & Predictions';
     const workH = (workMaxHeight ? workMaxHeight.value : '') || '';
     const workT = (workHangTime ? workHangTime.value : '') || '';
     const workR = (workRange ? workRange.value : '') || '';
@@ -2986,8 +3469,8 @@ function renderSlideDeckPreview(slideIdx) {
         </div>
       </div>
     `;
-  } else if (slideIdx === 9) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 9 of 10: Model Verification & Comparison Table';
+  } else if (slideIdx === 10) {
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 10 of 11: Model Verification & Comparison Table';
     slideHTML = `
       <div style="flex: 1; display: flex; flex-direction: column;">
         <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Model Verification: Measured vs. Theoretical Comparison</h2>
@@ -3046,8 +3529,8 @@ function renderSlideDeckPreview(slideIdx) {
         </div>
       </div>
     `;
-  } else if (slideIdx === 10) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 10 of 10: Real World Reflection';
+  } else if (slideIdx === 11) {
+    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 11 of 11: Real World Reflection';
     const refTxt = (state.reflectionText || '').trim();
     slideHTML = `
       <div style="flex: 1; display: flex; flex-direction: column;">
@@ -3211,7 +3694,55 @@ async function exportPresentationPPTX() {
     'x-acc'
   );
 
-  // Slide 8: Kinematic Calculations & Theoretical Predictions
+  // Slide 8: Motion Graph Translation, Physical Intervals & Signed-Area Method
+  const ptsSlide = state.series[state.activeSeries] || [];
+  const tMinSlide = ptsSlide.length > 0 ? ptsSlide[0].time : 0;
+  const tMaxSlide = ptsSlide.length > 1 ? ptsSlide[ptsSlide.length - 1].time : 1;
+  const tApexSlide = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMinSlide, Math.min(tMaxSlide, -cVals.vy0 / cVals.ay)) : (tMinSlide + tMaxSlide) / 2;
+  const giSlide = state.graphInterpretation || {};
+  const saSlide = state.signedAreaValues || {};
+  const areaUpSlide = saSlide.areaUp !== undefined && saSlide.areaUp !== '' ? Number(saSlide.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApexSlide - tMinSlide);
+  const areaDownSlide = saSlide.areaDown !== undefined && saSlide.areaDown !== '' ? Number(saSlide.areaDown) : 0.5 * Math.min(0, cVals.ay * tMaxSlide + cVals.vy0) * Math.max(0, tMaxSlide - tApexSlide);
+  const netDySlide = saSlide.netDyArea !== undefined && saSlide.netDyArea !== '' ? Number(saSlide.netDyArea) : (areaUpSlide + areaDownSlide);
+  const yMaxAreaSlide = saSlide.yMaxFromArea !== undefined && saSlide.yMaxFromArea !== '' ? Number(saSlide.yMaxFromArea) : (cVals.y0 + areaUpSlide);
+  const yFinalAreaSlide = saSlide.yFinalFromArea !== undefined && saSlide.yFinalFromArea !== '' ? Number(saSlide.yFinalFromArea) : (cVals.y0 + netDySlide);
+
+  const s8m = pptx.addSlide();
+  s8m.addText('Motion Graph Translation, Intervals & Signed-Area Method', {
+    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
+    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
+  });
+  s8m.addText('Unit 2 Motion Graph Mastery: Connecting tangent slopes (Δy/Δt), signed v-t areas (∑Area), and physical intervals.', {
+    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
+    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
+  });
+
+  s8m.addText(`1. GRAPH SHAPE TRANSLATION & TWO-POINT TANGENTS\n• Two-Point Slope Formula: vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual slopes verified, ${state.tangentPoints.length}/10 total)\n• Vertical Chain: Parabola y(t) → linear vᵧ(t) crossing 0 → constant aᵧ = ${cVals.ay.toFixed(2)} m/s²\n• Horizontal Chain: Linear x(t) → constant vₓ = ${cVals.vx0.toFixed(2)} m/s → zero aₓ = 0 m/s²`, {
+    x: 0.8, y: 1.6, w: 5.6, h: 2.3,
+    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  s8m.addText(`2. STOPPING & DIRECTION OF MOTION INTERVALS\n• Vertical Stopping (vᵧ = 0): Instantaneously at apex t_apex = ${tApexSlide.toFixed(3)} s (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0)\n• Moving Upward (+y, vᵧ > 0): [${tMinSlide.toFixed(2)} s, ${tApexSlide.toFixed(2)} s]\n• Moving Downward (−y, vᵧ < 0): [${tApexSlide.toFixed(2)} s, ${tMaxSlide.toFixed(2)} s]`, {
+    x: 6.8, y: 1.6, w: 5.6, h: 2.3,
+    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  s8m.addText(`3. SIGN OF ACCELERATION ACROSS FLIGHT\n• Negative Acceleration Interval (aᵧ < 0): Entire flight [${tMinSlide.toFixed(2)} s, ${tMaxSlide.toFixed(2)} s]\n• Why aᵧ < 0 even while rising: ${giSlide.accSignExplanation || 'The slope Δvᵧ/Δt of the velocity-time line is constant and negative throughout ascent, apex, and descent because gravity pulls downward the entire flight.'}`, {
+    x: 0.8, y: 4.2, w: 5.6, h: 2.4,
+    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+
+  s8m.addText(`4. SIGNED AREA UNDER vᵧ(t) GRAPH (Δy = ∑Area)\n• Positive Ascent Triangle Area₁ (+Δy_up): +${areaUpSlide.toFixed(3)} m\n• Negative Descent Triangle Area₂ (Δy_down): ${areaDownSlide.toFixed(3)} m\n• Total Net Displacement (Δy_total = Area₁ + Area₂): ${netDySlide.toFixed(3)} m\n• Apex Height (y₀ + Δy_up): ${yMaxAreaSlide.toFixed(3)} m  |  Final Position (y₀ + Δy_total): ${yFinalAreaSlide.toFixed(3)} m`, {
+    x: 6.8, y: 4.2, w: 5.6, h: 2.4,
+    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
+    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
+  });
+  addVerificationFooter(s8m);
+
+  // Slide 9: Kinematic Calculations & Theoretical Predictions
   const s8 = pptx.addSlide();
   s8.addText('Kinematic Calculations & Theoretical Predictions', {
     x: 0.8, y: 0.6, w: 11.5, h: 0.6,
@@ -3338,7 +3869,7 @@ async function exportPresentationPPTX() {
 
   const fileName = `Physics_of_Sports_Analytics_${sName.replace(/\s+/g, '_')}.pptx`;
   await pptx.writeFile({ fileName });
-  updateStatus(`Downloaded complete 10-slide presentation with originality verification: ${fileName}`);
+  updateStatus(`Downloaded complete 11-slide presentation with originality verification: ${fileName}`);
 }
 
 function preparePrintableReport() {
@@ -3355,6 +3886,16 @@ function preparePrintableReport() {
   const workT = (workHangTime ? workHangTime.value : '') || '';
   const workR = (workRange ? workRange.value : '') || '';
   const workV = (workVector ? workVector.value : '') || '';
+  const tMinP = pts.length > 0 ? pts[0].time : 0;
+  const tMaxP = pts.length > 1 ? pts[pts.length - 1].time : 1;
+  const tApexP = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMinP, Math.min(tMaxP, -cVals.vy0 / cVals.ay)) : (tMinP + tMaxP) / 2;
+  const giP = state.graphInterpretation || {};
+  const saP = state.signedAreaValues || {};
+  const areaUpP = saP.areaUp !== undefined && saP.areaUp !== '' ? Number(saP.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApexP - tMinP);
+  const areaDownP = saP.areaDown !== undefined && saP.areaDown !== '' ? Number(saP.areaDown) : 0.5 * Math.min(0, cVals.ay * tMaxP + cVals.vy0) * Math.max(0, tMaxP - tApexP);
+  const netDyP = saP.netDyArea !== undefined && saP.netDyArea !== '' ? Number(saP.netDyArea) : (areaUpP + areaDownP);
+  const yMaxAreaP = saP.yMaxFromArea !== undefined && saP.yMaxFromArea !== '' ? Number(saP.yMaxFromArea) : (cVals.y0 + areaUpP);
+  const yFinalAreaP = saP.yFinalFromArea !== undefined && saP.yFinalFromArea !== '' ? Number(saP.yFinalFromArea) : (cVals.y0 + netDyP);
 
   const snap = getVideoSnapshotData();
   const chartYPos = generateChartImageData('y-pos');
@@ -3527,6 +4068,22 @@ function preparePrintableReport() {
         </div>
         <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
           ID: ${auth.token}
+        </div>
+      </div>
+
+      <h3 class="print-section-title">Unit 2 Motion Graph Mastery: Two-Point Tangents, Intervals &amp; Signed v-t Area</h3>
+      <div class="print-calc-grid" style="margin-bottom: 0.65rem;">
+        <div class="print-calc-card">
+          <strong style="color: #0f7e9b;">A. Two-Point Tangents &amp; Stopping (Exam 4 &amp; 3e)</strong><br>
+          • <em>Two-Point Slope:</em> vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual verified, ${state.tangentPoints.length}/10 total)<br>
+          • <em>Apex Stopping (vᵧ = 0):</em> t_apex = <strong>${tApexP.toFixed(3)} s</strong> (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0)<br>
+          • <em>Intervals:</em> Up (+y): [${tMinP.toFixed(2)}s, ${tApexP.toFixed(2)}s] • Down (−y): [${tApexP.toFixed(2)}s, ${tMaxP.toFixed(2)}s] • Accel aᵧ &lt; 0: [${tMinP.toFixed(2)}s, ${tMaxP.toFixed(2)}s]
+        </div>
+        <div class="print-calc-card">
+          <strong style="color: #d67b19;">B. Signed Area Under vᵧ(t) Graph (Exam 3c–d)</strong><br>
+          • <em>Ascent Triangle (+Δy_up):</em> +${areaUpP.toFixed(3)} m | <em>Descent Triangle (Δy_down):</em> ${areaDownP.toFixed(3)} m<br>
+          • <em>Net Displacement (Δy_total):</em> ${netDyP.toFixed(3)} m<br>
+          • <strong>Apex Height (y₀ + Δy_up):</strong> ${yMaxAreaP.toFixed(3)} m | <strong>Final y (y₀ + Δy_total):</strong> ${yFinalAreaP.toFixed(3)} m
         </div>
       </div>
 
@@ -3743,6 +4300,10 @@ function saveSessionJSON() {
       pixelsPerMeter: state.pixelsPerMeter,
       scaleStick: state.scaleStick,
       tangentPoints: state.tangentPoints,
+      manualTangentCount: state.manualTangentCount,
+      showSignedArea: state.showSignedArea,
+      graphInterpretation: state.graphInterpretation,
+      signedAreaValues: state.signedAreaValues,
       calcValues: state.calcValues,
       authenticityToken: auth.token,
       authenticitySignature: auth,
@@ -3787,6 +4348,41 @@ function loadSessionJSON(file) {
         state.pixelsPerMeter = data.state.pixelsPerMeter || state.pixelsPerMeter;
         state.scaleStick = data.state.scaleStick || state.scaleStick;
         state.tangentPoints = data.state.tangentPoints || state.tangentPoints;
+        state.manualTangentCount = data.state.manualTangentCount !== undefined
+          ? data.state.manualTangentCount
+          : (state.tangentPoints ? state.tangentPoints.filter(p => p.manualVerified).length : 0);
+        if (data.state.showSignedArea !== undefined) {
+          state.showSignedArea = data.state.showSignedArea;
+          if (chkShowSignedArea) chkShowSignedArea.checked = state.showSignedArea;
+        }
+        if (data.state.graphInterpretation) {
+          state.graphInterpretation = data.state.graphInterpretation;
+          const gi = state.graphInterpretation;
+          if (selTransYtoVy && gi.transYtoVy !== undefined) selTransYtoVy.value = gi.transYtoVy;
+          if (selTransVytoAy && gi.transVytoAy !== undefined) selTransVytoAy.value = gi.transVytoAy;
+          if (selTransX && gi.transX !== undefined) selTransX.value = gi.transX;
+          if (selStopBehavior && gi.stopBehavior !== undefined) selStopBehavior.value = gi.stopBehavior;
+          if (inpStopTimeApex && gi.stopTimeApex !== undefined) inpStopTimeApex.value = gi.stopTimeApex;
+          if (txtStopExplanation && gi.stopExplanation !== undefined) txtStopExplanation.value = gi.stopExplanation;
+          if (inpPosDirStart && gi.posDirStart !== undefined) inpPosDirStart.value = gi.posDirStart;
+          if (inpPosDirEnd && gi.posDirEnd !== undefined) inpPosDirEnd.value = gi.posDirEnd;
+          if (inpNegDirStart && gi.negDirStart !== undefined) inpNegDirStart.value = gi.negDirStart;
+          if (inpNegDirEnd && gi.negDirEnd !== undefined) inpNegDirEnd.value = gi.negDirEnd;
+          if (inpNegAccStart && gi.negAccStart !== undefined) inpNegAccStart.value = gi.negAccStart;
+          if (inpNegAccEnd && gi.negAccEnd !== undefined) inpNegAccEnd.value = gi.negAccEnd;
+          if (txtAccSignExplanation && gi.accSignExplanation !== undefined) txtAccSignExplanation.value = gi.accSignExplanation;
+        }
+        if (data.state.signedAreaValues) {
+          state.signedAreaValues = data.state.signedAreaValues;
+          const sa = state.signedAreaValues;
+          if (inpSlopeAyFromVt && sa.slopeAyFromVt !== undefined) inpSlopeAyFromVt.value = sa.slopeAyFromVt;
+          if (inpAreaUp && sa.areaUp !== undefined) inpAreaUp.value = sa.areaUp;
+          if (inpAreaDown && sa.areaDown !== undefined) inpAreaDown.value = sa.areaDown;
+          if (inpNetDyArea && sa.netDyArea !== undefined) inpNetDyArea.value = sa.netDyArea;
+          if (inpYMaxFromArea && sa.yMaxFromArea !== undefined) inpYMaxFromArea.value = sa.yMaxFromArea;
+          if (inpYFinalFromArea && sa.yFinalFromArea !== undefined) inpYFinalFromArea.value = sa.yFinalFromArea;
+          if (workSignedArea && sa.workSignedArea !== undefined) workSignedArea.value = sa.workSignedArea;
+        }
         state.calcValues = data.state.calcValues || state.calcValues;
         state.studentWork = data.state.studentWork || {};
         if (data.state.studentWork) {
@@ -3811,6 +4407,8 @@ function loadSessionJSON(file) {
       updateTable();
       updateCharts();
       autoFitAllGraphs();
+      updateTangentProgressBadges();
+      verifyGraphInterpretation();
       if (data.state && data.state.calcValues) {
         const c = data.state.calcValues;
         if (inpX0 && c.x0 !== undefined) inpX0.value = c.x0;
@@ -4274,32 +4872,64 @@ function initEventListeners() {
   if (btnSetTZero) btnSetTZero.addEventListener('click', setInitialTimeAtFirstPoint);
   if (btnExportCSV) btnExportCSV.addEventListener('click', exportCSV);
 
-  // 6-Graph Studio Nav
+  // 6-Graph Studio Nav & Signed Area Toggle
   graphNavBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       renderStudioGraph(btn.dataset.graph);
     });
   });
 
+  if (chkShowSignedArea) {
+    chkShowSignedArea.addEventListener('change', () => {
+      state.showSignedArea = chkShowSignedArea.checked;
+      renderStudioGraph(state.activeGraphTab);
+      if (state.activeGraphTab === 'grid-all') renderAllGridGraphs();
+    });
+  }
+
   if (tangentSlider) {
     tangentSlider.addEventListener('input', e => {
       updateTangentTool(parseFloat(e.target.value));
     });
   }
+  if (btnVerifyAndRecordTangent) btnVerifyAndRecordTangent.addEventListener('click', verifyAndRecordTwoPointTangent);
   if (btnRecordTangent) btnRecordTangent.addEventListener('click', recordTangentPoint);
   if (btnClearTangents) btnClearTangents.addEventListener('click', clearTangentPoints);
   if (btnAutoFitAll) btnAutoFitAll.addEventListener('click', autoFitAllGraphs);
+
+  // Step 3 Graph Translation & Interval Analysis Verification
+  if (btnVerifyGraphInterpretation) {
+    btnVerifyGraphInterpretation.addEventListener('click', verifyGraphInterpretation);
+  }
+  [
+    selTransYtoVy, selTransVytoAy, selTransX,
+    selStopBehavior, inpStopTimeApex, txtStopExplanation,
+    inpPosDirStart, inpPosDirEnd, inpNegDirStart, inpNegDirEnd,
+    inpNegAccStart, inpNegAccEnd, txtAccSignExplanation
+  ].forEach(el => {
+    if (el) {
+      el.addEventListener('change', verifyGraphInterpretation);
+      el.addEventListener('input', verifyGraphInterpretation);
+    }
+  });
 
   // Calculations Workspace
   if (btnCheckWorksheet) btnCheckWorksheet.addEventListener('click', checkAndVerifyCalculations);
   [
     inpX0, inpVx0, inpAx, inpY0, inpVy0, inpAy,
+    inpSlopeAyFromVt, inpAreaUp, inpAreaDown, inpNetDyArea, inpYMaxFromArea, inpYFinalFromArea,
     inpCalcRange, inpMeasRange, inpCalcHangTime, inpMeasHangTime,
     inpCalcMaxHeight, inpMeasMaxHeight, inpSpeedV0, inpAngleTheta,
     tblInpAy, tblInpAx, tblInpHang, tblInpRange, tblInpMaxH
   ].forEach(inp => {
     if (inp) inp.addEventListener('input', () => checkAndVerifyCalculations());
   });
+
+  if (workSignedArea) {
+    workSignedArea.addEventListener('input', () => {
+      state.signedAreaValues.workSignedArea = workSignedArea.value;
+    });
+  }
 
   [workMaxHeight, workHangTime, workRange, workVector].forEach(txt => {
     if (txt) {
@@ -4333,7 +4963,7 @@ function initEventListeners() {
   }
   if (btnNextSlide) {
     btnNextSlide.addEventListener('click', () => {
-      const next = Math.min(10, state.currentSlideIdx + 1);
+      const next = Math.min(11, state.currentSlideIdx + 1);
       renderSlideDeckPreview(next);
     });
   }
