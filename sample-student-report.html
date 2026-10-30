@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exemplar Student Submission (100/100) — Alex Rivera | Physics of Sports Analytics</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}, {left: '$', right: '$', display: false}]});"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --teal: #0f7e9b;
+      --teal-dark: #095f76;
+      --teal-soft: #eef7fa;
+      --amber: #d67b19;
+      --amber-dark: #b06210;
+      --amber-soft: #fff7ed;
+      --bg: #f1f5f9;
+      --surface: #f8fafc;
+      --border: #c8dbe3;
+      --text: #123140;
+      --muted: #4b6570;
+      --green: #1a7f37;
+      --green-soft: #e6f8ea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    .top-bar {
+      max-width: 960px;
+      margin: 1.25rem auto 0;
+      padding: 0.85rem 1.25rem;
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      box-shadow: 0 2px 8px rgba(15, 126, 155, 0.08);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.48rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .btn-teal { background: var(--teal); color: #ffffff; border-color: var(--teal-dark); }
+    .btn-amber { background: var(--amber); color: #ffffff; border-color: var(--amber-dark); }
+
+    .report-page {
+      width: 100%;
+      max-width: 960px;
+      margin: 1.25rem auto;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.8rem 2rem;
+      box-shadow: 0 4px 16px rgba(15, 126, 155, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    .print-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--teal);
+      padding-bottom: 0.65rem;
+      margin-bottom: 0.9rem;
+    }
+    .print-brand {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--amber);
+    }
+    .print-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--teal);
+      margin: 0.15rem 0;
+    }
+    .print-subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      background: var(--teal-soft);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.83rem;
+      margin-bottom: 0.9rem;
+    }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--teal);
+      border-bottom: 1.5px solid var(--border);
+      padding-bottom: 0.25rem;
+      margin: 0.85rem 0 0.55rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      margin-bottom: 0.65rem;
+    }
+    th {
+      background: var(--teal);
+      color: #ffffff;
+      padding: 0.42rem 0.6rem;
+      text-align: left;
+      font-weight: 700;
+    }
+    td {
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:nth-child(even) td { background: var(--surface); }
+    .graphs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    .graph-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.7rem;
+      background: #ffffff;
+    }
+    .graph-card-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--teal);
+      margin-bottom: 0.2rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .canvas-box {
+      height: 170px;
+      position: relative;
+    }
+    .eq-box {
+      font-size: 0.73rem;
+      background: var(--surface);
+      border-top: 1px solid #e2e8f0;
+      padding-top: 0.3rem;
+      margin-top: 0.25rem;
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .calc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--teal);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.8rem;
+    }
+    .calc-card.amber {
+      border-left-color: var(--amber);
+      background: #fffaf5;
+    }
+    .work-mono {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.73rem;
+      background: #ffffff;
+      border: 1px solid #dbe7ed;
+      border-radius: 4px;
+      padding: 0.4rem 0.55rem;
+      margin-top: 0.3rem;
+      color: #0c3644;
+      line-height: 1.45;
+    }
+    .badge-ok {
+      display: inline-block;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid var(--green);
+      font-weight: 800;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+    }
+    .print-footer {
+      margin-top: auto;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: var(--muted);
+      font-family: monospace;
+    }
+    @media print {
+      body { background: #ffffff; }
+      .no-print { display: none !important; }
+      .report-page {
+        margin: 0;
+        border: none;
+        box-shadow: none;
+        padding: 0.35in 0.4in;
+        page-break-after: always;
+        break-after: page;
+      }
+      .report-page:last-of-type {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar no-print">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+      <a href="index.html" class="btn btn-teal">← Back to Simulation</a>
+      <a href="student-guide.html" class="btn">📘 Student Guide</a>
+      <a href="teacher-guide.html" class="btn">🧑‍🏫 Teacher Guide</a>
+      <a href="sample-student-session.json" download class="btn">💾 Download Exemplar .json Session</a>
+    </div>
+    <button onclick="window.print()" class="btn btn-amber">🖨️ Print / Save Exemplar 4-Page PDF</button>
+  </div>
+
+  <!-- ==================== PAGE 1: TRAJECTORY SNAPSHOT & CALIBRATION ==================== -->
+  <div class="report-page">
+    <div class="print-header">
+      <div>
+        <div class="print-brand">The Thinking Experiment &bull; PhysicsKit &bull; Exemplar 100/100 Submission</div>
+        <h1 class="print-title">Physics of Sports Analytics: Video Project</h1>
+        <p class="print-subtitle">Formal Laboratory Investigation, Unit 2 Motion Graph Mastery &amp; Kinematic Verification Report</p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 0.78rem; color: var(--teal); font-weight: 800;">
+        Originality ID: PK-SPORTS-8F4A-3B19-B453<br>
+        <span class="badge-ok">Score: 100 / 100 (Exemplar)</span>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div><strong>Student:</strong> Alex Rivera</div>
+      <div><strong>Teacher:</strong> Mr. Lopez</div>
+      <div><strong>Experiment:</strong> Basketball 3-Pt Arc (60 FPS)</div>
+      <div><strong>Date:</strong> October 30, 2026</div>
+    </div>
+
+    <div class="section-title">1. Calibrated Video Frame Snapshot (All 13 Tracked Free-Flight Points, 1.00 m Scale Stick &amp; Origin)</div>
+    <div style="text-align: center; margin-bottom: 0.5rem;">
+      <canvas id="exemplarVideoSnapshot" width="880" height="360" style="width: 100%; max-height: 295px; object-fit: contain; border: 1.5px solid var(--border); border-radius: 8px;"></canvas>
+    </div>
+
+    <div class="section-title">2. Video Calibration &amp; Initial Kinematic Parameters</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Calibration Metric</th>
+          <th>Measured Value</th>
+          <th>Kinematic Parameter</th>
+          <th>Graph Curve-Fit Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Calibration Scale Factor</strong></td>
+          <td>112.0 px/meter (1.00 m reference stick)</td>
+          <td><strong>Initial Horizontal Position ($x_0$)</strong></td>
+          <td>$0.000\text{ m}$ (at release vertical line)</td>
+        </tr>
+        <tr>
+          <td><strong>Coordinate Origin $(0,0)$</strong></td>
+          <td>$(110\text{ px}, 395\text{ px})$ on court floor</td>
+          <td><strong>Initial Vertical Position ($y_0$)</strong></td>
+          <td>$1.200\text{ m}$ above court floor</td>
+        </tr>
+        <tr>
+          <td><strong>Total Free-Flight Frames Tracked</strong></td>
+          <td>13 points ($t = 0.000\text{ s}$ to $1.000\text{ s}$)</td>
+          <td><strong>Initial Horizontal Velocity ($v_{0x}$)</strong></td>
+          <td>$+2.629\text{ m/s}$ (constant)</td>
+        </tr>
+        <tr>
+          <td><strong>Tracking Target</strong></td>
+          <td>Basketball geometric center of mass</td>
+          <td><strong>Initial Vertical Velocity ($v_{0y}$)</strong></td>
+          <td>$+4.944\text{ m/s}$ (upward)</td>
+        </tr>
+        <tr>
+          <td><strong>Resultant Launch Vector ($v_0, \theta$)</strong></td>
+          <td colspan="3">
+            <strong style="color: var(--teal);">$v_0 = 5.600\text{ m/s}$</strong> at launch angle <strong style="color: var(--amber);">$\theta = 62.00^\circ$</strong> above horizontal &bull; Experimental Vertical Acc: <strong>$a_y = -9.780\text{ m/s}^2$</strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">3. Sampled Free-Flight Coordinate &amp; Two-Point Tangent Table</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Pt #</th>
+          <th>Time $t\text{ (s)}$</th>
+          <th>Horiz Pos $x\text{ (m)}$</th>
+          <th>Vert Pos $y\text{ (m)}$</th>
+          <th>Tangent Instant $t\text{ (s)}$</th>
+          <th>Two Tangent Line Points $P_1(t_1,y_1), P_2(t_2,y_2)$</th>
+          <th>Tangent Slope $v_y = \frac{y_2-y_1}{t_2-t_1}$</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1 (Launch)</strong></td><td>0.000</td><td>0.000</td><td>1.200</td>
+          <td>$t = 0.150\text{ s}$ (Manual #1)</td>
+          <td>$P_1(0.010\text{ s}, 1.344\text{ m}), P_2(0.290\text{ s}, 2.317\text{ m})$</td>
+          <td>$\frac{2.317 - 1.344}{0.290 - 0.010} = \mathbf{+3.477\text{ m/s}}$ ✓</td>
+        </tr>
+        <tr>
+          <td><strong>4 (Rising)</strong></td><td>0.250</td><td>0.657</td><td>2.130</td>
+          <td>$t = 0.506\text{ s}$ (Manual #2 Apex)</td>
+          <td>$P_1(0.360\text{ s}, 2.450\text{ m}), P_2(0.650\text{ s}, 2.450\text{ m})$</td>
+          <td>$\frac{2.450 - 2.450}{0.650 - 0.360} = \mathbf{0.000\text{ m/s}}$ ✓</td>
+        </tr>
+        <tr>
+          <td><strong>7 (Near Apex)</strong></td><td>0.500</td><td>1.315</td><td>2.450</td>
+          <td>$t = 0.850\text{ s}$ (Manual #3)</td>
+          <td>$P_1(0.710\text{ s}, 2.345\text{ m}), P_2(0.990\text{ s}, 1.402\text{ m})$</td>
+          <td>$\frac{1.402 - 2.345}{0.990 - 0.710} = \mathbf{-3.369\text{ m/s}}$ ✓</td>
+        </tr>
+        <tr>
+          <td><strong>13 (Pre-Rim)</strong></td><td>1.000</td><td>2.629</td><td>1.255</td>
+          <td>10 Total Tangents Sampled</td>
+          <td>Spanning $t = 0.050\text{ s}$ to $t = 0.950\text{ s}$</td>
+          <td>Linear Fit: $v_y(t) = (-9.780)t + 4.944$</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="print-footer">
+      <span>The Thinking Experiment &bull; Sports Analytics Video Project (Exemplar)</span>
+      <span>Originality Token: <strong>PK-SPORTS-8F4A-3B19-B453</strong></span>
+      <span>Page 1 of 4</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2: THE 6 KINEMATICS GRAPHS & EQUATIONS ==================== -->
+  <div class="report-page">
+    <div class="print-header">
+      <div>
+        <div class="print-brand">The Thinking Experiment &bull; PhysicsKit</div>
+        <h2 class="print-title" style="font-size: 1.25rem;">Section 3: 6 Required Kinematics Graphs, Tangent Slopes &amp; Signed Areas</h2>
+        <p class="print-subtitle">General &amp; particular equations with units, 10-point tangent velocity line, and shaded signed $v$-$t$ displacement areas</p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: var(--teal);">
+        ID: PK-SPORTS-8F4A-3B19-B453
+      </div>
+    </div>
+
+    <div class="graphs-grid">
+      <div class="graph-card">
+        <div class="graph-card-title"><span>1. Vertical Position $y(t)$ [Parabola &amp; Tangent]</span><span>$R^2 = 0.9999$</span></div>
+        <div class="canvas-box"><canvas id="cYPos"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $y(t) = \frac{1}{2}a_y t^2 + v_{0y}t + y_0$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $y(t) = (-4.890\text{ m/s}^2)t^2 + (4.944\text{ m/s})t + (1.200\text{ m})$
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-card-title"><span>2. Horizontal Position $x(t)$ [Uniform Motion]</span><span>$R^2 = 1.0000$</span></div>
+        <div class="canvas-box"><canvas id="cXPos"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $x(t) = v_{0x}t + x_0$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $x(t) = (2.629\text{ m/s})t + (0.000\text{ m})$
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-card-title"><span>3. Vertical Velocity $v_y(t)$ [10 Tangents &amp; Signed Area]</span><span>$R^2 = 0.9999$</span></div>
+        <div class="canvas-box"><canvas id="cYVel"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $v_y(t) = a_y t + v_{0y}$ &bull; <strong>Zero Crossing:</strong> $t_{\text{apex}} = 0.506\text{ s}$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $v_y(t) = (-9.780\text{ m/s}^2)t + (4.944\text{ m/s})$
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-card-title"><span>4. Horizontal Velocity $v_x(t)$ [Shaded Area $\Delta x$]</span><span>Slope $a_x = 0$</span></div>
+        <div class="canvas-box"><canvas id="cXVel"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $v_x(t) = v_{0x} = \text{constant}$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $v_x(t) = 2.629\text{ m/s}$ (Rectangle Area $\Delta x = 2.629\text{ m}$)
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-card-title"><span>5. Vertical Acceleration $a_y(t)$ [Slope $\Delta v_y/\Delta t$]</span><span>Ref $g = -9.80\text{ m/s}^2$</span></div>
+        <div class="canvas-box"><canvas id="cYAcc"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $a_y(t) = \frac{\Delta v_y}{\Delta t} = \text{constant}$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $a_y(t) = -9.780\text{ m/s}^2$ ($\%\text{ Diff} = -0.20\%$)
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-card-title"><span>6. Horizontal Acceleration $a_x(t)$ [Slope $\Delta v_x/\Delta t$]</span><span>Newton's 1st Law</span></div>
+        <div class="canvas-box"><canvas id="cXAcc"></canvas></div>
+        <div class="eq-box">
+          <strong>General:</strong> $a_x(t) = \frac{\Delta v_x}{\Delta t} = 0\text{ m/s}^2$<br>
+          <strong style="color: var(--teal);">Particular:</strong> $a_x(t) = 0.000\text{ m/s}^2$ (Zero horizontal net force)
+        </div>
+      </div>
+    </div>
+
+    <div class="print-footer">
+      <span>The Thinking Experiment &bull; Sports Analytics Video Project (Exemplar)</span>
+      <span>Originality Token: <strong>PK-SPORTS-8F4A-3B19-B453</strong></span>
+      <span>Page 2 of 4</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 3: GRAPH MASTERY, SIGNED AREA & ALGEBRAIC DERIVATIONS ==================== -->
+  <div class="report-page">
+    <div class="print-header">
+      <div>
+        <div class="print-brand">The Thinking Experiment &bull; PhysicsKit</div>
+        <h2 class="print-title" style="font-size: 1.25rem;">Section 4: Motion Graph Mastery, Signed $v$-$t$ Area &amp; Algebraic Derivations</h2>
+        <p class="print-subtitle">Unit 2 Graph Translation &amp; Interval Analysis (Exam 1 &amp; 3) and Full Algebraic Kinematics Work (No Shortcuts)</p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: var(--teal);">
+        ID: PK-SPORTS-8F4A-3B19-B453
+      </div>
+    </div>
+
+    <div class="section-title">1. Unit 2 Motion Graph Interpretation &amp; Physical Motion Intervals (Exam Problem 1 &amp; Problem 3e–g)</div>
+    <div class="calc-grid">
+      <div class="calc-card">
+        <div style="display:flex; justify-content:space-between;">
+          <strong style="color: var(--teal);">A. Graph Shape Translation &amp; Stopping ($v_y = 0$)</strong>
+          <span class="badge-ok">✓ Verified</span>
+        </div>
+        <div class="work-mono">
+          • <strong>Vertical Chain:</strong> Concave-down parabola $y(t)$ has positive decreasing slope on $[0, 0.506\text{ s}]$, zero slope at $t_{\text{apex}} = 0.506\text{ s}$, and negative steepening slope on $[0.506\text{ s}, 1.000\text{ s}]$ $\implies$ straight line $v_y(t)$ with negative slope $\implies$ constant negative horizontal line $a_y(t) = -9.780\text{ m/s}^2$.<br>
+          • <strong>Apex Stopping (3e):</strong> At $t_{\text{apex}} = 0.506\text{ s}$, $v_y = 0\text{ m/s}$ (stops vertically), but the ball does <strong>not</strong> stop in 2D space because $v_x = 2.629\text{ m/s} \neq 0$.
+        </div>
+      </div>
+
+      <div class="calc-card">
+        <div style="display:flex; justify-content:space-between;">
+          <strong style="color: var(--teal);">B. Direction Intervals &amp; Sign of Acceleration</strong>
+          <span class="badge-ok">✓ Verified</span>
+        </div>
+        <div class="work-mono">
+          • <strong>Moving Upward ($+y, v_y &gt; 0$):</strong> $t \in [0.000\text{ s}, 0.506\text{ s}]$<br>
+          • <strong>Moving Downward ($-y, v_y &lt; 0$):</strong> $t \in [0.506\text{ s}, 1.000\text{ s}]$<br>
+          • <strong>Negative Accel ($a_y &lt; 0$):</strong> Entire flight $t \in [0.000\text{ s}, 1.000\text{ s}]$.<br>
+          • <strong>Why $a_y &lt; 0$ While Rising (3g):</strong> The slope $\frac{\Delta v_y}{\Delta t} = -9.780\text{ m/s}^2$ of $v_y(t)$ is constant and negative throughout ascent, apex, and descent because gravity pulls downward the entire flight.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">2. Section 1B: Velocity-Time Slope ($\Delta v_y/\Delta t$) &amp; Signed-Area Method ($\Delta y = \sum\text{Area}$, Exam Problem 3b–d)</div>
+    <div class="calc-card amber" style="margin-bottom: 0.65rem;">
+      <div style="display:flex; justify-content:space-between;">
+        <strong style="color: var(--amber-dark);">Signed Triangle Areas Under $v_y(t)$ &amp; Apex/Final Position Verification</strong>
+        <span class="badge-ok">✓ Signed-Area &amp; Slope Verified</span>
+      </div>
+      <div class="work-mono">
+        1) <strong>Slope of $v_y(t)$ Line (3b):</strong> $a_y = \frac{v_{y2} - v_{y1}}{t_2 - t_1} = \frac{-4.836\text{ m/s} - 4.944\text{ m/s}}{1.000\text{ s} - 0.000\text{ s}} = \mathbf{-9.780\text{ m/s}^2}$<br>
+        2) <strong>Positive Ascent Triangle ($\text{Area}_1 = +\Delta y_{\text{up}}$ on $[0, 0.506\text{ s}]$):</strong> $\Delta y_{\text{up}} = +\frac{1}{2}(0.506\text{ s})(4.944\text{ m/s}) = \mathbf{+1.250\text{ m}}$<br>
+        3) <strong>Negative Descent Triangle ($\text{Area}_2 = \Delta y_{\text{down}}$ on $[0.506\text{ s}, 1.000\text{ s}]$):</strong> $\Delta y_{\text{down}} = \frac{1}{2}(1.000\text{ s} - 0.506\text{ s})(-4.836\text{ m/s}) = \mathbf{-1.195\text{ m}}$<br>
+        4) <strong>Net Vertical Displacement (3c):</strong> $\Delta y_{\text{total}} = \text{Area}_1 + \text{Area}_2 = (+1.250\text{ m}) + (-1.195\text{ m}) = \mathbf{+0.055\text{ m}}$<br>
+        5) <strong>Positions from $y_0 = 1.200\text{ m}$ (3d):</strong> $y_{\text{max}} = y_0 + \Delta y_{\text{up}} = 1.200 + 1.250 = \mathbf{2.450\text{ m}}$ &bull; $y_{\text{final}} = y_0 + \Delta y_{\text{total}} = 1.200 + 0.055 = \mathbf{1.255\text{ m}}$
+      </div>
+    </div>
+
+    <div class="section-title">3. Step-by-Step Algebraic Kinematics Derivations (No Shortcut Formulas)</div>
+    <div class="calc-grid">
+      <div class="calc-card">
+        <strong style="color: var(--teal);">1. Resultant Launch Speed ($v_0$) &amp; Launch Angle ($\theta$)</strong>
+        <div class="work-mono">
+          • Given: $v_{0x} = 2.629\text{ m/s}$, $v_{0y} = 4.944\text{ m/s}$<br>
+          • $v_0 = \sqrt{v_{0x}^2 + v_{0y}^2} = \sqrt{(2.629)^2 + (4.944)^2} = \sqrt{31.355} = \mathbf{5.600\text{ m/s}}$<br>
+          • $\theta = \tan^{-1}\!\left(\frac{v_{0y}}{v_{0x}}\right) = \tan^{-1}\!\left(\frac{4.944}{2.629}\right) = \mathbf{62.00^\circ}$<br>
+          • Check: $v_0\cos(62^\circ) = 2.629\text{ m/s}$, $v_0\sin(62^\circ) = 4.944\text{ m/s}$ ✓
+        </div>
+      </div>
+
+      <div class="calc-card">
+        <strong style="color: var(--teal);">2. Maximum Apex Height ($y_{\text{max}}$)</strong>
+        <div class="work-mono">
+          • Fundamental Eq: $v_{fy}^2 = v_{0y}^2 + 2a_y(y_{\text{max}} - y_0)$ (at apex, $v_{fy} = 0$)<br>
+          • $0^2 = (4.944\text{ m/s})^2 + 2(-9.780\text{ m/s}^2)(y_{\text{max}} - 1.200\text{ m})$<br>
+          • $19.560(y_{\text{max}} - 1.200) = 24.443 \implies y_{\text{max}} - 1.200 = 1.250\text{ m}$<br>
+          • $y_{\text{max}} = 1.200\text{ m} + 1.250\text{ m} = \mathbf{2.450\text{ m}}$ (Measured: $2.450\text{ m}$)
+        </div>
+      </div>
+
+      <div class="calc-card">
+        <strong style="color: var(--teal);">3. Flight Hang Time ($t_{\text{hang}}$) via Quadratic Formula</strong>
+        <div class="work-mono">
+          • Fundamental Eq: $y(t) = y_0 + v_{0y}t + \frac{1}{2}a_y t^2$ ($y_{\text{final}} = 1.255\text{ m}$)<br>
+          • $1.255 = 1.200 + 4.944t - 4.890t^2 \implies -4.890t^2 + 4.944t - 0.055 = 0$<br>
+          • $t = \frac{-4.944 - \sqrt{(4.944)^2 - 4(-4.890)(-0.055)}}{2(-4.890)} = \frac{-4.944 - 4.834}{-9.780} = \mathbf{1.000\text{ s}}$
+        </div>
+      </div>
+
+      <div class="calc-card">
+        <strong style="color: var(--teal);">4. Horizontal Range ($\Delta x$)</strong>
+        <div class="work-mono">
+          • Fundamental Eq: $\Delta x = v_{0x}t_{\text{hang}} + \frac{1}{2}a_x t_{\text{hang}}^2$ ($a_x = 0\text{ m/s}^2$)<br>
+          • $\Delta x = (2.629\text{ m/s})(1.000\text{ s}) + 0 = \mathbf{2.629\text{ m}}$<br>
+          • Measured from Video: $x_{\text{final}} - x_0 = 2.629\text{ m} - 0.000\text{ m} = \mathbf{2.629\text{ m}}$
+        </div>
+      </div>
+    </div>
+
+    <div class="print-footer">
+      <span>The Thinking Experiment &bull; Sports Analytics Video Project (Exemplar)</span>
+      <span>Originality Token: <strong>PK-SPORTS-8F4A-3B19-B453</strong></span>
+      <span>Page 3 of 4</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 4: MASTER COMPARISON TABLE, REFLECTION & INTEGRITY SEAL ==================== -->
+  <div class="report-page">
+    <div class="print-header">
+      <div>
+        <div class="print-brand">The Thinking Experiment &bull; PhysicsKit</div>
+        <h2 class="print-title" style="font-size: 1.25rem;">Section 5: Model Verification Table, Real-World Reflection &amp; Integrity Seal</h2>
+        <p class="print-subtitle">Direct comparison of measured vs. calculated parameters, 7-sentence physical analysis, and cryptographic verification</p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: var(--teal);">
+        ID: PK-SPORTS-8F4A-3B19-B453
+      </div>
+    </div>
+
+    <div class="section-title">1. Master Kinematic Comparison Table ($\text{\% Diff} = \frac{\text{Calculated} - \text{Measured}}{\text{Measured}} \times 100\%$)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Kinematic Parameter</th>
+          <th style="text-align: center;">Measured (Video / Graph)</th>
+          <th style="text-align: center;">Student Calculated (Theory)</th>
+          <th style="text-align: center;">Percent Difference</th>
+          <th style="text-align: center;">Model Agreement</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Vertical Acceleration ($a_y$)</strong></td>
+          <td style="text-align: center;">$-9.780\text{ m/s}^2$</td>
+          <td style="text-align: center;">$-9.800\text{ m/s}^2$ (Ref $g$)</td>
+          <td style="text-align: center; font-weight: 700;">$-0.20\%$</td>
+          <td style="text-align: center;"><span class="badge-ok">✓ Excellent (&lt;6%)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Horizontal Acceleration ($a_x$)</strong></td>
+          <td style="text-align: center;">$0.000\text{ m/s}^2$</td>
+          <td style="text-align: center;">$0.000\text{ m/s}^2$ (Newton I)</td>
+          <td style="text-align: center; font-weight: 700;">$\Delta = 0.000\text{ m/s}^2$</td>
+          <td style="text-align: center;"><span class="badge-ok">✓ Verified ($a_x \approx 0$)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Maximum Apex Height ($y_{\text{max}}$)</strong></td>
+          <td style="text-align: center;">$2.450\text{ m}$</td>
+          <td style="text-align: center;">$2.450\text{ m}$</td>
+          <td style="text-align: center; font-weight: 700;">$0.00\%$</td>
+          <td style="text-align: center;"><span class="badge-ok">✓ Excellent (&lt;6%)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Flight Hang Time ($t_{\text{hang}}$)</strong></td>
+          <td style="text-align: center;">$1.000\text{ s}$</td>
+          <td style="text-align: center;">$1.000\text{ s}$</td>
+          <td style="text-align: center; font-weight: 700;">$0.00\%$</td>
+          <td style="text-align: center;"><span class="badge-ok">✓ Excellent (&lt;6%)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Horizontal Range ($\Delta x$)</strong></td>
+          <td style="text-align: center;">$2.629\text{ m}$</td>
+          <td style="text-align: center;">$2.629\text{ m}$</td>
+          <td style="text-align: center; font-weight: 700;">$0.00\%$</td>
+          <td style="text-align: center;"><span class="badge-ok">✓ Excellent (&lt;6%)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">2. Real-World Reflection (7 Complete Sentences)</div>
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.9rem 1.1rem; font-size: 0.84rem; line-height: 1.62; color: var(--text);">
+      Our video analysis of a basketball three-point shot confirmed that a projectile in free flight obeys the constant-acceleration kinematics model with remarkable precision. The experimental vertical acceleration obtained from the linear regression of our 10 two-point tangent slopes was $a_y = -9.780\text{ m/s}^2$, yielding a percent difference of only $-0.20\%$ compared to the standard gravitational acceleration $g = -9.800\text{ m/s}^2$. Both the signed-area method under the $v_y(t)$ graph ($\Delta y_{\text{up}} = +1.250\text{ m}$ above the time axis and $\Delta y_{\text{down}} = -1.195\text{ m}$ below the time axis) and our algebraic kinematics derivation predicted an apex height of $y_{\text{max}} = 2.450\text{ m}$, matching the video measurement to within $0.00\%$. Furthermore, our interval analysis demonstrated a crucial physical concept: at $t_{\text{apex}} = 0.506\text{ s}$, the basketball stops moving vertically ($v_y = 0\text{ m/s}$) as it transitions from rising to falling, yet it never stops moving in 2D space because its horizontal velocity remains constant at $v_x = 2.629\text{ m/s}$ and its vertical acceleration remains $-9.780\text{ m/s}^2$ downward across the entire $[0.000\text{ s}, 1.000\text{ s}]$ flight. Minor experimental uncertainties in real-world sports video tracking arise from camera lens perspective distortion (parallax if the shooter is not strictly in the same plane as the $1.00\text{ m}$ calibration stick), slight motion blur of the basketball's center of mass at $60\text{ FPS}$, and a small upward aerodynamic drag and Magnus backspin lift force. At a moderate launch speed of $v_0 = 5.600\text{ m/s}$, air resistance is small enough that horizontal acceleration remains effectively zero ($a_x = 0.000\text{ m/s}^2$). From a sports biomechanics perspective, releasing the basketball at a steep launch angle of $\theta = 62.00^\circ$ increases the apex height ($2.450\text{ m}$) and steepens the entry angle into the hoop, giving the shooter a wider effective target opening than a flat trajectory.
+    </div>
+
+    <div class="section-title">3. Academic Integrity &amp; Originality Verification Seal</div>
+    <div style="background: var(--surface); border: 2px solid var(--teal); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.9rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 0.5rem;">
+        <div>
+          <strong style="color: var(--teal); font-size: 0.9rem;">PhysicsKit Anti-Plagiarism Digital Certificate</strong><br>
+          <span style="font-size: 0.74rem; color: var(--muted);">Cryptographically bound to tracked frame coordinates, student name, and scale calibration ($\text{8F4A}_{16} \oplus \text{3B19}_{16} = \text{B453}_{16}$).</span>
+        </div>
+        <div style="font-family: monospace; font-weight: 800; font-size: 0.92rem; color: var(--teal); background: var(--teal-soft); padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid var(--teal);">
+          PK-SPORTS-8F4A-3B19-B453
+        </div>
+      </div>
+      <div style="font-size: 0.77rem; color: #334155; line-height: 1.48;">
+        &bull; <strong>Student Name:</strong> Alex Rivera &bull; <strong>Teacher:</strong> Mr. Lopez &bull; <strong>Tracked Frames:</strong> 13 free-flight coordinates<br>
+        &bull; <strong>Honor Code Pledge:</strong> <em>"On my honor, I have neither given nor received unauthorized aid on this assignment."</em><br>
+        &bull; <strong>Verification Status:</strong> <span style="color: var(--green); font-weight: 800;">✓ Verified Authentic Student Work (100 / 100 Rubric Score)</span>
+      </div>
+    </div>
+
+    <div class="print-footer">
+      <span>The Thinking Experiment &bull; Sports Analytics Video Project (Exemplar)</span>
+      <span>Originality Token: <strong>PK-SPORTS-8F4A-3B19-B453</strong></span>
+      <span>Page 4 of 4</span>
+    </div>
+  </div>
+
+  <script>
+    // Draw Exemplar Calibrated Video Snapshot on Page 1
+    (function drawExemplarSnapshot() {
+      const c = document.getElementById('exemplarVideoSnapshot');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const w = c.width, h = c.height;
+
+      // Court backdrop
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 45) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      for (let y = 0; y < h; y += 45) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+      // Hardwood floor
+      const floorY = 290;
+      ctx.fillStyle = '#fff3e0';
+      ctx.fillRect(0, floorY, w, h - floorY);
+      ctx.strokeStyle = '#ffb74d';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(w, floorY); ctx.stroke();
+
+      // Origin (130, 290) and scale = 112 px/m
+      const ox = 130, oy = 290, ppm = 112;
+
+      // Hoop on right
+      const hoopX = 430, hoopY = oy - 1.255 * ppm;
+      ctx.strokeStyle = '#c53030';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(hoopX + 38, hoopY - 55, 5, 110);
+      ctx.fillStyle = '#d67b19';
+      ctx.fillRect(hoopX, hoopY, 38, 6);
+
+      // Origin Axes (+x Teal, +y Amber)
+      ctx.strokeStyle = '#0f7e9b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(ox - 25, oy); ctx.lineTo(ox + 120, oy); ctx.stroke();
+      ctx.fillStyle = '#0f7e9b';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('+x (Origin 0,0)', ox + 125, oy + 4);
+
+      ctx.strokeStyle = '#d67b19';
+      ctx.beginPath(); ctx.moveTo(ox, oy + 20); ctx.lineTo(ox, oy - 180); ctx.stroke();
+      ctx.fillStyle = '#d67b19';
+      ctx.fillText('+y', ox - 8, oy - 186);
+
+      ctx.fillStyle = '#0f7e9b';
+      ctx.beginPath(); ctx.arc(ox, oy, 6, 0, Math.PI * 2); ctx.fill();
+
+      // Scale Stick (1.00 m = 112 px)
+      const sx1 = ox, sx2 = ox + ppm, sy = 328;
+      ctx.strokeStyle = '#d67b19';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.moveTo(sx1, sy); ctx.lineTo(sx2, sy); ctx.stroke();
+      [sx1, sx2].forEach(px => {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(px, sy, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.stroke();
+      });
+      ctx.fillStyle = '#123140';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText('Scale: 1.00 m (112 px/m)', sx1 + 4, sy + 18);
+
+      // 13 Tracked Points
+      const pts = [
+        { t: 0.000, x: 0.000, y: 1.200 },
+        { t: 0.083, x: 0.219, y: 1.578 },
+        { t: 0.167, x: 0.438, y: 1.888 },
+        { t: 0.250, x: 0.657, y: 2.130 },
+        { t: 0.333, x: 0.876, y: 2.305 },
+        { t: 0.417, x: 1.095, y: 2.411 },
+        { t: 0.500, x: 1.315, y: 2.450 },
+        { t: 0.583, x: 1.534, y: 2.420 },
+        { t: 0.667, x: 1.753, y: 2.323 },
+        { t: 0.750, x: 1.972, y: 2.158 },
+        { t: 0.833, x: 2.191, y: 1.925 },
+        { t: 0.917, x: 2.410, y: 1.624 },
+        { t: 1.000, x: 2.629, y: 1.255 }
+      ];
+
+      ctx.strokeStyle = 'rgba(15, 126, 155, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const px = ox + p.x * ppm;
+        const py = oy - p.y * ppm;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+
+      pts.forEach((p, i) => {
+        const px = ox + p.x * ppm;
+        const py = oy - p.y * ppm;
+        ctx.beginPath();
+        ctx.arc(px, py, (i === 0 || i === 6 || i === 12) ? 7 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = i === 0 ? '#16a34a' : (i === 6 ? '#d67b19' : '#0f7e9b');
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#123140';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(String(i + 1), px + 6, py - 5);
+      });
+
+      // Banner
+      ctx.fillStyle = 'rgba(15, 126, 155, 0.94)';
+      ctx.fillRect(16, 14, 495, 32);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('🎯 Calibrated Video Capture: 13 Free-Flight Points • 1.00 m Scale • Origin (0,0)', 26, 34);
+    })();
+
+    // Render the 6 Kinematics Charts on Page 2
+    window.addEventListener('DOMContentLoaded', () => {
+      const pts = [
+        { t: 0.000, x: 0.000, y: 1.200 },
+        { t: 0.083, x: 0.219, y: 1.578 },
+        { t: 0.167, x: 0.438, y: 1.888 },
+        { t: 0.250, x: 0.657, y: 2.130 },
+        { t: 0.333, x: 0.876, y: 2.305 },
+        { t: 0.417, x: 1.095, y: 2.411 },
+        { t: 0.500, x: 1.315, y: 2.450 },
+        { t: 0.583, x: 1.534, y: 2.420 },
+        { t: 0.667, x: 1.753, y: 2.323 },
+        { t: 0.750, x: 1.972, y: 2.158 },
+        { t: 0.833, x: 2.191, y: 1.925 },
+        { t: 0.917, x: 2.410, y: 1.624 },
+        { t: 1.000, x: 2.629, y: 1.255 }
+      ];
+      const fitY = [];
+      for (let i = 0; i <= 40; i++) {
+        const t = i / 40;
+        fitY.push({ x: t, y: -4.890 * t * t + 4.944 * t + 1.200 });
+      }
+      const tangents = [
+        { x: 0.050, y: 4.455 }, { x: 0.150, y: 3.477 }, { x: 0.250, y: 2.499 },
+        { x: 0.350, y: 1.521 }, { x: 0.450, y: 0.543 }, { x: 0.506, y: 0.000 },
+        { x: 0.650, y: -1.413 }, { x: 0.750, y: -2.391 }, { x: 0.850, y: -3.369 },
+        { x: 0.950, y: -4.347 }
+      ];
+
+      const baseOpts = (yLabel, min, max) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } } },
+        scales: {
+          x: { title: { display: true, text: 'Time t (s)', font: { size: 10, weight: 'bold' } }, ticks: { font: { size: 9 } } },
+          y: { title: { display: true, text: yLabel, font: { size: 10, weight: 'bold' } }, suggestedMin: min, suggestedMax: max, ticks: { font: { size: 9 } } }
+        }
+      });
+
+      new Chart(document.getElementById('cYPos'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'Measured y(t)', data: pts.map(p => ({ x: p.t, y: p.y })), backgroundColor: '#d67b19', pointRadius: 4 },
+            { label: 'Quadratic Fit', data: fitY, type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0 },
+            { label: 'Tangent @ t=0.15s (P₁, P₂)', data: [{ x: 0.010, y: 1.344 }, { x: 0.290, y: 2.317 }], type: 'line', borderColor: '#0f7e9b', borderDash: [5, 3], borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ffffff' }
+          ]
+        },
+        options: baseOpts('y (m)', 0, 2.8)
+      });
+
+      new Chart(document.getElementById('cXPos'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'Measured x(t)', data: pts.map(p => ({ x: p.t, y: p.x })), backgroundColor: '#0f7e9b', pointRadius: 4 },
+            { label: 'Linear Fit (v₀ₓ = 2.629 m/s)', data: [{ x: 0, y: 0 }, { x: 1, y: 2.629 }], type: 'line', borderColor: '#095f76', borderWidth: 2, pointRadius: 0 }
+          ]
+        },
+        options: baseOpts('x (m)', 0, 3.0)
+      });
+
+      new Chart(document.getElementById('cYVel'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: '10 Tangent Slopes', data: tangents, backgroundColor: '#d67b19', pointRadius: 4.5, pointStyle: 'rectRot' },
+            { label: 'Linear Fit (aᵧ = -9.78 m/s²)', data: [{ x: 0, y: 4.944 }, { x: 1, y: -4.836 }], type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0 },
+            { label: '+Δy_up (+1.250 m)', data: [{ x: 0, y: 4.944 }, { x: 0.506, y: 0 }], type: 'line', borderColor: 'rgba(15,126,155,0.6)', backgroundColor: 'rgba(15,126,155,0.22)', borderWidth: 1, pointRadius: 0, fill: 'origin' },
+            { label: 'Δy_down (-1.195 m)', data: [{ x: 0.506, y: 0 }, { x: 1.0, y: -4.836 }], type: 'line', borderColor: 'rgba(214,123,25,0.6)', backgroundColor: 'rgba(214,123,25,0.22)', borderWidth: 1, pointRadius: 0, fill: 'origin' }
+          ]
+        },
+        options: baseOpts('vᵧ (m/s)', -6, 6)
+      });
+
+      new Chart(document.getElementById('cXVel'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'vₓ(t) = 2.629 m/s (Area Δx = 2.629 m)', data: [{ x: 0, y: 2.629 }, { x: 1, y: 2.629 }], type: 'line', borderColor: '#0f7e9b', backgroundColor: 'rgba(15,126,155,0.18)', borderWidth: 2.5, pointRadius: 3, fill: 'origin' }
+          ]
+        },
+        options: baseOpts('vₓ (m/s)', 0, 4.0)
+      });
+
+      new Chart(document.getElementById('cYAcc'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'Measured aᵧ = -9.780 m/s²', data: [{ x: 0, y: -9.78 }, { x: 1, y: -9.78 }], type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 3 },
+            { label: 'Ref g = -9.800 m/s²', data: [{ x: 0, y: -9.80 }, { x: 1, y: -9.80 }], type: 'line', borderColor: '#64748b', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0 }
+          ]
+        },
+        options: baseOpts('aᵧ (m/s²)', -12, 2)
+      });
+
+      new Chart(document.getElementById('cXAcc'), {
+        type: 'scatter',
+        data: {
+          datasets: [
+            { label: 'Measured aₓ = 0.000 m/s²', data: [{ x: 0, y: 0 }, { x: 1, y: 0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 3 }
+          ]
+        },
+        options: baseOpts('aₓ (m/s²)', -2, 2)
+      });
+    });
+  </script>
+</body>
+</html>

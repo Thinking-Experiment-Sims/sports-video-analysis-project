@@ -1,0 +1,111 @@
+{
+  "version": "1.0",
+  "date": "2026-10-30T15:30:00.000Z",
+  "studentName": "Alex Rivera (Exemplar 100/100)",
+  "teacherName": "Mr. Lopez",
+  "authenticityToken": "PK-SPORTS-8F4A-3B19-B453",
+  "state": {
+    "syntheticType": "basketball",
+    "origin": { "x": 110, "y": 395 },
+    "originAngle": 0,
+    "pixelsPerMeter": 112,
+    "scaleStick": {
+      "start": { "x": 110, "y": 447 },
+      "end": { "x": 222, "y": 447 },
+      "lengthMeters": 1.0
+    },
+    "series": {
+      "A": [
+        { "frame": 0,  "rawTime": 0.000, "time": 0.000, "videoX": 110.0, "videoY": 260.6, "x": 0.000, "y": 1.200, "vx": 2.629, "vy": 4.944, "ax": 0.000, "ay": -9.780 },
+        { "frame": 5,  "rawTime": 0.083, "time": 0.083, "videoX": 134.5, "videoY": 218.3, "x": 0.219, "y": 1.578, "vx": 2.629, "vy": 4.129, "ax": 0.000, "ay": -9.780 },
+        { "frame": 10, "rawTime": 0.167, "time": 0.167, "videoX": 159.1, "videoY": 183.5, "x": 0.438, "y": 1.888, "vx": 2.629, "vy": 3.314, "ax": 0.000, "ay": -9.780 },
+        { "frame": 15, "rawTime": 0.250, "time": 0.250, "videoX": 183.6, "videoY": 156.4, "x": 0.657, "y": 2.130, "vx": 2.629, "vy": 2.499, "ax": 0.000, "ay": -9.780 },
+        { "frame": 20, "rawTime": 0.333, "time": 0.333, "videoX": 208.1, "videoY": 136.8, "x": 0.876, "y": 2.305, "vx": 2.629, "vy": 1.684, "ax": 0.000, "ay": -9.780 },
+        { "frame": 25, "rawTime": 0.417, "time": 0.417, "videoX": 232.6, "videoY": 125.0, "x": 1.095, "y": 2.411, "vx": 2.629, "vy": 0.869, "ax": 0.000, "ay": -9.780 },
+        { "frame": 30, "rawTime": 0.500, "time": 0.500, "videoX": 257.3, "videoY": 120.6, "x": 1.315, "y": 2.450, "vx": 2.629, "vy": 0.054, "ax": 0.000, "ay": -9.780 },
+        { "frame": 35, "rawTime": 0.583, "time": 0.583, "videoX": 281.8, "videoY": 124.0, "x": 1.534, "y": 2.420, "vx": 2.629, "vy": -0.761, "ax": 0.000, "ay": -9.780 },
+        { "frame": 40, "rawTime": 0.667, "time": 0.667, "videoX": 306.3, "videoY": 134.8, "x": 1.753, "y": 2.323, "vx": 2.629, "vy": -1.576, "ax": 0.000, "ay": -9.780 },
+        { "frame": 45, "rawTime": 0.750, "time": 0.750, "videoX": 330.9, "videoY": 153.3, "x": 1.972, "y": 2.158, "vx": 2.629, "vy": -2.391, "ax": 0.000, "ay": -9.780 },
+        { "frame": 50, "rawTime": 0.833, "time": 0.833, "videoX": 355.4, "videoY": 179.4, "x": 2.191, "y": 1.925, "vx": 2.629, "vy": -3.206, "ax": 0.000, "ay": -9.780 },
+        { "frame": 55, "rawTime": 0.917, "time": 0.917, "videoX": 379.9, "videoY": 213.1, "x": 2.410, "y": 1.624, "vx": 2.629, "vy": -4.021, "ax": 0.000, "ay": -9.780 },
+        { "frame": 60, "rawTime": 1.000, "time": 1.000, "videoX": 404.4, "videoY": 254.4, "x": 2.629, "y": 1.255, "vx": 2.629, "vy": -4.836, "ax": 0.000, "ay": -9.780 }
+      ],
+      "B": []
+    },
+    "tangentPoints": [
+      { "time": 0.050, "vy": 4.455, "manualVerified": false },
+      { "time": 0.150, "vy": 3.477, "t1": 0.010, "y1": 1.344, "t2": 0.290, "y2": 2.317, "manualVerified": true },
+      { "time": 0.250, "vy": 2.499, "manualVerified": false },
+      { "time": 0.350, "vy": 1.521, "manualVerified": false },
+      { "time": 0.450, "vy": 0.543, "manualVerified": false },
+      { "time": 0.506, "vy": 0.000, "t1": 0.360, "y1": 2.450, "t2": 0.650, "y2": 2.450, "manualVerified": true },
+      { "time": 0.650, "vy": -1.413, "manualVerified": false },
+      { "time": 0.750, "vy": -2.391, "manualVerified": false },
+      { "time": 0.850, "vy": -3.369, "t1": 0.710, "y1": 2.345, "t2": 0.990, "y2": 1.402, "manualVerified": true },
+      { "time": 0.950, "vy": -4.347, "manualVerified": false }
+    ],
+    "manualTangentCount": 3,
+    "showSignedArea": true,
+    "graphInterpretation": {
+      "transYtoVy": "linear_neg_cross",
+      "transVytoAy": "const_neg_line",
+      "transX": "correct_x",
+      "stopBehavior": "instant_apex",
+      "stopTimeApex": 0.506,
+      "stopExplanation": "At t_apex = 0.506 s, the vertical velocity vy(t) crosses zero (vy = 0 m/s) as the basketball reaches its maximum height, but it does not stop completely in 2D space because its horizontal velocity remains constant at vx = 2.629 m/s.",
+      "posDirStart": 0.000,
+      "posDirEnd": 0.506,
+      "negDirStart": 0.506,
+      "negDirEnd": 1.000,
+      "negAccStart": 0.000,
+      "negAccEnd": 1.000,
+      "accSignExplanation": "Vertical acceleration ay = Δvy/Δt = -9.780 m/s² is negative across the entire flight [0.000 s, 1.000 s] because gravity pulls downward continuously while rising, at the apex, and while falling.",
+      "verifiedTrans": true,
+      "verifiedIntervals": true
+    },
+    "signedAreaValues": {
+      "slopeAyFromVt": -9.780,
+      "areaUp": 1.250,
+      "areaDown": -1.195,
+      "netDyArea": 0.055,
+      "yMaxFromArea": 2.450,
+      "yFinalFromArea": 1.255,
+      "workSignedArea": "1) Slope of vy(t): ay = (vy2 - vy1)/(t2 - t1) = (-4.836 - 4.944)/(1.000 - 0.000) = -9.780 m/s².\n2) Ascent Triangle Area₁ (+Δy_up on [0, 0.506 s]): ½(0.506 s)(4.944 m/s) = +1.250 m.\n3) Descent Triangle Area₂ (Δy_down on [0.506 s, 1.000 s]): ½(1.000 - 0.506 s)(-4.836 m/s) = -1.195 m.\n4) Net Displacement: Δy_total = +1.250 m + (-1.195 m) = +0.055 m.\n5) Apex Height: y_max = y₀ + Δy_up = 1.200 m + 1.250 m = 2.450 m; Final Height: y_final = y₀ + Δy_total = 1.200 m + 0.055 m = 1.255 m."
+    },
+    "calcValues": {
+      "x0": 0.000,
+      "vx0": 2.629,
+      "ax": 0.000,
+      "y0": 1.200,
+      "vy0": 4.944,
+      "ay": -9.780,
+      "rangeCalc": 2.629,
+      "rangeMeas": 2.629,
+      "rangePctDiff": 0.00,
+      "hangCalc": 1.000,
+      "hangMeas": 1.000,
+      "hangPctDiff": 0.00,
+      "maxHCalc": 2.450,
+      "maxHMeas": 2.450,
+      "maxHPctDiff": 0.00,
+      "v0": 5.600,
+      "theta": 62.00,
+      "ayPctDiff": -0.20,
+      "axDiff": 0.000
+    },
+    "studentWork": {
+      "workRange": "Fundamental Equation: Δx = v₀x·t_hang + ½a_x·t_hang² (where a_x = 0 m/s²).\nSubstitution: Δx = (2.629 m/s)(1.000 s) + 0 = 2.629 m.",
+      "workHang": "Fundamental Equation: y(t) = y₀ + v₀y·t + ½a_y·t².\nSubstitute y_final = 1.255 m, y₀ = 1.200 m, v₀y = 4.944 m/s, a_y = -9.780 m/s²:\n1.255 = 1.200 + 4.944t - 4.890t²  ⇒  -4.890t² + 4.944t - 0.055 = 0.\nQuadratic Formula: t = [-4.944 - √(4.944² - 4(-4.890)(-0.055))] / (2·(-4.890)) = (-4.944 - 4.834) / (-9.780) = 1.000 s.",
+      "workMaxH": "Fundamental Equation: v_fy² = v₀y² + 2a_y(y_max - y₀).\nAt apex, v_fy = 0 m/s:\n0² = (4.944 m/s)² + 2(-9.780 m/s²)(y_max - 1.200 m)\n0 = 24.443 - 19.560(y_max - 1.200)  ⇒  y_max - 1.200 = 24.443 / 19.560 = 1.250 m  ⇒  y_max = 1.200 m + 1.250 m = 2.450 m.",
+      "workVector": "Launch Speed: v₀ = √(v₀x² + v₀y²) = √((2.629 m/s)² + (4.944 m/s)²) = √(6.912 + 24.443) = √31.355 = 5.600 m/s.\nLaunch Angle: θ = arctan(v₀y / v₀x) = arctan(4.944 / 2.629) = arctan(1.8806) = 62.00°."
+    },
+    "tableInputs": {
+      "ay": "-9.780",
+      "ax": "0.000",
+      "hang": "1.000",
+      "range": "2.629",
+      "maxH": "2.450"
+    },
+    "reflectionText": "Our video analysis of a basketball three-point shot confirmed that a projectile in free flight obeys the constant-acceleration kinematics model with remarkable precision. The experimental vertical acceleration obtained from the linear regression of our 10 two-point tangent slopes was ay = -9.780 m/s², yielding a percent difference of only -0.20% compared to the standard gravitational acceleration g = -9.800 m/s². Both the signed-area method under the vy(t) graph (Δy_up = +1.250 m above the time axis and Δy_down = -1.195 m below the time axis) and our algebraic kinematics derivation predicted an apex height of y_max = 2.450 m, matching the video measurement to within 0.00%. Furthermore, our interval analysis demonstrated a crucial physical concept: at t_apex = 0.506 s, the basketball stops moving vertically (vy = 0 m/s) as it transitions from rising to falling, yet it never stops moving in 2D space because its horizontal velocity remains constant at vx = 2.629 m/s and its vertical acceleration remains -9.780 m/s² downward across the entire [0.000 s, 1.000 s] flight. Minor experimental uncertainties in real-world sports video tracking arise from camera lens perspective distortion (parallax if the shooter is not strictly in the same plane as the 1.00 m calibration stick), slight motion blur of the basketball's center of mass at 60 FPS, and a small upward aerodynamic drag and Magnus backspin lift force. At a moderate launch speed of v₀ = 5.600 m/s, air resistance is small enough that horizontal acceleration remains effectively zero (ax = 0.000 m/s²). From a sports biomechanics perspective, releasing the basketball at a steep launch angle of θ = 62.00° increases the apex height (2.450 m) and steepens the entry angle into the hoop, giving the shooter a wider effective target opening than a flat trajectory."
+  }
+}
