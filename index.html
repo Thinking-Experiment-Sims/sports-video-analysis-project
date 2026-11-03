@@ -883,40 +883,40 @@
           <div class="calc-grid-2">
             <!-- 5a -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5a. Horizontal Velocity Slope (\(v_{0x} = \Delta x / \Delta t\))</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5a. Horizontal Velocity from Graph Slope</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Pick two points on your fitted \(x\)–\(t\) line and compute the slope.
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.76rem; margin-bottom: 0.45rem;">
-                <div>Point 1 \((t_1, x_1)\): <input type="text" id="inp5aPt1" class="input-control" style="width: 100%;" placeholder="(0.00 s, 0.133 m)"></div>
-                <div>Point 2 \((t_2, x_2)\): <input type="text" id="inp5aPt2" class="input-control" style="width: 100%;" placeholder="(1.00 s, 2.783 m)"></div>
+                <div>Point 1 \((t_1, x_1)\): <input type="text" id="inp5aPt1" class="input-control" style="width: 100%;" placeholder="(t₁, x₁)"></div>
+                <div>Point 2 \((t_2, x_2)\): <input type="text" id="inp5aPt2" class="input-control" style="width: 100%;" placeholder="(t₂, x₂)"></div>
               </div>
               <div class="calc-field-group">
-                <label for="inpVx0">Calculated \(v_{0x} = \Delta x / \Delta t\) (m/s):</label>
+                <label for="inpVx0">Calculated Horizontal Velocity \(v_{0x}\) (m/s):</label>
                 <input type="number" id="inpVx0" class="input-control" step="0.001" placeholder="m/s">
               </div>
               <div id="fb5a" class="practice-feedback-msg"></div>
-              <label for="work5aVx" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Substitution with Units &amp; Why \(v_{0x}\) Is Constant:</label>
-              <textarea id="work5aVx" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="v₀ₓ = (x₂ − x₁)/(t₂ − t₁) = ... m/s. Constant because..."></textarea>
+              <label for="work5aVx" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Work with Units &amp; Explain Why Constant:</label>
+              <textarea id="work5aVx" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your slope equation, substitution with units, and explain why horizontal velocity is constant in your model..."></textarea>
             </div>
 
             <!-- 5b -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">5b. Vertical Acceleration Slope (\(a_{y,\text{fit}} = \Delta v_y / \Delta t\))</h4>
+              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">5b. Vertical Acceleration from Graph Slope</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
-                Pick two points on your fitted \(v_y\)–\(t\) line and compute the slope. Compare with \(-9.8\text{ m/s}^2\).
+                Pick two points on your fitted \(v_y\)–\(t\) line and compute the slope. Compare with free-fall reference.
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.76rem; margin-bottom: 0.45rem;">
-                <div>Point 1 \((t_1, v_{y1})\): <input type="text" id="inp5bPt1" class="input-control" style="width: 100%;" placeholder="(0.00 s, 4.900 m/s)"></div>
-                <div>Point 2 \((t_2, v_{y2})\): <input type="text" id="inp5bPt2" class="input-control" style="width: 100%;" placeholder="(1.00 s, -4.900 m/s)"></div>
+                <div>Point 1 \((t_1, v_{y1})\): <input type="text" id="inp5bPt1" class="input-control" style="width: 100%;" placeholder="(t₁, vᵧ₁)"></div>
+                <div>Point 2 \((t_2, v_{y2})\): <input type="text" id="inp5bPt2" class="input-control" style="width: 100%;" placeholder="(t₂, vᵧ₂)"></div>
               </div>
               <div class="calc-field-group">
-                <label for="inpAy">Calculated \(a_{y,\text{fit}} = \Delta v_y / \Delta t\) (m/s²):</label>
-                <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="m/s² (negative!)">
+                <label for="inpAy">Calculated Vertical Acceleration \(a_{y,\text{fit}}\) (m/s²):</label>
+                <input type="number" id="inpAy" class="input-control" step="0.001" placeholder="m/s²">
               </div>
               <div id="fb5b" class="practice-feedback-msg"></div>
-              <label for="work5bAy" style="font-size: 0.76rem; font-weight: 600; color: var(--accent-amber-dark); display: block; margin-top: 0.4rem;">Show Substitution with Units &amp; Compare with \(-9.8\text{ m/s}^2\):</label>
-              <textarea id="work5bAy" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="aᵧ,fit = (vᵧ₂ − vᵧ₁)/(t₂ − t₁) = ... m/s². Compared to −9.8 m/s²..."></textarea>
+              <label for="work5bAy" style="font-size: 0.76rem; font-weight: 600; color: var(--accent-amber-dark); display: block; margin-top: 0.4rem;">Show Work with Units &amp; Compare with Free-Fall Reference:</label>
+              <textarea id="work5bAy" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your slope equation, substitution with units, and compare your value to reference gravity..."></textarea>
             </div>
           </div>
 
@@ -938,42 +938,42 @@
           <div class="calc-grid-2">
             <!-- 5c -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5c. Initial Vertical Velocity (\(v_{0y,\text{pred}} = -a_{y,\text{ref}}t_{\text{up}}\))</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5c. Initial Vertical Velocity Predicted from Apex Condition</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
-                At the apex \(v_y = 0\). Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) and observed \(t_{\text{up}}\) to predict \(v_{0y,\text{pred}}\), then compare with fitted \(B\).
+                At the apex, vertical velocity reaches zero. Use your observed video rise time \(t_{\text{up}}\) and reference gravity to predict \(v_{0y,\text{pred}}\), then compare with fitted parameter \(B\).
               </p>
               <div class="calc-field-group">
-                <label for="inpVy0Pred">Predicted \(v_{0y,\text{pred}}\) (m/s):</label>
-                <input type="number" id="inpVy0Pred" class="input-control" step="0.001" placeholder="9.8 × t_up">
+                <label for="inpVy0Pred">Predicted Initial Vertical Velocity \(v_{0y,\text{pred}}\) (m/s):</label>
+                <input type="number" id="inpVy0Pred" class="input-control" step="0.001" placeholder="m/s">
               </div>
               <div id="fb5c" class="practice-feedback-msg"></div>
-              <label for="work5cVy0" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Substitution, Compare with Fitted \(B\) &amp; Source of Difference:</label>
-              <textarea id="work5cVy0" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="v₀ᵧ,pred = −(−9.8 m/s²)(t_up) = ... m/s vs. fitted B = ..."></textarea>
+              <label for="work5cVy0" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Work, Compare with Fitted Parameter \(B\) &amp; Identify Source of Difference:</label>
+              <textarea id="work5cVy0" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your kinematic equation, substitution with units, compare with B from your fit, and explain possible sources of difference..."></textarea>
             </div>
 
             <!-- 5d -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5d. Displacements (\(\Delta x, \Delta y\)) &amp; Final Height at \(t_{\text{hang}}\)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5d. Displacements &amp; Final Height at \(t_{\text{hang}}\)</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
-                Use \(t_{\text{hang}}\) to predict \(\Delta x = v_{0x}t_{\text{hang}}\), \(\Delta y = v_{0y,\text{pred}}t_{\text{hang}} + \frac{1}{2}(-9.8)t_{\text{hang}}^2\), and \(y_{\text{final}} = y_0 + \Delta y\).
+                Use your velocities, total flight duration \(t_{\text{hang}}\), and reference gravity to predict horizontal displacement, vertical displacement, and final height.
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem; font-size: 0.74rem;">
                 <div>
-                  <label for="inpCalcRange" style="font-weight: 600;">Pred \(\Delta x\) (m):</label>
-                  <input type="number" id="inpCalcRange" class="input-control" step="0.001" style="width: 100%;" placeholder="v₀ₓ·t_hang">
+                  <label for="inpCalcRange" style="font-weight: 600;">Predicted \(\Delta x\) (m):</label>
+                  <input type="number" id="inpCalcRange" class="input-control" step="0.001" style="width: 100%;" placeholder="m">
                 </div>
                 <div>
-                  <label for="inpPredDy" style="font-weight: 600;">Pred \(\Delta y\) (m):</label>
-                  <input type="number" id="inpPredDy" class="input-control" step="0.001" style="width: 100%;" placeholder="Δy at t_hang">
+                  <label for="inpPredDy" style="font-weight: 600;">Predicted \(\Delta y\) (m):</label>
+                  <input type="number" id="inpPredDy" class="input-control" step="0.001" style="width: 100%;" placeholder="m">
                 </div>
                 <div>
-                  <label for="inpPredYFinal" style="font-weight: 600;">\(y_{\text{final}}\) (m):</label>
-                  <input type="number" id="inpPredYFinal" class="input-control" step="0.001" style="width: 100%;" placeholder="y₀ + Δy">
+                  <label for="inpPredYFinal" style="font-weight: 600;">Predicted \(y_{\text{final}}\) (m):</label>
+                  <input type="number" id="inpPredYFinal" class="input-control" step="0.001" style="width: 100%;" placeholder="m">
                 </div>
               </div>
               <div id="fb5d" class="practice-feedback-msg"></div>
               <label for="work5dDisp" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Equations, Substitutions &amp; Compare with Tracked Endpoints:</label>
-              <textarea id="work5dDisp" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Δx, Δy, and y_final = y₀ + Δy over t_hang..."></textarea>
+              <textarea id="work5dDisp" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your equations and substitutions for Δx, Δy, and final height, and compare with your tracked endpoints..."></textarea>
             </div>
           </div>
 
@@ -997,28 +997,28 @@
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
               <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">5e. Maximum Height Using \(t_{\text{up}}\) (Not \(t_{\text{hang}}\))</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
-                Use rise time \(t_{\text{up}}\) to calculate \(\Delta y_{\text{up}} = v_{0y,\text{pred}}t_{\text{up}} + \frac{1}{2}(-9.8)t_{\text{up}}^2\), then add \(y_0\) to get \(y_{\max}\).
+                Use observed rise time \(t_{\text{up}}\) to determine upward displacement to the apex, then determine maximum height above the ground.
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.74rem;">
                 <div>
                   <label for="inpPredDyUp" style="font-weight: 600;">Upward \(\Delta y_{\text{up}}\) (m):</label>
-                  <input type="number" id="inpPredDyUp" class="input-control" step="0.001" style="width: 100%;" placeholder="Δy_up at t_up">
+                  <input type="number" id="inpPredDyUp" class="input-control" step="0.001" style="width: 100%;" placeholder="m">
                 </div>
                 <div>
-                  <label for="inpCalcMaxHeight" style="font-weight: 600;">Max Height \(y_{\max} = y_0 + \Delta y_{\text{up}}\) (m):</label>
-                  <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" style="width: 100%;" placeholder="y₀ + Δy_up">
+                  <label for="inpCalcMaxHeight" style="font-weight: 600;">Max Height \(y_{\max}\) (m):</label>
+                  <input type="number" id="inpCalcMaxHeight" class="input-control" step="0.001" style="width: 100%;" placeholder="m">
                 </div>
               </div>
               <div id="fb5e" class="practice-feedback-msg"></div>
-              <label for="workMaxHeight" style="font-size: 0.76rem; font-weight: 600; color: var(--accent-amber-dark); display: block; margin-top: 0.4rem;">Show Substitutions &amp; Compare with Highest Tracked Point:</label>
-              <textarea id="workMaxHeight" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Δy_up using t_up, add y₀, and compare with highest tracked y..."></textarea>
+              <label for="workMaxHeight" style="font-size: 0.76rem; font-weight: 600; color: var(--accent-amber-dark); display: block; margin-top: 0.4rem;">Show Equations, Substitutions &amp; Compare with Highest Tracked Point:</label>
+              <textarea id="workMaxHeight" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your work to find upward displacement and maximum height, and compare with your highest tracked point..."></textarea>
             </div>
 
             <!-- 5f -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5f. Launch Speed \(v_0\) &amp; Angle \(\theta\) at \(t = 0\)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5f. Launch Speed &amp; Angle at \(t = 0\)</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
-                Combine \(v_{0x}\) and \(v_{0y,\text{pred}}\): \(v_0 = \sqrt{v_{0x}^2 + v_{0y,\text{pred}}^2}\) and \(\theta = \tan^{-1}(v_{0y,\text{pred}} / v_{0x})\).
+                Combine your horizontal velocity and initial vertical velocity to find the launch speed and launch angle above the horizontal.
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.74rem;">
                 <div>
@@ -1031,8 +1031,8 @@
                 </div>
               </div>
               <div id="fb5f" class="practice-feedback-msg"></div>
-              <label for="workVector" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Pythagorean &amp; Inverse-Tangent Substitutions:</label>
-              <textarea id="workVector" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="v₀ = √(v₀ₓ² + v₀ᵧ,pred²) = ... m/s, θ = tan⁻¹(v₀ᵧ,pred / v₀ₓ) = ...°"></textarea>
+              <label for="workVector" style="font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem;">Show Vector Equations &amp; Substitutions:</label>
+              <textarea id="workVector" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your vector magnitude and direction equations and substitutions with units..."></textarea>
             </div>
           </div>
 
@@ -1059,12 +1059,12 @@
         </button>
       </div>
 
-      <!-- SUB-TAB 5A: SIGNED AREA ON vy(t) WITH SIDE-BY-SIDE SHADED CHART -->
+      <!-- SUB-TAB 5A: SIGNED AREA ON vy(t) WITH REGION SELECTION & SIDE-BY-SIDE CHART -->
       <div id="subtab-5a" class="subtab-panel active">
         <div class="card" style="padding: 1.15rem;">
           <div class="goal-strip amber">
             <div>
-              <strong>🎯 Step 5A Goal:</strong> Split \(v_y(t)\) at \(t_{\text{zero}}\) where \(v_y = 0\). Calculate the <strong>positive ascent triangle area</strong> and <strong>negative descent triangle area</strong>, add them to get \(\Delta y_{\text{area}}\), and add fitted initial height \(C\).
+              <strong>🎯 Step 5A Goal:</strong> Select a region on your \(v_y(t)\) graph to examine its geometric shape. Calculate the <strong>ascent area</strong> and <strong>descent area</strong> from the graph dimensions, determine the net vertical displacement \(\Delta y_{\text{area}}\), and check consistency with your fitted initial height \(C\).
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
               <span class="pct-diff-badge" id="badgeSignedAreaVerify">Not checked</span>
@@ -1073,59 +1073,77 @@
           </div>
 
           <div style="display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 1.15rem; align-items: start;">
-            <!-- Left: Live Shaded vy(t) Graph -->
+            <!-- Left: Interactive vy(t) Graph with Region Selection -->
             <div class="card" style="padding: 0.85rem; border-top: 3px solid var(--accent-amber);">
-              <strong style="font-size: 0.88rem; color: var(--accent-amber-dark); display: block; margin-bottom: 0.35rem;">
-                Shaded Signed Areas on Your Fitted \(v_y(t)\) Line
-              </strong>
-              <div style="height: 265px; position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <strong style="font-size: 0.88rem; color: var(--accent-amber-dark);">
+                  1. Select Region to Highlight on \(v_y(t)\):
+                </strong>
+              </div>
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+                <button type="button" class="btn btn-area-region" data-region="ascent" id="btnAreaAscent" style="font-size: 0.74rem; padding: 0.28rem 0.55rem;">
+                  Highlight Ascent Region
+                </button>
+                <button type="button" class="btn btn-area-region" data-region="descent" id="btnAreaDescent" style="font-size: 0.74rem; padding: 0.28rem 0.55rem;">
+                  Highlight Descent Region
+                </button>
+                <button type="button" class="btn btn-area-region" data-region="both" id="btnAreaBoth" style="font-size: 0.74rem; padding: 0.28rem 0.55rem;">
+                  Highlight Both Regions
+                </button>
+                <button type="button" class="btn btn-area-region" data-region="none" id="btnAreaNone" style="font-size: 0.74rem; padding: 0.28rem 0.55rem;">
+                  Clear Shading
+                </button>
+              </div>
+
+              <div style="height: 250px; position: relative;">
                 <canvas id="canvasAreaYVel"></canvas>
               </div>
-              <div id="areaGraphReadoutBar" style="margin-top: 0.45rem; font-size: 0.76rem; background: var(--surface-alt); padding: 0.45rem 0.65rem; border-radius: 4px; font-family: monospace;">
-                Fitted C = — m | y_fit(t_hang) = — m
+
+              <div id="areaRegionReadout" style="margin-top: 0.45rem; font-size: 0.76rem; background: var(--surface-alt); padding: 0.45rem 0.65rem; border-radius: 4px; border: 1px solid var(--border-light); line-height: 1.45;">
+                Select a region above to inspect its interval boundaries and dimensions.
               </div>
             </div>
 
-            <!-- Right: Clean 5-Field Area Worksheet -->
+            <!-- Right: Student Area Worksheet (No Equations Pre-filled) -->
             <div style="background: #fff7ed; border: 1.5px solid var(--accent-amber); border-radius: var(--radius-sm); padding: 0.95rem;">
               <details class="per-hint" style="margin-top: 0; margin-bottom: 0.65rem;">
-                <summary>💡 Formula Hint: How do I calculate the two triangle areas?</summary>
+                <summary>💡 Concept Hint: How does area on a velocity graph connect to displacement?</summary>
                 <div style="font-size: 0.78rem; color: var(--ink); line-height: 1.45;">
-                  <div>• <strong>Zero Crossing:</strong> \(t_{\text{zero}} = -B / (2A)\) where the \(v_y\) line crosses \(0\).</div>
-                  <div>• <strong>Ascent Triangle (\(0\) to \(t_{\text{zero}}\)):</strong> \(+\text{Area}_{\text{up}} = \frac{1}{2} \times t_{\text{zero}} \times v_y(0) > 0\).</div>
-                  <div>• <strong>Descent Triangle (\(t_{\text{zero}}\) to \(t_{\text{hang}}\)):</strong> \(\text{Area}_{\text{down}} = \frac{1}{2} \times (t_{\text{hang}} - t_{\text{zero}}) \times v_y(t_{\text{hang}}) < 0\) (negative!).</div>
-                  <div>• <strong>Final Position Check:</strong> \(C + \Delta y_{\text{area}}\) should match \(y_{\text{fit}}(t_{\text{hang}}) = At_{\text{hang}}^2 + Bt_{\text{hang}} + C\).</div>
+                  <div>• The area between a velocity graph and the time axis represents <strong>displacement</strong>.</div>
+                  <div>• With a constant acceleration, each region forms a geometric <strong>triangle</strong>.</div>
+                  <div>• Areas above the time axis (\(v_y > 0\)) are <strong>positive</strong>; areas below (\(v_y < 0\)) are <strong>negative</strong>.</div>
+                  <div>• Adding net displacement \(\Delta y_{\text{area}}\) to your fitted initial height \(C\) should match \(y_{\text{fit}}(t_{\text{hang}})\).</div>
                 </div>
               </details>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; font-size: 0.78rem; margin-bottom: 0.55rem;">
                 <div>
-                  <label for="inpZeroCrossT" style="font-weight: 700;">1. Zero Crossing \(t_{\text{zero}}\) (s):</label>
-                  <input type="number" id="inpZeroCrossT" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="Where vᵧ = 0">
+                  <label for="inpZeroCrossT" style="font-weight: 700;">1. Zero-Crossing Time \(t_{\text{zero}}\) (s):</label>
+                  <input type="number" id="inpZeroCrossT" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="s">
                 </div>
                 <div>
-                  <label for="inpAreaUp" style="font-weight: 700; color: var(--primary-teal);">2. Ascent \(+\text{Area}_{\text{up}}\) (m):</label>
-                  <input type="number" id="inpAreaUp" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="½ · t_zero · vᵧ(0) > 0">
+                  <label for="inpAreaUp" style="font-weight: 700; color: var(--primary-teal);">2. Calculated Ascent Area (m):</label>
+                  <input type="number" id="inpAreaUp" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="m (positive)">
                 </div>
                 <div>
-                  <label for="inpAreaDown" style="font-weight: 700; color: var(--accent-amber-dark);">3. Descent \(\text{Area}_{\text{down}}\) (m):</label>
-                  <input type="number" id="inpAreaDown" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="Negative! (< 0)">
+                  <label for="inpAreaDown" style="font-weight: 700; color: var(--accent-amber-dark);">3. Calculated Descent Area (m):</label>
+                  <input type="number" id="inpAreaDown" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="m (negative!)">
                 </div>
                 <div>
-                  <label for="inpNetDyArea" style="font-weight: 700;">4. Net \(\Delta y_{\text{area}} = \text{Area}_{\text{up}} + \text{Area}_{\text{down}}\) (m):</label>
-                  <input type="number" id="inpNetDyArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="Sum of signed areas">
+                  <label for="inpNetDyArea" style="font-weight: 700;">4. Net Displacement from Area (m):</label>
+                  <input type="number" id="inpNetDyArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="m">
                 </div>
               </div>
 
               <div style="margin-bottom: 0.5rem; font-size: 0.78rem;">
-                <label for="inpYFinalFromArea" style="font-weight: 700; color: var(--primary-teal);">5. Fitted Initial Height \(C + \Delta y_{\text{area}}\) (m) [Compare with \(y_{\text{fit}}(t_{\text{hang}})\)]:</label>
-                <input type="number" id="inpYFinalFromArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="C + Δy_area">
+                <label for="inpYFinalFromArea" style="font-weight: 700; color: var(--primary-teal);">5. Final Height from Area Check (\(C + \Delta y_{\text{area}}\)) (m):</label>
+                <input type="number" id="inpYFinalFromArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="m">
               </div>
 
               <div id="fbSignedArea" class="practice-feedback-msg"></div>
 
-              <label for="workSignedArea" style="font-weight: 700; font-size: 0.76rem; color: var(--ink); display: block; margin-top: 0.35rem;">Show Your Area Calculations &amp; Comparison with \(y_{\text{fit}}(t_{\text{hang}})\):</label>
-              <textarea id="workSignedArea" class="input-control" rows="2" style="width: 100%; font-family: monospace; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Area_up = ½(...) = ..., Area_down = −½(...) = ..., Δy_area = ..., C + Δy_area = ..."></textarea>
+              <label for="workSignedArea" style="font-weight: 700; font-size: 0.76rem; color: var(--ink); display: block; margin-top: 0.35rem;">Show Your Area Calculations &amp; Comparison with Fitted Position:</label>
+              <textarea id="workSignedArea" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your area equations, substitutions, net displacement, addition of initial height C, and comparison with y_fit(t_hang)..."></textarea>
             </div>
           </div>
 

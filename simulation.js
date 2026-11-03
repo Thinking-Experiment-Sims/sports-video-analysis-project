@@ -120,7 +120,8 @@ const state = {
     yAcc: 'none'  // 'none' | 'zero' | 'constant' | 'linear' (target: 'constant')
   },
   tangentPoints: [], // Array of { t, vy } sampled by the student from tangent lines on y(t)
-  showSignedArea: true,
+  showSignedArea: false,
+  selectedAreaRegion: 'none', // 'none' | 'ascent' | 'descent' | 'both'
   activeTangentTime: 0.15,
 
   // Step 2C: Student Submitted Responses (Raw strings; NEVER auto-filled with model answers)
@@ -2213,19 +2214,51 @@ function renderSignedAreaTab5Chart() {
   autoFitAndDeriveAllGraphs();
   const cov = state.coverageStatus;
   const exp = getExpectedPhysicsValues();
-  const readout = el('areaGraphReadoutBar');
-  if (readout && exp) {
-    readout.innerHTML = `<strong>Fitted Parameters from Step 3:</strong> Initial velocity <code>B = ${exp.B.toFixed(3)} m/s</code> | Slope <code>aᵧ = 2A = ${exp.ayFit.toFixed(3)} m/s²</code> | Initial height <code>C = ${exp.C.toFixed(3)} m</code> | Duration <code>t_hang = ${exp.T.toFixed(3)} s</code> | Fitted final height <code>y_fit(t_hang) = ${exp.yFitAtT.toFixed(3)} m</code>`;
+  const reg = state.selectedAreaRegion || 'none';
+
+  // Update region button active states
+  document.querySelectorAll('.btn-area-region').forEach(btn => {
+    btn.classList.toggle('active', (btn.getAttribute('data-region') || 'none') === reg);
+  });
+
+  const readout = el('areaRegionReadout');
+  if (readout && exp && cov && cov.hasValidTurnaround && cov.tZero !== null) {
+    const tz = cov.tZero;
+    const v0yVal = exp.B;
+    const vFinalVal = exp.ayFit * exp.T + exp.B;
+
+    if (reg === 'ascent') {
+      readout.innerHTML = `
+        <strong style="color: var(--primary-teal);">Selected: Ascent Region [0 to t_zero]</strong><br>
+        • <strong>Horizontal Base:</strong> t = 0.000 s to t_zero = ${tz.toFixed(3)} s (Δt = ${tz.toFixed(3)} s)<br>
+        • <strong>Vertical Height:</strong> vᵧ(0) = ${v0yVal >= 0 ? '+' : ''}${v0yVal.toFixed(3)} m/s down to vᵧ(t_zero) = 0 m/s<br>
+        Calculate the triangle area from these graph dimensions and enter it in field 2.
+      `;
+    } else if (reg === 'descent') {
+      readout.innerHTML = `
+        <strong style="color: var(--accent-amber-dark);">Selected: Descent Region [t_zero to t_hang]</strong><br>
+        • <strong>Horizontal Base:</strong> t_zero = ${tz.toFixed(3)} s to t_hang = ${exp.T.toFixed(3)} s (Δt = ${(exp.T - tz).toFixed(3)} s)<br>
+        • <strong>Vertical Height:</strong> vᵧ(t_zero) = 0 m/s down to vᵧ(t_hang) = ${vFinalVal.toFixed(3)} m/s (below time axis)<br>
+        Calculate the triangle area (note the negative sign!) and enter it in field 3.
+      `;
+    } else if (reg === 'both') {
+      readout.innerHTML = `
+        <strong style="color: var(--ink);">Selected: Both Regions (Full Flight)</strong><br>
+        • Ascent Triangle: [0.000 s, ${tz.toFixed(3)} s] with initial height vᵧ(0) = ${v0yVal >= 0 ? '+' : ''}${v0yVal.toFixed(3)} m/s<br>
+        • Descent Triangle: [${tz.toFixed(3)} s, ${exp.T.toFixed(3)} s] with final height vᵧ(t_hang) = ${vFinalVal.toFixed(3)} m/s<br>
+        Add your calculated positive ascent area and negative descent area to determine net displacement Δy_area.
+      `;
+    } else {
+      readout.innerHTML = `<em>Click a button above to select and highlight the ascent or descent region to inspect its interval boundaries and dimensions.</em>`;
+    }
   }
+
   const canvas = el('canvasAreaYVel');
   if (!canvas) return;
   if (gridCharts['canvasAreaYVel']) {
     gridCharts['canvasAreaYVel'].destroy();
   }
-  const prevAreaFlag = state.showSignedArea;
-  state.showSignedArea = true;
   const cfg = buildChartConfigForGraph('y-vel', false);
-  state.showSignedArea = prevAreaFlag;
   gridCharts['canvasAreaYVel'] = new Chart(canvas.getContext('2d'), cfg);
 }
 
@@ -2405,33 +2438,37 @@ function buildChartConfigForGraph(type, isExportImage = false) {
       fill: false
     });
 
-    // Shade signed ascent and descent areas ONLY if a valid turnaround exists inside (tMin, tMax)
-    if (state.showSignedArea && cov.hasValidTurnaround && cov.tZero !== null) {
+    // Shade signed ascent and/or descent areas if requested and valid turnaround exists
+    const reg = state.selectedAreaRegion || 'none';
+    const showAscent = (reg === 'ascent' || reg === 'both' || (state.showSignedArea && reg !== 'descent' && reg !== 'none'));
+    const showDescent = (reg === 'descent' || reg === 'both' || (state.showSignedArea && reg !== 'ascent' && reg !== 'none'));
+
+    if (cov.hasValidTurnaround && cov.tZero !== null) {
       const tz = cov.tZero;
-      const areaUp = 0.5 * vStart * (tz - tMin);
-      const areaDown = 0.5 * vEnd * (tMax - tz);
-      datasets.push(
-        {
-          label: `+Area_up (+${areaUp.toFixed(3)} m)`,
+      if (showAscent) {
+        datasets.push({
+          label: `Ascent Region [0.000 s to ${tz.toFixed(3)} s]`,
           data: [{ x: tMin, y: vStart }, { x: tz, y: 0 }],
           type: 'line',
-          borderColor: 'rgba(15, 126, 155, 0.7)',
-          backgroundColor: 'rgba(15, 126, 155, 0.22)',
-          borderWidth: 1.5,
+          borderColor: 'rgba(15, 126, 155, 0.85)',
+          backgroundColor: 'rgba(15, 126, 155, 0.25)',
+          borderWidth: 2,
           pointRadius: 3,
           fill: 'origin'
-        },
-        {
-          label: `Area_down (${areaDown.toFixed(3)} m)`,
+        });
+      }
+      if (showDescent) {
+        datasets.push({
+          label: `Descent Region [${tz.toFixed(3)} s to ${tMax.toFixed(3)} s]`,
           data: [{ x: tz, y: 0 }, { x: tMax, y: vEnd }],
           type: 'line',
-          borderColor: 'rgba(214, 123, 25, 0.7)',
-          backgroundColor: 'rgba(214, 123, 25, 0.22)',
-          borderWidth: 1.5,
+          borderColor: 'rgba(214, 123, 25, 0.85)',
+          backgroundColor: 'rgba(214, 123, 25, 0.25)',
+          borderWidth: 2,
           pointRadius: 3,
           fill: 'origin'
-        }
-      );
+        });
+      }
     }
 
     const maxAbsV = Math.max(4, Math.abs(vStart), Math.abs(vEnd)) * 1.25;
@@ -3540,6 +3577,7 @@ function saveSessionJSON() {
       fitResults: state.fitResults,
       selectedFits: state.selectedFits,
       tangentPoints: state.tangentPoints,
+      selectedAreaRegion: state.selectedAreaRegion,
       firstAttemptPrediction: state.firstAttemptPrediction,
       predictionRevision: state.predictionRevision,
       graphConnections: state.graphConnections,
@@ -3638,6 +3676,7 @@ function loadSessionJSON(file) {
           };
         }
         state.tangentPoints = Array.isArray(s.tangentPoints) ? s.tangentPoints : [];
+        state.selectedAreaRegion = s.selectedAreaRegion || 'none';
         state.predictionRevision = s.predictionRevision || '';
         state.graphConnections = s.graphConnections || '';
         if (s.showSignedArea !== undefined) {
@@ -4266,6 +4305,14 @@ function initEventListeners() {
   if (el('btnClearTangentPoints')) {
     el('btnClearTangentPoints').addEventListener('click', clearTangentPoints);
   }
+
+  // Interactive Area Region Selection Buttons (Tab 5A)
+  document.querySelectorAll('.btn-area-region').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.selectedAreaRegion = btn.getAttribute('data-region') || 'none';
+      renderSignedAreaTab5Chart();
+    });
+  });
 
   // Student Inputs & Check Numbers Buttons (Tab 4 & Tab 5)
   ['btnCheckWorksheet', 'btnCheckAreaTab5', 'btnCheckIntervalsTab5'].forEach(btnId => {

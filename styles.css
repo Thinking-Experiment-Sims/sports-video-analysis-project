@@ -2335,5 +2335,12 @@ details.per-hint[open] summary {
   color: #14532d;
 }
 
+.btn-area-region.active {
+  background: var(--accent-amber);
+  color: #ffffff;
+  border-color: var(--accent-amber-dark);
+}
+
+
 
 
