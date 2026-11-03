@@ -1,503 +1,409 @@
 /**
- * Sports Analytics & Projectile Video Lab Simulation
+ * Projectile Video Project Lab — Guided 3-Step Activity
  * Designed for The Thinking Experiment (PhysicsKit)
  * Strictly Light Mode: Teal (#0f7e9b), Amber (#d67b19), White (#ffffff).
+ *
+ * Three App Steps:
+ *   Step 1: Track the Flight (Record, Calibrate, Track)
+ *   Step 2: Explain the Motion (Save Predictions Before Reveal, Two-Column Six-Graph Panel,
+ *           Calculations 5a–5f with fixed ay,ref = -9.8 m/s², Signed-Area Check, Intervals & Apex Reasoning)
+ *   Step 3: Submit Report (One complete, non-truncated lab report + .json progress backup)
  */
 
+const FIXED_AY_REF = -9.8; // Fixed reference vertical acceleration for lab predictions (m/s^2)
+
+// ============================================================================
 // Global Application State
+// ============================================================================
 const state = {
-  currentStep: 1, // 1 to 5
+  schemaVersion: '2.0',
+  currentStep: 1, // 1: Track the Flight, 2: Explain the Motion, 3: Submit Report
   studentName: '',
   teacherName: 'Mr. Lopez',
-  activeTool: 'track', // 'track', 'scale', 'origin'
-  activeSeries: 'A',
+
+  // Video & Synthetic Model State
+  isSynthetic: true,
+  syntheticType: 'basketball', // 'basketball', 'projectile', 'soccer'
+  videoFileName: '',
   fps: 60,
-  stepFrames: 2,
+  stepFrames: 5,
   currentTime: 0,
-  duration: 0,
+  duration: 1.4,
   isPlaying: false,
-
-  // Visibility toggles
-  showPoints: true,
-  showVectors: true,
-  showScale: true,
-  showOrigin: true,
-
-  // Marker options
-  markerType: 'circle',
-  markerRadius: 14,
-
-  // Motion component filter
-  motionFilter: 'both',
   timeOffset: 0,
 
-  // Calibration & Transform
-  pixelsPerMeter: 140,
-  origin: { x: 80, y: 410 },
-  originAngle: 0,
+  // Active Tool & Visibility Toggles
+  activeTool: 'track', // 'track', 'scale', 'origin'
+  activeSeries: 'A',
+  showPoints: true,
+  showVectors: false, // Optional diagnostic finite-difference vectors
+  showScale: true,
+  showOrigin: true,
+  markerType: 'circle',
+  markerRadius: 14,
+  motionFilter: 'both',
 
-  // Scale stick state
+  // Calibration & Coordinate Transform (y = 0 at ground reference, x = 0 below release)
+  pixelsPerMeter: 112,
+  origin: { x: 110, y: 426 },
+  originAngle: 0,
   scaleStick: {
-    start: { x: 80, y: 430 },
-    end: { x: 220, y: 430 },
-    lengthMeters: 1.0,
+    start: { x: 110, y: 465 },
+    end: { x: 222, y: 465 },
+    lengthMeters: 1.00,
     isDragging: false,
     dragPoint: null
   },
 
-  // Tracked data points
+  // Tracked Airborne Coordinates
   series: {
     A: [], // Array of { frame, rawTime, time, videoX, videoY, x, y, vx, vy, ax, ay }
     B: []
   },
 
-  // Tangent tool state (rubric requires 10 points from slopes of tangents & 3 manual two-point calculations)
-  tangentPoints: [], // { time, vy, slope, x, y, t1, y1, t2, y2, manualVerified }
-  activeTangentTime: 0,
-  manualTangentCount: 0,
-  showSignedArea: true,
+  // Observed rise time from first tracked frame to apex read from video (s)
+  observedTUp: '',
 
-  // 6-Graph Studio state
-  activeGraphTab: 'y-pos', // 'y-pos', 'x-pos', 'y-vel', 'x-vel', 'y-acc', 'x-acc', 'grid-all'
+  // Coverage & Honest Turnaround Diagnostics
+  coverageStatus: {
+    hasEnoughPoints: false,
+    hasInteriorPeak: false,
+    isConcaveDown: false,
+    hasValidTurnaround: false,
+    tMin: 0,
+    tMax: 0,
+    T: 0,
+    y0: null,
+    x0: null,
+    xFinal: null,
+    yFinal: null,
+    dxTrack: null,
+    dyTrack: null,
+    peakPoint: null,
+    tZero: null,
+    message: 'No points tracked yet.'
+  },
+
+  // Fitted Position Models & Derived Kinematics (One fit per axis; no redundant refitting)
   fitResults: {
-    yPos: null, // { A, B, C, r2 } -> y = At^2 + Bt + C
-    xPos: null, // { slope, intercept, r2 } -> x = mt + b
-    yVel: null, // { slope, intercept, r2 }
-    xVel: null,
-    yAcc: null,
-    xAcc: null
+    xPos: null, // { slope: m, intercept: c, r2 } -> x(t) = m*t + c
+    yPos: null, // { A, B, C, r2 } -> y(t) = A*t^2 + B*t + C
+    xVel: null, // Derived: { vx: m }
+    yVel: null, // Derived: { slope: 2A, intercept: B, tZero }
+    xAcc: null, // Derived: { ax: 0 } (follows from linear x model)
+    yAcc: null  // Derived: { ay: 2A, ref: -9.8 }
   },
 
-  // Module A & B: Graph Translation & Physical Interval Interpretation (Unit 2 Exam Problem 1 & 3)
-  graphInterpretation: {
-    transYtoVy: '',
-    transVytoAy: '',
-    transX: '',
-    stopBehavior: '',
-    stopTimeApex: '',
-    stopExplanation: '',
-    posDirStart: '',
-    posDirEnd: '',
-    negDirStart: '',
-    negDirEnd: '',
-    negAccStart: '',
-    negAccEnd: '',
-    accSignExplanation: '',
-    verifiedTrans: false,
-    verifiedIntervals: false
+  // Step 2A: First-Attempt Prediction (Locked before revealing derived velocity & acceleration plots)
+  firstAttemptPrediction: {
+    isSaved: false,
+    isLegacyMissing: false,
+    savedAt: null,
+    vxShape: '',
+    vyShape: '',
+    axShape: '',
+    ayShape: '',
+    initialNotes: ''
   },
 
-  // Section 1B: Signed v-t Area & Position Values (Unit 2 Exam Problem 3b, 3c, 3d)
-  signedAreaValues: {
-    slopeAyFromVt: '',
-    areaUp: '',
-    areaDown: '',
-    netDyArea: '',
-    yMaxFromArea: '',
-    yFinalFromArea: '',
-    workSignedArea: ''
+  // Step 2B: Separate Reasoned Revision & Graph Connections Explanation
+  predictionRevision: '',
+  graphConnections: '',
+
+  // Optional Tangent Explorer State (Never blocks completion)
+  showSignedArea: true,
+  activeTangentTime: null,
+
+  // Step 2C: Student Submitted Responses (Raw strings; NEVER auto-filled with model answers)
+  studentResponses: {
+    // 5a: Horizontal velocity slope on fitted x-t line
+    inp5aPt1: '',
+    inp5aPt2: '',
+    inpVx0: '',
+    work5aVx: '',
+    // 5b: Vertical acceleration slope on derived vy-t line
+    inp5bPt1: '',
+    inp5bPt2: '',
+    inpAy: '',
+    work5bAy: '',
+    // 5c: Predicted initial vertical velocity from fixed ay,ref = -9.8 m/s^2 and observed t_up
+    inpVy0Pred: '',
+    work5cVy0: '',
+    // 5d: Predicted displacements at T and final height y_final = y0 + dy
+    inpCalcRange: '',
+    inpPredDy: '',
+    inpPredYFinal: '',
+    work5dDisp: '',
+    // 5e: Predicted maximum height using t_up (not T) and measured y0
+    inpPredDyUp: '',
+    inpCalcMaxHeight: '',
+    workMaxHeight: '',
+    // 5f: Initial speed and launch angle at first tracked instant
+    inpSpeedV0: '',
+    inpAngleTheta: '',
+    workVector: '',
+    // Signed-area check on fitted vy-t + fitted C
+    inpZeroCrossT: '',
+    inpAreaUp: '',
+    inpAreaDown: '',
+    inpNetDyArea: '',
+    inpYFinalFromArea: '',
+    workSignedArea: '',
+    // Direction intervals (excluding zero crossing), apex 2D rest, and negative ay reasoning
+    inpPosDirStart: '',
+    inpPosDirEnd: '',
+    inpNegDirStart: '',
+    inpNegDirEnd: '',
+    txtStopExplanation: '',
+    inpNegAccStart: '',
+    inpNegAccEnd: '',
+    txtAccSignExplanation: '',
+    // Specific measurement limitation tied to a reported result
+    reflectionText: ''
   },
 
-  // Calculations & Reflection
-  calcValues: {
-    x0: 0, vx0: 0, ax: 0,
-    y0: 0, vy0: 0, ay: -9.8,
-    rangeCalc: 0, rangeMeas: 0, rangePctDiff: 0,
-    hangCalc: 0, hangMeas: 0, hangPctDiff: 0,
-    maxHCalc: 0, maxHMeas: 0, maxHPctDiff: 0,
-    v0: 0, theta: 0,
-    ayPctDiff: 0, axDiff: 0
+  // Practice Feedback State (Saved separately from student responses)
+  feedbackState: {
+    checkedAt: null,
+    fb5a: { status: 'unchecked', text: '' },
+    fb5b: { status: 'unchecked', text: '' },
+    fb5c: { status: 'unchecked', text: '' },
+    fb5d: { status: 'unchecked', text: '' },
+    fb5e: { status: 'unchecked', text: '' },
+    fb5f: { status: 'unchecked', text: '' },
+    fbSignedArea: { status: 'unchecked', text: '' },
+    fbIntervals: { status: 'unchecked', text: '' }
   },
-  reflectionText: '',
 
-  // Presentation Deck Preview
-  currentSlideIdx: 1,
-
-  // Synthetic Video Generator
-  isSynthetic: true,
-  syntheticType: 'projectile',
+  // Synthetic Canvas Buffer
   syntheticCanvas: document.createElement('canvas'),
   syntheticCtx: null
 };
 
-// ============================================================================
-// DOM Elements Binding
-// ============================================================================
-const video = document.getElementById('mainVideo');
-const overlayCanvas = document.getElementById('overlayCanvas');
-const ctx = overlayCanvas.getContext('2d');
-const reticlePreview = document.getElementById('reticlePreview');
-const viewportContainer = document.getElementById('viewportContainer');
-const dropzoneOverlay = document.getElementById('dropzoneOverlay');
+// Synthetic Model Definitions (y = 0 at floor, y0 > 0 at release, clip ends before ground impact so T != 2*t_up)
+const SYNTHETIC_MODELS = {
+  basketball: {
+    label: 'SYNTHETIC MODEL CLIP: Basketball Launch (Practice)',
+    ballType: 'basketball',
+    y0: 1.20,       // Released 1.20 m above floor
+    vx0: 2.65,      // Horizontal velocity (m/s)
+    vy0: 4.90,      // Initial upward velocity -> t_up = 4.90 / 9.8 = 0.500 s
+    g: 9.80,
+    duration: 1.15, // Ends at t = 1.15 s (y ≈ 0.355 m above floor, before landing; T != 2*t_up)
+    sampleTimes: [0.05, 0.13, 0.21, 0.30, 0.38, 0.46, 0.55, 0.63, 0.72, 0.80, 0.88, 0.97, 1.05]
+  },
+  projectile: {
+    label: 'SYNTHETIC MODEL CLIP: Ball Toss Arc (Practice)',
+    ballType: 'baseball',
+    y0: 1.00,       // Released 1.00 m above floor
+    vx0: 2.40,
+    vy0: 4.41,      // t_up = 4.41 / 9.8 = 0.450 s
+    g: 9.80,
+    duration: 1.05, // Ends above floor with unequal endpoint heights
+    sampleTimes: [0.04, 0.12, 0.20, 0.28, 0.36, 0.44, 0.49, 0.57, 0.65, 0.73, 0.81, 0.89, 0.97]
+  },
+  soccer: {
+    label: 'SYNTHETIC MODEL CLIP: Soccer Chip Kick (Practice)',
+    ballType: 'soccer',
+    y0: 0.45,       // Chipped from elevated ramp/platform 0.45 m above turf reference
+    vx0: 3.40,
+    vy0: 5.39,      // t_up = 5.39 / 9.8 = 0.550 s
+    g: 9.80,
+    duration: 1.15,
+    sampleTimes: [0.03, 0.11, 0.20, 0.28, 0.37, 0.45, 0.54, 0.62, 0.71, 0.79, 0.88, 0.96, 1.05]
+  }
+};
 
-// Stepper & Stages
-const stepBtns = [
-  document.getElementById('stepBtn1'),
-  document.getElementById('stepBtn2'),
-  document.getElementById('stepBtn3'),
-  document.getElementById('stepBtn4'),
-  document.getElementById('stepBtn5')
-];
-const videoWorkspaceStage = document.getElementById('videoWorkspaceStage');
-const stepView3 = document.getElementById('stepView3');
-const stepView4 = document.getElementById('stepView4');
-const stepView5 = document.getElementById('stepView5');
-
-// Student Metadata
-const studentNameInput = document.getElementById('studentNameInput');
-const teacherSelect = document.getElementById('teacherSelect');
-const btnSaveSession = document.getElementById('btnSaveSession');
-const btnLoadSession = document.getElementById('btnLoadSession');
-const loadSessionInput = document.getElementById('loadSessionInput');
-
-// Controls
-const timeScrubber = document.getElementById('timeScrubber');
-const currentTimeText = document.getElementById('currentTimeText');
-const currentFrameText = document.getElementById('currentFrameText');
-const btnPlayPause = document.getElementById('btnPlayPause');
-const iconPlay = document.getElementById('iconPlay');
-const iconPause = document.getElementById('iconPause');
-const btnPrevFrame = document.getElementById('btnPrevFrame');
-const btnNextFrame = document.getElementById('btnNextFrame');
-const playbackRateSelect = document.getElementById('playbackRateSelect');
-const fpsInput = document.getElementById('fpsInput');
-const stepFrameSelect = document.getElementById('stepFrameSelect');
-const seriesSelect = document.getElementById('seriesSelect');
-const btnClearSeries = document.getElementById('btnClearSeries');
-const btnSetTZero = document.getElementById('btnSetTZero');
-const statusMessage = document.getElementById('statusMessage');
-
-// Visibility & Tools
-const chkShowPoints = document.getElementById('chkShowPoints');
-const chkShowVectors = document.getElementById('chkShowVectors');
-const chkShowScale = document.getElementById('chkShowScale');
-const chkShowOrigin = document.getElementById('chkShowOrigin');
-const markerTypeSelect = document.getElementById('markerTypeSelect');
-const markerSizeSelect = document.getElementById('markerSizeSelect');
-const motionComponentSelect = document.getElementById('motionComponentSelect');
-const posChartTitle = document.getElementById('posChartTitle');
-const velChartTitle = document.getElementById('velChartTitle');
-const toolTrack = document.getElementById('toolTrack');
-const toolScale = document.getElementById('toolScale');
-const toolOrigin = document.getElementById('toolOrigin');
-const videoFileInput = document.getElementById('videoFileInput');
-const btnExportCSV = document.getElementById('btnExportCSV');
-const btnSampleSelect = document.getElementById('btnSampleSelect');
-const scaleLengthInput = document.getElementById('scaleLengthInput');
-const btnApplyScale = document.getElementById('btnApplyScale');
-const scaleReadout = document.getElementById('scaleReadout');
-const originAngleInput = document.getElementById('originAngleInput');
-const btnResetOrigin = document.getElementById('btnResetOrigin');
-const fitResultPos = document.getElementById('fitResultPos');
-const fitResultVel = document.getElementById('fitResultVel');
-const pointsTableBody = document.getElementById('pointsTableBody');
-const btnFitQuadPos = document.getElementById('btnFitQuadPos');
-const btnFitLinPos = document.getElementById('btnFitLinPos');
-const btnFitVelocity = document.getElementById('btnFitVelocity');
-
-// 6-Graph Studio Elements
-const graphNavBtns = document.querySelectorAll('.graph-nav-btn');
-const chkShowSignedArea = document.getElementById('chkShowSignedArea');
-const tangentStudioBar = document.getElementById('tangentStudioBar');
-const tangentPointCountBadge = document.getElementById('tangentPointCountBadge');
-const twoPointVerifiedBadge = document.getElementById('twoPointVerifiedBadge');
-const tangentTimeDisplay = document.getElementById('tangentTimeDisplay');
-const tangentYDisplay = document.getElementById('tangentYDisplay');
-const tangentSlopeDisplay = document.getElementById('tangentSlopeDisplay');
-const tangentReadoutCoordsHint = document.getElementById('tangentReadoutCoordsHint');
-const inpTanT1 = document.getElementById('inpTanT1');
-const inpTanY1 = document.getElementById('inpTanY1');
-const inpTanT2 = document.getElementById('inpTanT2');
-const inpTanY2 = document.getElementById('inpTanY2');
-const inpTanStudentSlope = document.getElementById('inpTanStudentSlope');
-const btnVerifyAndRecordTangent = document.getElementById('btnVerifyAndRecordTangent');
-const tanFeedbackMsg = document.getElementById('tanFeedbackMsg');
-const tangentSlider = document.getElementById('tangentSlider');
-const btnRecordTangent = document.getElementById('btnRecordTangent');
-const btnClearTangents = document.getElementById('btnClearTangents');
-const btnAutoFitAll = document.getElementById('btnAutoFitAll');
-const singleGraphContainer = document.getElementById('singleGraphContainer');
-const gridAllContainer = document.getElementById('gridAllContainer');
-const activeGraphEqTitle = document.getElementById('activeGraphEqTitle');
-const activeGraphR2 = document.getElementById('activeGraphR2');
-const activeGeneralEq = document.getElementById('activeGeneralEq');
-const activeParticularEq = document.getElementById('activeParticularEq');
-const activeGraphCanvas = document.getElementById('activeGraphCanvas');
-
-// Graph Translation & Physical Interval Elements (Step 3)
-const btnVerifyGraphInterpretation = document.getElementById('btnVerifyGraphInterpretation');
-const badgeGraphTransStatus = document.getElementById('badgeGraphTransStatus');
-const selTransYtoVy = document.getElementById('selTransYtoVy');
-const selTransVytoAy = document.getElementById('selTransVytoAy');
-const selTransX = document.getElementById('selTransX');
-const badgeIntervalStatus = document.getElementById('badgeIntervalStatus');
-const selStopBehavior = document.getElementById('selStopBehavior');
-const inpStopTimeApex = document.getElementById('inpStopTimeApex');
-const hintApexTimeRange = document.getElementById('hintApexTimeRange');
-const txtStopExplanation = document.getElementById('txtStopExplanation');
-const inpPosDirStart = document.getElementById('inpPosDirStart');
-const inpPosDirEnd = document.getElementById('inpPosDirEnd');
-const inpNegDirStart = document.getElementById('inpNegDirStart');
-const inpNegDirEnd = document.getElementById('inpNegDirEnd');
-const inpNegAccStart = document.getElementById('inpNegAccStart');
-const inpNegAccEnd = document.getElementById('inpNegAccEnd');
-const txtAccSignExplanation = document.getElementById('txtAccSignExplanation');
-
-// Calculations Workspace Elements
-const btnCheckWorksheet = document.getElementById('btnCheckWorksheet');
-const authenticityBadge = document.getElementById('authenticityBadge');
-const inpX0 = document.getElementById('inpX0');
-const inpVx0 = document.getElementById('inpVx0');
-const inpAx = document.getElementById('inpAx');
-const lblAxDiff = document.getElementById('lblAxDiff');
-const inpY0 = document.getElementById('inpY0');
-const inpVy0 = document.getElementById('inpVy0');
-const inpAy = document.getElementById('inpAy');
-const badgeAyPctDiff = document.getElementById('badgeAyPctDiff');
-
-// Section 1B Signed Area & Slope Elements
-const badgeSignedAreaVerify = document.getElementById('badgeSignedAreaVerify');
-const inpSlopeAyFromVt = document.getElementById('inpSlopeAyFromVt');
-const inpAreaUp = document.getElementById('inpAreaUp');
-const inpAreaDown = document.getElementById('inpAreaDown');
-const inpNetDyArea = document.getElementById('inpNetDyArea');
-const inpYMaxFromArea = document.getElementById('inpYMaxFromArea');
-const inpYFinalFromArea = document.getElementById('inpYFinalFromArea');
-const workSignedArea = document.getElementById('workSignedArea');
-const inpCalcRange = document.getElementById('inpCalcRange');
-const inpMeasRange = document.getElementById('inpMeasRange');
-const badgeRangePctDiff = document.getElementById('badgeRangePctDiff');
-const inpCalcHangTime = document.getElementById('inpCalcHangTime');
-const inpMeasHangTime = document.getElementById('inpMeasHangTime');
-const badgeHangTimePctDiff = document.getElementById('badgeHangTimePctDiff');
-const inpCalcMaxHeight = document.getElementById('inpCalcMaxHeight');
-const inpMeasMaxHeight = document.getElementById('inpMeasMaxHeight');
-const badgeMaxHeightPctDiff = document.getElementById('badgeMaxHeightPctDiff');
-const inpSpeedV0 = document.getElementById('inpSpeedV0');
-const inpAngleTheta = document.getElementById('inpAngleTheta');
-const lblConsistencyCheck = document.getElementById('lblConsistencyCheck');
-const reflectionText = document.getElementById('reflectionText');
-const sentenceBadge = document.getElementById('sentenceBadge');
-
-// Master Kinematic Comparison Table Elements
-const tblMeasAy = document.getElementById('tblMeasAy');
-const tblInpAy = document.getElementById('tblInpAy');
-const tblDiffAy = document.getElementById('tblDiffAy');
-const badgeAyCompare = document.getElementById('badgeAyCompare');
-
-const tblMeasAx = document.getElementById('tblMeasAx');
-const tblInpAx = document.getElementById('tblInpAx');
-const tblDiffAx = document.getElementById('tblDiffAx');
-const badgeAxCompare = document.getElementById('badgeAxCompare');
-
-const tblMeasHang = document.getElementById('tblMeasHang');
-const tblInpHang = document.getElementById('tblInpHang');
-const tblDiffHang = document.getElementById('tblDiffHang');
-const badgeHangCompare = document.getElementById('badgeHangCompare');
-
-const tblMeasRange = document.getElementById('tblMeasRange');
-const tblInpRange = document.getElementById('tblInpRange');
-const tblDiffRange = document.getElementById('tblDiffRange');
-const badgeRangeCompare = document.getElementById('badgeRangeCompare');
-
-const tblMeasMaxH = document.getElementById('tblMeasMaxH');
-const tblInpMaxH = document.getElementById('tblInpMaxH');
-const tblDiffMaxH = document.getElementById('tblDiffMaxH');
-const badgeMaxHCompare = document.getElementById('badgeMaxHCompare');
-
-// Student Derivation Work Textareas
-const workMaxHeight = document.getElementById('workMaxHeight');
-const workHangTime = document.getElementById('workHangTime');
-const workRange = document.getElementById('workRange');
-const workVector = document.getElementById('workVector');
-
-// Grid Graph Badges & Equations Elements
-const gridBadgeYPos = document.getElementById('gridBadgeYPos');
-const gridGenYPos = document.getElementById('gridGenYPos');
-const gridPartYPos = document.getElementById('gridPartYPos');
-
-const gridBadgeXPos = document.getElementById('gridBadgeXPos');
-const gridGenXPos = document.getElementById('gridGenXPos');
-const gridPartXPos = document.getElementById('gridPartXPos');
-
-const gridBadgeYVel = document.getElementById('gridBadgeYVel');
-const gridGenYVel = document.getElementById('gridGenYVel');
-const gridPartYVel = document.getElementById('gridPartYVel');
-
-const gridBadgeXVel = document.getElementById('gridBadgeXVel');
-const gridGenXVel = document.getElementById('gridGenXVel');
-const gridPartXVel = document.getElementById('gridPartXVel');
-
-const gridBadgeYAcc = document.getElementById('gridBadgeYAcc');
-const gridGenYAcc = document.getElementById('gridGenYAcc');
-const gridPartYAcc = document.getElementById('gridPartYAcc');
-
-const gridBadgeXAcc = document.getElementById('gridBadgeXAcc');
-const gridGenXAcc = document.getElementById('gridGenXAcc');
-const gridPartXAcc = document.getElementById('gridPartXAcc');
-
-// Presentation Elements
-const btnDownloadPptx = document.getElementById('btnDownloadPptx');
-const btnPrintReport = document.getElementById('btnPrintReport');
-const btnCopyFormData = document.getElementById('btnCopyFormData');
-const slidePreviewTitle = document.getElementById('slidePreviewTitle');
-const slideViewport = document.getElementById('slideViewport');
-const btnPrevSlide = document.getElementById('btnPrevSlide');
-const btnNextSlide = document.getElementById('btnNextSlide');
-const slideThumbs = document.querySelectorAll('.slide-thumb');
-
-// Chart Instances
+// Chart.js Instances
 let posChart = null;
-let velChart = null;
-let studioChart = null;
-let gridCharts = {};
+const gridCharts = {};
 
 // ============================================================================
-// Initialization & Synthetic Experiments
+// DOM Element References
+// ============================================================================
+const el = (id) => document.getElementById(id);
+
+const video = el('mainVideo');
+const overlayCanvas = el('overlayCanvas');
+const ctx = overlayCanvas ? overlayCanvas.getContext('2d') : null;
+const reticlePreview = el('reticlePreview');
+const viewportContainer = el('viewportContainer');
+const dropzoneOverlay = el('dropzoneOverlay');
+
+// Stepper & Step Views
+const stepBtns = [el('stepBtn1'), el('stepBtn2'), el('stepBtn3')];
+const stepViews = [el('stepView1'), el('stepView2'), el('stepView3')];
+
+// ============================================================================
+// Initialization
 // ============================================================================
 function init() {
   initEventListeners();
-  initCharts();
-  if (dropzoneOverlay) {
-    dropzoneOverlay.classList.add('hidden');
-    dropzoneOverlay.style.display = 'none';
-  }
-  initSyntheticExperiment('projectile');
-  resizeCanvas();
-  renderSyntheticFrame(0);
-  drawOverlay();
-  updateTable();
-  updateAuthenticityBadge();
+  initPosChart();
+  initSyntheticExperiment('basketball');
+  loadSamplePointsForActivePreset(); // Provide a ready-to-explore synthetic trajectory out of the box
   updateStepView(1);
+  triggerKaTeXRender(document.body);
+}
 
-  // Trigger KaTeX rendering on startup
-  const tryRenderKaTeX = () => {
+function triggerKaTeXRender(container) {
+  if (!container) return;
+  const runRender = () => {
     if (window.renderMathInElement) {
-      window.renderMathInElement(document.body, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '\\[', right: '\\]', display: true },
-          { left: '\\(', right: '\\)', display: false },
-          { left: '$', right: '$', display: false }
-        ],
-        throwOnError: false
-      });
-      renderStudioGraph(state.activeGraphTab);
-    } else {
-      setTimeout(tryRenderKaTeX, 100);
+      try {
+        window.renderMathInElement(container, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '\\[', right: '\\]', display: true },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      } catch (e) {
+        console.warn('KaTeX auto-render warning:', e);
+      }
     }
   };
-  tryRenderKaTeX();
+  if (window.renderMathInElement) {
+    runRender();
+  } else {
+    setTimeout(runRender, 180);
+  }
 }
 
-function updateStatus(msg) {
-  if (statusMessage) statusMessage.textContent = msg;
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-// Preset Physics / Sports Experiments
-function initSyntheticExperiment(type = 'projectile') {
+// ============================================================================
+// Step Navigation (3 Steps: Track the Flight, Explain the Motion, Submit Report)
+// ============================================================================
+function updateStepView(stepNum) {
+  state.currentStep = stepNum;
+
+  stepBtns.forEach((btn, idx) => {
+    if (!btn) return;
+    const num = idx + 1;
+    btn.classList.remove('active', 'completed');
+    if (num === stepNum) {
+      btn.classList.add('active');
+    } else if (num < stepNum) {
+      btn.classList.add('completed');
+    }
+  });
+
+  if (stepViews[0]) stepViews[0].style.display = (stepNum === 1) ? 'grid' : 'none';
+  if (stepViews[1]) stepViews[1].style.display = (stepNum === 2) ? 'block' : 'none';
+  if (stepViews[2]) stepViews[2].style.display = (stepNum === 3) ? 'block' : 'none';
+
+  if (stepNum === 1) {
+    resizeCanvas();
+    if (state.isSynthetic) renderSyntheticFrame(state.currentTime);
+    drawOverlay();
+    updateSetupAndCoverageReadouts();
+  } else if (stepNum === 2) {
+    autoFitAndDeriveAllGraphs();
+    updatePosChart();
+    updatePredictionGateUI();
+    updateReferenceQuantitiesBar();
+    updateWrittenStatusBadges();
+    if (state.firstAttemptPrediction.isSaved) {
+      renderSixGraphPanel();
+    }
+  } else if (stepNum === 3) {
+    autoFitAndDeriveAllGraphs();
+    updateRubricChecklistUI();
+    preparePrintableReport();
+  }
+
+  triggerKaTeXRender(stepViews[stepNum - 1] || document.body);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================================
+// Synthetic Model Clips & Real Video File Loading
+// ============================================================================
+function initSyntheticExperiment(type = 'basketball') {
+  const modelKey = SYNTHETIC_MODELS[type] ? type : 'basketball';
+  const model = SYNTHETIC_MODELS[modelKey];
+
   state.isSynthetic = true;
-  state.syntheticType = type;
-  state.duration = 2.5;
+  state.syntheticType = modelKey;
+  state.videoFileName = '';
+  state.duration = model.duration;
   state.currentTime = 0;
   state.timeOffset = 0;
   state.fps = 60;
-  if (fpsInput) fpsInput.value = state.fps;
+
+  if (el('fpsInput')) el('fpsInput').value = state.fps;
+  if (el('presetModelSelect')) el('presetModelSelect').value = modelKey;
+  if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'none';
+
+  const badge = el('clipSourceTypeBadge');
+  if (badge) {
+    badge.textContent = model.label;
+    badge.style.background = '#fff7ed';
+    badge.style.color = '#b06210';
+    badge.style.borderColor = '#f5d0a9';
+  }
 
   if (video) {
+    video.pause();
     video.style.display = 'none';
     video.src = '';
   }
 
   resizeCanvas();
-  const w = overlayCanvas.width || 860;
-  const h = overlayCanvas.height || 520;
+  const w = (overlayCanvas && overlayCanvas.width) ? overlayCanvas.width : 860;
+  const h = (overlayCanvas && overlayCanvas.height) ? overlayCanvas.height : 520;
   state.syntheticCanvas.width = w;
   state.syntheticCanvas.height = h;
   state.syntheticCtx = state.syntheticCanvas.getContext('2d');
 
-  if (type === 'projectile') {
-    state.origin = { x: 100, y: Math.round(h * 0.78) };
-    state.pixelsPerMeter = Math.round(w * 0.17);
-    state.scaleStick = {
-      start: { x: 100, y: Math.round(h * 0.86) },
-      end: { x: 100 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded 2D Projectile Motion. Click Set Origin or Set Scale to adjust calibration, or click Add Points to track!');
-  } else if (type === 'basketball') {
-    state.duration = 2.0;
-    state.origin = { x: 110, y: Math.round(h * 0.76) };
-    state.pixelsPerMeter = Math.round(w * 0.13);
-    state.scaleStick = {
-      start: { x: 110, y: Math.round(h * 0.86) },
-      end: { x: 110 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded Basketball Arc (3-Pt Shot). Calibrate scale and track trajectory!');
-  } else if (type === 'soccer') {
-    state.duration = 2.2;
-    state.origin = { x: 90, y: Math.round(h * 0.78) };
-    state.pixelsPerMeter = Math.round(w * 0.11);
-    state.scaleStick = {
-      start: { x: 90, y: Math.round(h * 0.86) },
-      end: { x: 90 + state.pixelsPerMeter, y: Math.round(h * 0.86) },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded Soccer Chip Kick. Track parabolic flight path!');
-  } else if (type === 'freefall') {
-    state.duration = 1.2;
-    state.origin = { x: Math.round(w * 0.5), y: 70 };
-    state.pixelsPerMeter = Math.round(h * 0.36);
-    state.scaleStick = {
-      start: { x: Math.round(w * 0.5) - 90, y: 70 },
-      end: { x: Math.round(w * 0.5) - 90, y: 70 + state.pixelsPerMeter },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded Free Fall Lab (g = 9.8 m/s²). Drop height = 2.0 m.');
-  } else if (type === 'pendulum') {
-    state.duration = 3.0;
-    state.origin = { x: Math.round(w * 0.5), y: 80 };
-    state.pixelsPerMeter = Math.round(h * 0.32);
-    state.scaleStick = {
-      start: { x: Math.round(w * 0.5), y: 80 },
-      end: { x: Math.round(w * 0.5) + state.pixelsPerMeter, y: 80 },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded Simple Harmonic Pendulum.');
-  } else if (type === 'cart') {
-    state.duration = 2.5;
-    state.origin = { x: 80, y: Math.round(h * 0.70) };
-    state.pixelsPerMeter = Math.round(w * 0.18);
-    state.scaleStick = {
-      start: { x: 80, y: Math.round(h * 0.82) },
-      end: { x: 80 + state.pixelsPerMeter, y: Math.round(h * 0.82) },
-      lengthMeters: 1.0,
-      isDragging: false,
-      dragPoint: null
-    };
-    updateStatus('Loaded Elastic Cart Collision.');
+  // Ground reference at floorY; x = 0 directly below release point
+  const floorY = Math.round(h * 0.82);
+  const releaseX = 110;
+  const ppm = Math.round(w * 0.14);
+
+  state.origin = { x: releaseX, y: floorY };
+  state.originAngle = 0;
+  if (el('originAngleInput')) el('originAngleInput').value = '0.0';
+
+  state.pixelsPerMeter = ppm;
+  state.scaleStick = {
+    start: { x: releaseX, y: Math.round(h * 0.90) },
+    end: { x: releaseX + ppm, y: Math.round(h * 0.90) },
+    lengthMeters: 1.00,
+    isDragging: false,
+    dragPoint: null
+  };
+
+  if (el('scaleLengthInput')) el('scaleLengthInput').value = '1.00';
+  updateScaleReadout();
+
+  const scrubber = el('timeScrubber');
+  if (scrubber) {
+    scrubber.min = 0;
+    scrubber.max = state.duration;
+    scrubber.step = 1 / state.fps;
+    scrubber.value = 0;
   }
 
-  updateScaleReadout();
-  if (scaleLengthInput) scaleLengthInput.value = state.scaleStick.lengthMeters.toFixed(2);
-  if (timeScrubber) {
-    timeScrubber.min = 0;
-    timeScrubber.max = state.duration;
-    timeScrubber.value = 0;
-  }
   updateTimeAndFrame(0);
-  drawOverlay();
+}
+
+function getSyntheticBallMetersAtTime(t) {
+  const model = SYNTHETIC_MODELS[state.syntheticType] || SYNTHETIC_MODELS.basketball;
+  const tc = Math.max(0, Math.min(model.duration, t));
+  const xMeters = model.vx0 * tc;
+  const yMeters = model.y0 + model.vy0 * tc - 0.5 * model.g * tc * tc;
+  return { xMeters, yMeters };
 }
 
 function renderSyntheticFrame(t) {
@@ -505,15 +411,16 @@ function renderSyntheticFrame(t) {
   const ctxS = state.syntheticCtx;
   const w = state.syntheticCanvas.width;
   const h = state.syntheticCanvas.height;
+  const model = SYNTHETIC_MODELS[state.syntheticType] || SYNTHETIC_MODELS.basketball;
 
-  // Background
+  // Clean light background
   ctxS.fillStyle = '#f8fafc';
   ctxS.fillRect(0, 0, w, h);
 
-  // Background Grid
+  // Subtle metric background grid
   ctxS.strokeStyle = '#e2e8f0';
   ctxS.lineWidth = 1;
-  const gridStep = Math.max(30, state.pixelsPerMeter / 2);
+  const gridStep = Math.max(28, state.pixelsPerMeter / 2);
   for (let x = 0; x < w; x += gridStep) {
     ctxS.beginPath();
     ctxS.moveTo(x, 0);
@@ -527,20 +434,20 @@ function renderSyntheticFrame(t) {
     ctxS.stroke();
   }
 
-  // Floor / Turf
-  const floorY = Math.round(h * 0.80);
+  // Visible Ground Reference Plane (y = 0)
+  const floorY = Math.round(h * 0.82);
   if (state.syntheticType === 'soccer') {
-    ctxS.fillStyle = '#e8f5e9'; // Turf light green
+    ctxS.fillStyle = '#e8f5e9';
     ctxS.fillRect(0, floorY, w, h - floorY);
-    ctxS.strokeStyle = '#81c784';
+    ctxS.strokeStyle = '#4caf50';
   } else if (state.syntheticType === 'basketball') {
-    ctxS.fillStyle = '#fff3e0'; // Hardwood court
+    ctxS.fillStyle = '#fff3e0';
     ctxS.fillRect(0, floorY, w, h - floorY);
-    ctxS.strokeStyle = '#ffb74d';
+    ctxS.strokeStyle = '#d67b19';
   } else {
     ctxS.fillStyle = '#e2edf3';
     ctxS.fillRect(0, floorY, w, h - floorY);
-    ctxS.strokeStyle = '#a9c4cf';
+    ctxS.strokeStyle = '#0f7e9b';
   }
   ctxS.lineWidth = 2.5;
   ctxS.beginPath();
@@ -548,119 +455,61 @@ function renderSyntheticFrame(t) {
   ctxS.lineTo(w, floorY);
   ctxS.stroke();
 
-  // 1.00 Meter Calibration Stick
-  const stickX = state.origin ? Math.min(state.origin.x, w - state.pixelsPerMeter - 40) : 100;
-  const stickY = Math.round(h * 0.86);
+  ctxS.fillStyle = '#4b6570';
+  ctxS.font = 'bold 11px sans-serif';
+  ctxS.fillText('GROUND REFERENCE LEVEL (y = 0.00 m)', w - 265, floorY - 7);
+
+  // Known 1.00 m Reference Calibration Bar in the Plane of Motion
+  const stickX = 110;
+  const stickY = Math.round(h * 0.89);
   const stickW = state.pixelsPerMeter;
   ctxS.fillStyle = '#ffecb3';
   ctxS.strokeStyle = '#d67b19';
   ctxS.lineWidth = 2;
-  ctxS.fillRect(stickX, stickY, stickW, 18);
-  ctxS.strokeRect(stickX, stickY, stickW, 18);
-  // Calibration endcap tick marks
-  ctxS.beginPath();
-  ctxS.moveTo(stickX, stickY - 4); ctxS.lineTo(stickX, stickY + 22);
-  ctxS.moveTo(stickX + stickW, stickY - 4); ctxS.lineTo(stickX + stickW, stickY + 22);
-  ctxS.stroke();
+  ctxS.fillRect(stickX, stickY, stickW, 16);
+  ctxS.strokeRect(stickX, stickY, stickW, 16);
   ctxS.fillStyle = '#123140';
   ctxS.font = 'bold 10px monospace';
-  ctxS.fillText('1.00 METER REFERENCE', stickX + 10, stickY + 13);
+  ctxS.fillText('1.00 m CALIBRATION BAR', stickX + 6, stickY + 12);
 
-  // Simulation physics
-  if (state.syntheticType === 'projectile') {
-    const theta = 56 * (Math.PI / 180);
-    const v0 = 4.3;
-    const g = 9.8;
-    const tFlight = (2 * v0 * Math.sin(theta)) / g;
-    const tClamped = Math.min(t, tFlight);
+  // Draw Release Height Reference Stand at x = 0
+  const releaseScreenY = floorY - model.y0 * state.pixelsPerMeter;
+  ctxS.strokeStyle = '#94a3b8';
+  ctxS.lineWidth = 2;
+  ctxS.setLineDash([4, 3]);
+  ctxS.beginPath();
+  ctxS.moveTo(110, floorY);
+  ctxS.lineTo(110, releaseScreenY);
+  ctxS.stroke();
+  ctxS.setLineDash([]);
 
-    const xMeters = v0 * Math.cos(theta) * tClamped;
-    const yMeters = v0 * Math.sin(theta) * tClamped - 0.5 * g * tClamped * tClamped;
-
-    const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
-    const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
-
-    drawSportsBall(ctxS, ballX, ballY, 14, 'baseball');
-  } else if (state.syntheticType === 'basketball') {
-    const theta = 62 * (Math.PI / 180);
-    const v0 = 5.6;
-    const g = 9.8;
-    const tFlight = 1.4;
-    const tClamped = Math.min(t, tFlight);
-
-    const xMeters = v0 * Math.cos(theta) * tClamped;
-    const yMeters = v0 * Math.sin(theta) * tClamped - 0.5 * g * tClamped * tClamped;
-
-    const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
-    const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
-
-    // Draw Basketball Hoop & Backboard
-    const hoopX = Math.round(w * 0.80);
-    const hoopY = Math.round(h * 0.46);
-    ctxS.strokeStyle = '#c53030';
+  // Draw Basketball Hoop for context on basketball model
+  if (state.syntheticType === 'basketball') {
+    const hoopX = Math.round(w * 0.82);
+    const hoopY = Math.round(h * 0.36);
+    ctxS.strokeStyle = '#64748b';
     ctxS.lineWidth = 4;
-    ctxS.strokeRect(hoopX + 46, hoopY - 80, 5, 200);
+    ctxS.strokeRect(hoopX + 42, hoopY - 65, 5, 110);
     ctxS.fillStyle = '#d67b19';
-    ctxS.fillRect(hoopX, hoopY, 46, 8);
-    // Net
-    ctxS.strokeStyle = 'rgba(255,255,255,0.85)';
-    ctxS.lineWidth = 1.5;
-    ctxS.beginPath();
-    ctxS.moveTo(hoopX, hoopY + 8); ctxS.lineTo(hoopX + 12, hoopY + 38);
-    ctxS.moveTo(hoopX + 46, hoopY + 8); ctxS.lineTo(hoopX + 34, hoopY + 38);
-    ctxS.stroke();
-
-    drawSportsBall(ctxS, ballX, ballY, 15, 'basketball');
-  } else if (state.syntheticType === 'soccer') {
-    const theta = 48 * (Math.PI / 180);
-    const v0 = 6.2;
-    const g = 9.8;
-    const tFlight = 1.55;
-    const tClamped = Math.min(t, tFlight);
-
-    const xMeters = v0 * Math.cos(theta) * tClamped;
-    const yMeters = v0 * Math.sin(theta) * tClamped - 0.5 * g * tClamped * tClamped;
-
-    const ballX = state.origin.x + xMeters * state.pixelsPerMeter;
-    const ballY = state.origin.y - yMeters * state.pixelsPerMeter;
-
-    drawSportsBall(ctxS, ballX, ballY, 14, 'soccer');
-  } else if (state.syntheticType === 'freefall') {
-    const g = 9.8;
-    const tDrop = Math.sqrt((2 * 1.8) / g);
-    const tClamped = Math.min(t, tDrop);
-    const yMeters = 0.5 * g * tClamped * tClamped;
-    const ballX = state.origin.x;
-    const ballY = state.origin.y + yMeters * state.pixelsPerMeter;
-
-    drawSportsBall(ctxS, ballX, ballY, 14, 'baseball');
-  } else if (state.syntheticType === 'pendulum') {
-    const L = 1.5;
-    const theta0 = 0.45;
-    const omega = Math.sqrt(9.8 / L);
-    const theta = theta0 * Math.cos(omega * t);
-
-    const bobX = state.origin.x + L * Math.sin(theta) * state.pixelsPerMeter;
-    const bobY = state.origin.y + L * Math.cos(theta) * state.pixelsPerMeter;
-
-    ctxS.strokeStyle = '#4b6570';
-    ctxS.lineWidth = 2;
-    ctxS.beginPath();
-    ctxS.moveTo(state.origin.x, state.origin.y);
-    ctxS.lineTo(bobX, bobY);
-    ctxS.stroke();
-
-    drawSportsBall(ctxS, bobX, bobY, 15, 'metallic');
-  } else if (state.syntheticType === 'cart') {
-    const xCart = state.origin.x + (1.2 * t) * state.pixelsPerMeter;
-    ctxS.fillStyle = '#0f7e9b';
-    ctxS.fillRect(xCart - 35, floorY - 24, 70, 24);
-    ctxS.fillStyle = '#123140';
-    ctxS.beginPath();
-    ctxS.arc(xCart - 20, floorY, 8, 0, Math.PI * 2);
-    ctxS.arc(xCart + 20, floorY, 8, 0, Math.PI * 2);
-    ctxS.fill();
+    ctxS.fillRect(hoopX, hoopY, 42, 7);
   }
+
+  // Ball position at time t
+  const { xMeters, yMeters } = getSyntheticBallMetersAtTime(t);
+  const ballX = 110 + xMeters * state.pixelsPerMeter;
+  const ballY = floorY - yMeters * state.pixelsPerMeter;
+
+  drawSportsBall(ctxS, ballX, ballY, 14, model.ballType);
+
+  // Watermark label inside synthetic canvas so screenshots clearly identify it as a synthetic model
+  ctxS.fillStyle = 'rgba(255, 247, 237, 0.92)';
+  ctxS.fillRect(14, 14, 330, 24);
+  ctxS.strokeStyle = '#d67b19';
+  ctxS.lineWidth = 1;
+  ctxS.strokeRect(14, 14, 330, 24);
+  ctxS.fillStyle = '#b06210';
+  ctxS.font = 'bold 11px sans-serif';
+  ctxS.fillText(model.label, 22, 30);
 }
 
 function drawSportsBall(ctxS, x, y, r, ballType) {
@@ -674,7 +523,6 @@ function drawSportsBall(ctxS, x, y, r, ballType) {
     ctxS.strokeStyle = '#123140';
     ctxS.lineWidth = 1.5;
     ctxS.stroke();
-    // Seams
     ctxS.beginPath();
     ctxS.arc(x, y, r * 0.7, 0, Math.PI);
     ctxS.stroke();
@@ -688,14 +536,7 @@ function drawSportsBall(ctxS, x, y, r, ballType) {
     ctxS.beginPath();
     ctxS.arc(x, y, r * 0.35, 0, Math.PI * 2);
     ctxS.fill();
-  } else if (ballType === 'metallic') {
-    ctxS.fillStyle = '#0f7e9b';
-    ctxS.fill();
-    ctxS.strokeStyle = '#095f76';
-    ctxS.lineWidth = 2;
-    ctxS.stroke();
   } else {
-    // Standard Bright Yellow/White Tennis or Baseball
     ctxS.fillStyle = '#fef08a';
     ctxS.fill();
     ctxS.strokeStyle = '#d67b19';
@@ -710,123 +551,90 @@ function drawSportsBall(ctxS, x, y, r, ballType) {
   ctxS.restore();
 }
 
-// ============================================================================
-// Step Workflow & Mode Switching
-// ============================================================================
-function updateStepView(stepNum) {
-  state.currentStep = stepNum;
+function loadSamplePointsForActivePreset() {
+  if (!state.isSynthetic) return;
+  const model = SYNTHETIC_MODELS[state.syntheticType] || SYNTHETIC_MODELS.basketball;
+  const h = (overlayCanvas && overlayCanvas.height) ? overlayCanvas.height : 520;
+  const floorY = Math.round(h * 0.82);
+  const releaseX = 110;
 
-  // Update Stepper Buttons
-  stepBtns.forEach((btn, idx) => {
-    if (!btn) return;
-    const num = idx + 1;
-    btn.classList.remove('active', 'completed');
-    if (num === stepNum) {
-      btn.classList.add('active');
-    } else if (num < stepNum) {
-      btn.classList.add('completed');
-    }
+  state.origin = { x: releaseX, y: floorY };
+  state.originAngle = 0;
+
+  const sampleTimes = model.sampleTimes;
+  state.timeOffset = sampleTimes[0]; // Set t = 0 at the first tracked airborne frame
+
+  const pts = sampleTimes.map((rawT) => {
+    const { xMeters, yMeters } = getSyntheticBallMetersAtTime(rawT);
+    const screenX = releaseX + xMeters * state.pixelsPerMeter;
+    const screenY = floorY - yMeters * state.pixelsPerMeter;
+    const phys = transformToPhysics(screenX, screenY);
+    return {
+      frame: Math.round(rawT * state.fps),
+      rawTime: rawT,
+      time: Math.max(0, rawT - state.timeOffset),
+      videoX: screenX,
+      videoY: screenY,
+      x: phys.x,
+      y: phys.y,
+      vx: 0,
+      vy: 0,
+      ax: 0,
+      ay: 0
+    };
   });
 
-  // Switch Stages
-  if (videoWorkspaceStage) videoWorkspaceStage.style.display = (stepNum === 1 || stepNum === 2) ? 'grid' : 'none';
-  if (stepView3) stepView3.style.display = (stepNum === 3) ? 'block' : 'none';
-  if (stepView4) stepView4.style.display = (stepNum === 4) ? 'block' : 'none';
-  if (stepView5) stepView5.style.display = (stepNum === 5) ? 'block' : 'none';
+  state.series.A = pts;
 
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-  const guidanceTitle = document.getElementById('guidanceTitle');
-  const guidanceText = document.getElementById('guidanceText');
+  // Set observed video rise time t_up from the highest tracked point
+  let peakPt = pts[0];
+  pts.forEach(p => {
+    if (p.y > peakPt.y) peakPt = p;
+  });
+  state.observedTUp = peakPt.time.toFixed(3);
+  if (el('inpObservedTUp')) el('inpObservedTUp').value = state.observedTUp;
+  if (el('inpCalcTUp')) el('inpCalcTUp').value = state.observedTUp;
 
-  if (stepNum === 1) {
-    setActiveTool('scale');
-    // Open Scale & Calibration tab in sidebar so controls are directly visible!
-    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-calibration'));
-    tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-calibration'));
-    if (guidanceTitle) guidanceTitle.innerHTML = 'Step 1: Calibration &amp; Coordinate Setup';
-    if (guidanceText) {
-      guidanceText.innerHTML = `
-        1. Select <strong>Set Origin</strong> and click on the ground or projectile release point.<br>
-        2. Select <strong>Set Scale</strong> and drag across the amber 1.00 m reference stick on the floor.<br>
-        3. Verify the scale readout in meters before advancing to Step 2.
-      `;
-    }
-    updateStatus('Step 1: Set coordinate origin and drag amber scale stick across the 1.00 m reference.');
-  } else if (stepNum === 2) {
-    setActiveTool('track');
-    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === 'tab-graphs'));
-    tabContents.forEach(c => c.classList.toggle('active', c.id === 'tab-graphs'));
-    if (guidanceTitle) guidanceTitle.innerHTML = 'Step 2: Frame-by-Frame Motion Tracking';
-    if (guidanceText) {
-      guidanceText.innerHTML = `
-        1. Select <strong>Add Points</strong> in the toolbar.<br>
-        2. Click directly on the projectile's center of mass on each frame (video auto-advances).<br>
-        3. When finished tracking, click <strong>Set t₀ at First Pt</strong> in the sidebar, then proceed to Step 3.
-      `;
-    }
-    updateStatus('Step 2: Step through frames and click projectile center-of-mass to track trajectory.');
-  } else if (stepNum === 3) {
-    updateStatus('Step 3: Kinematics Studio - Verify curves of best fit and sample 10 tangent slopes.');
-    renderStudioGraph(state.activeGraphTab);
-  } else if (stepNum === 4) {
-    updateStatus('Step 4: Calculations Workspace - Use kinematic formulas to calculate values and verify percent differences.');
-    updateCalculationFormulas();
-  } else if (stepNum === 5) {
-    updateStatus('Step 5: Presentation & Reports - Export 10-slide PowerPoint deck, print 4-page lab report, copy form data.');
-    updateAuthenticityBadge();
-    renderSlideDeckPreview(state.currentSlideIdx);
-  }
-
-  // Ensure KaTeX renders math in updated elements
-  if (window.renderMathInElement) {
-    renderMathInElement(document.body, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '\\[', right: '\\]', display: true },
-        { left: '\\(', right: '\\)', display: false },
-        { left: '$', right: '$', display: false }
-      ]
-    });
-  }
+  recalculateKinematics();
+  autoFitAndDeriveAllGraphs();
+  updateTable();
+  updateSetupAndCoverageReadouts();
+  updatePosChart();
+  drawOverlay();
 }
 
-// Tool Switching
+// ============================================================================
+// Coordinate Transform, Tracking & Honest Coverage / Apex Detection
+// ============================================================================
 function setActiveTool(tool) {
   state.activeTool = tool;
-  [toolTrack, toolScale, toolOrigin].forEach(btn => {
+  ['toolTrack', 'toolScale', 'toolOrigin'].forEach(id => {
+    const btn = el(id);
     if (btn) btn.classList.remove('active', 'btn-amber');
   });
 
-  if (tool === 'track' && toolTrack) {
-    toolTrack.classList.add('active', 'btn-amber');
-    if (overlayCanvas) overlayCanvas.style.cursor = 'crosshair';
-  } else if (tool === 'scale' && toolScale) {
-    toolScale.classList.add('active', 'btn-amber');
-    if (overlayCanvas) overlayCanvas.style.cursor = 'crosshair';
-  } else if (tool === 'origin' && toolOrigin) {
-    toolOrigin.classList.add('active', 'btn-amber');
-    if (overlayCanvas) overlayCanvas.style.cursor = 'move';
+  const activeBtn = tool === 'track' ? el('toolTrack') : (tool === 'scale' ? el('toolScale') : el('toolOrigin'));
+  if (activeBtn) activeBtn.classList.add('active', 'btn-amber');
+  if (overlayCanvas) {
+    overlayCanvas.style.cursor = tool === 'origin' ? 'move' : 'crosshair';
   }
   drawOverlay();
 }
 
-// Coordinate Transforms
 function transformToPhysics(screenX, screenY) {
   const dx = screenX - state.origin.x;
-  const dy = state.origin.y - screenY; // Screen Y goes down; Physics Y goes up
-
-  const angle = state.originAngle;
+  const dy = state.origin.y - screenY; // Screen Y down -> Physics Y up (+y upward)
+  const angle = state.originAngle || 0;
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
 
   const rotX = dx * cosA - dy * sinA;
   const rotY = dx * sinA + dy * cosA;
 
-  const metersX = rotX / state.pixelsPerMeter;
-  const metersY = rotY / state.pixelsPerMeter;
-
-  return { x: metersX, y: metersY };
+  return {
+    x: rotX / state.pixelsPerMeter,
+    y: rotY / state.pixelsPerMeter
+  };
 }
 
 function getAdjustedTime(rawTime) {
@@ -838,9 +646,9 @@ function updateTimeAndFrame(t) {
   const adjustedT = getAdjustedTime(t);
   const frame = Math.round(t * state.fps);
 
-  if (currentTimeText) currentTimeText.textContent = `t = ${adjustedT.toFixed(3)} s`;
-  if (currentFrameText) currentFrameText.textContent = `Frame: ${frame}`;
-  if (timeScrubber) timeScrubber.value = t;
+  if (el('currentTimeText')) el('currentTimeText').textContent = `t = ${adjustedT.toFixed(3)} s`;
+  if (el('currentFrameText')) el('currentFrameText').textContent = `Frame: ${frame}`;
+  if (el('timeScrubber')) el('timeScrubber').value = t;
 
   if (state.isSynthetic) {
     renderSyntheticFrame(t);
@@ -849,13 +657,12 @@ function updateTimeAndFrame(t) {
 }
 
 function stepFrame(delta) {
-  if (state.isPlaying) {
-    togglePlay();
-  }
+  if (state.isPlaying) togglePlay();
   const dt = 1 / state.fps;
-  let nextT = state.currentTime + delta * dt;
-  const maxDur = (state.duration > 0) ? state.duration : (video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 10);
-  nextT = Math.max(0, Math.min(maxDur, nextT));
+  const maxDur = (state.duration > 0)
+    ? state.duration
+    : (video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 10);
+  const nextT = Math.max(0, Math.min(maxDur, state.currentTime + delta * dt));
 
   updateTimeAndFrame(nextT);
   if (!state.isSynthetic && video) {
@@ -863,22 +670,22 @@ function stepFrame(delta) {
   }
 }
 
+let syntheticPlayTimer = null;
 function togglePlay() {
   state.isPlaying = !state.isPlaying;
-  if (iconPlay) iconPlay.style.display = state.isPlaying ? 'none' : 'block';
-  if (iconPause) iconPause.style.display = state.isPlaying ? 'block' : 'none';
+  if (el('iconPlay')) el('iconPlay').style.display = state.isPlaying ? 'none' : 'block';
+  if (el('iconPause')) el('iconPause').style.display = state.isPlaying ? 'block' : 'none';
 
   if (state.isSynthetic) {
     if (state.isPlaying) playSyntheticLoop();
   } else if (video) {
     if (state.isPlaying) {
-      const rate = parseFloat(playbackRateSelect ? playbackRateSelect.value : 0.5) || 0.5;
+      const rate = parseFloat(el('playbackRateSelect') ? el('playbackRateSelect').value : 0.5) || 0.5;
       video.playbackRate = rate;
-      video.play().catch(err => {
-        console.warn('Playback error:', err);
+      video.play().catch(() => {
         state.isPlaying = false;
-        if (iconPlay) iconPlay.style.display = 'block';
-        if (iconPause) iconPause.style.display = 'none';
+        if (el('iconPlay')) el('iconPlay').style.display = 'block';
+        if (el('iconPause')) el('iconPause').style.display = 'none';
       });
     } else {
       video.pause();
@@ -886,37 +693,34 @@ function togglePlay() {
   }
 }
 
-let syntheticPlayTimer = null;
 function playSyntheticLoop() {
   if (!state.isPlaying || !state.isSynthetic) return;
-  const dt = (1 / state.fps) * (parseFloat(playbackRateSelect ? playbackRateSelect.value : 0.5));
-  let nextT = state.currentTime + dt;
-  if (nextT >= state.duration) {
-    nextT = 0;
-  }
+  const rate = parseFloat(el('playbackRateSelect') ? el('playbackRateSelect').value : 0.5) || 0.5;
+  let nextT = state.currentTime + (1 / state.fps) * rate;
+  if (nextT >= state.duration) nextT = 0;
   updateTimeAndFrame(nextT);
   syntheticPlayTimer = requestAnimationFrame(playSyntheticLoop);
 }
 
-// Point Tracking
 function addTrackPoint(screenX, screenY) {
-  if (state.isPlaying) {
-    togglePlay();
-  }
+  if (state.isPlaying) togglePlay();
 
-  // Synchronize with active video position or state time
   const currentT = (!state.isSynthetic && video && Number.isFinite(video.currentTime))
     ? video.currentTime
     : state.currentTime;
   state.currentTime = currentT;
 
   const pts = state.series[state.activeSeries];
+  // If this is the very first tracked point, automatically set t = 0 at this frame
+  if (pts.length === 0) {
+    state.timeOffset = currentT;
+  }
+
   const phys = transformToPhysics(screenX, screenY);
   const frame = Math.round(currentT * state.fps);
-
-  // Avoid duplicates on the exact same frame (within 0.4 of a frame period)
   const frameThreshold = 0.4 / state.fps;
   const existingIdx = pts.findIndex(p => Math.abs(p.rawTime - currentT) < frameThreshold || p.frame === frame);
+
   const ptData = {
     frame,
     rawTime: currentT,
@@ -938,68 +742,77 @@ function addTrackPoint(screenX, screenY) {
   }
 
   pts.sort((a, b) => a.rawTime - b.rawTime);
+  // Ensure t = 0 stays anchored at the first tracked airborne frame unless manually adjusted
+  state.timeOffset = pts[0].rawTime;
+
   recalculateKinematics();
+  autoFitAndDeriveAllGraphs();
   updateTable();
-  updateCharts();
+  updateSetupAndCoverageReadouts();
+  updatePosChart();
   drawOverlay();
 
-  // Automatically step forward to next frame for fast tracking
-  const stepCount = parseInt(stepFrameSelect ? stepFrameSelect.value : 2, 10) || 2;
+  const stepCount = parseInt(el('stepFrameSelect') ? el('stepFrameSelect').value : 5, 10) || 5;
   stepFrame(stepCount);
 }
 
 function recalculateKinematics() {
-  const pts = state.series[state.activeSeries];
-  pts.forEach(p => { p.time = getAdjustedTime(p.rawTime); });
-  if (pts.length < 2) return;
+  ['A', 'B'].forEach(seriesKey => {
+    const pts = state.series[seriesKey];
+    pts.forEach(p => {
+      const phys = transformToPhysics(p.videoX, p.videoY);
+      p.x = phys.x;
+      p.y = phys.y;
+      p.time = getAdjustedTime(p.rawTime);
+    });
+    if (pts.length < 2) return;
 
-  // Numerical Velocities
-  for (let i = 0; i < pts.length; i++) {
-    if (i === 0) {
-      const dt = pts[1].time - pts[0].time;
-      pts[0].vx = dt > 0 ? (pts[1].x - pts[0].x) / dt : 0;
-      pts[0].vy = dt > 0 ? (pts[1].y - pts[0].y) / dt : 0;
-    } else if (i === pts.length - 1) {
-      const dt = pts[i].time - pts[i - 1].time;
-      pts[i].vx = dt > 0 ? (pts[i].x - pts[i - 1].x) / dt : 0;
-      pts[i].vy = dt > 0 ? (pts[i].y - pts[i - 1].y) / dt : 0;
-    } else {
-      const dt = pts[i + 1].time - pts[i - 1].time;
-      pts[i].vx = dt > 0 ? (pts[i + 1].x - pts[i - 1].x) / dt : 0;
-      pts[i].vy = dt > 0 ? (pts[i + 1].y - pts[i - 1].y) / dt : 0;
+    // Optional finite-difference velocity & acceleration (labeled strictly as diagnostic)
+    for (let i = 0; i < pts.length; i++) {
+      if (i === 0) {
+        const dt = pts[1].time - pts[0].time;
+        pts[0].vx = dt > 0 ? (pts[1].x - pts[0].x) / dt : 0;
+        pts[0].vy = dt > 0 ? (pts[1].y - pts[0].y) / dt : 0;
+      } else if (i === pts.length - 1) {
+        const dt = pts[i].time - pts[i - 1].time;
+        pts[i].vx = dt > 0 ? (pts[i].x - pts[i - 1].x) / dt : 0;
+        pts[i].vy = dt > 0 ? (pts[i].y - pts[i - 1].y) / dt : 0;
+      } else {
+        const dt = pts[i + 1].time - pts[i - 1].time;
+        pts[i].vx = dt > 0 ? (pts[i + 1].x - pts[i - 1].x) / dt : 0;
+        pts[i].vy = dt > 0 ? (pts[i + 1].y - pts[i - 1].y) / dt : 0;
+      }
     }
-  }
-
-  // Numerical Accelerations
-  for (let i = 0; i < pts.length; i++) {
-    if (i === 0) {
-      const dt = pts[1].time - pts[0].time;
-      pts[0].ax = dt > 0 ? (pts[1].vx - pts[0].vx) / dt : 0;
-      pts[0].ay = dt > 0 ? (pts[1].vy - pts[0].vy) / dt : 0;
-    } else if (i === pts.length - 1) {
-      const dt = pts[i].time - pts[i - 1].time;
-      pts[i].ax = dt > 0 ? (pts[i].vx - pts[i - 1].vx) / dt : 0;
-      pts[i].ay = dt > 0 ? (pts[i].vy - pts[i - 1].vy) / dt : 0;
-    } else {
-      const dt = pts[i + 1].time - pts[i - 1].time;
-      pts[i].ax = dt > 0 ? (pts[i + 1].vx - pts[i - 1].vx) / dt : 0;
-      pts[i].ay = dt > 0 ? (pts[i + 1].vy - pts[i - 1].vy) / dt : 0;
-    }
-  }
+  });
 }
 
 function setInitialTimeAtFirstPoint() {
   const pts = state.series[state.activeSeries];
-  if (pts.length === 0) return;
+  if (!pts || pts.length === 0) return;
   state.timeOffset = pts[0].rawTime;
   recalculateKinematics();
+  autoFitAndDeriveAllGraphs();
   updateTimeAndFrame(state.currentTime);
   updateTable();
-  updateCharts();
-  updateStatus(`Set t₀ = 0.000 s at first tracked point (${state.timeOffset.toFixed(3)}s)`);
+  updateSetupAndCoverageReadouts();
+  updatePosChart();
 }
 
-// Canvas Overlay Drawing
+function updateScaleReadout() {
+  const dx = state.scaleStick.end.x - state.scaleStick.start.x;
+  const dy = state.scaleStick.end.y - state.scaleStick.start.y;
+  const pixelDist = Math.hypot(dx, dy);
+  if (pixelDist > 5) {
+    state.pixelsPerMeter = pixelDist / state.scaleStick.lengthMeters;
+    if (el('scaleReadout')) {
+      el('scaleReadout').textContent = `Current Scale: ${state.pixelsPerMeter.toFixed(1)} px/m (${state.scaleStick.lengthMeters.toFixed(2)} m reference)`;
+    }
+  }
+}
+
+// ============================================================================
+// Canvas Overlay Rendering
+// ============================================================================
 function resizeCanvas() {
   if (!overlayCanvas || !viewportContainer) return;
   const rect = viewportContainer.getBoundingClientRect();
@@ -1031,28 +844,29 @@ function drawOverlay() {
 function drawAxes() {
   const ox = state.origin.x;
   const oy = state.origin.y;
-  const angle = state.originAngle;
+  const angle = state.originAngle || 0;
 
   ctx.save();
   ctx.translate(ox, oy);
   ctx.rotate(-angle);
 
-  // X Axis (Teal)
+  // +x axis (Teal)
   ctx.strokeStyle = '#0f7e9b';
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(-50, 0);
-  ctx.lineTo(150, 0);
+  ctx.moveTo(-45, 0);
+  ctx.lineTo(155, 0);
   ctx.stroke();
 
-  // Y Axis (Amber)
+  // +y axis (Amber)
   ctx.strokeStyle = '#d67b19';
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(0, 50);
-  ctx.lineTo(0, -150);
+  ctx.moveTo(0, 45);
+  ctx.lineTo(0, -155);
   ctx.stroke();
 
-  // Origin point handle
+  // Origin handle
   ctx.fillStyle = state.activeTool === 'origin' ? '#d67b19' : '#0f7e9b';
   ctx.beginPath();
   ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
@@ -1061,22 +875,11 @@ function drawAxes() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Target reticle ring around origin when origin tool is active
-  if (state.activeTool === 'origin') {
-    ctx.strokeStyle = 'rgba(214, 123, 25, 0.65)';
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
   ctx.fillStyle = '#0f7e9b';
   ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('+x', 156, 4);
+  ctx.fillText('+x (m)', 160, 4);
   ctx.fillStyle = '#d67b19';
-  ctx.fillText('+y', -10, -156);
+  ctx.fillText('+y (m)', -16, -162);
 
   ctx.restore();
 }
@@ -1093,13 +896,12 @@ function drawScaleStick() {
   ctx.lineTo(e.x, e.y);
   ctx.stroke();
 
-  // Endcaps
   [s, e].forEach(p => {
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#d67b19';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 8.5, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
@@ -1123,28 +925,25 @@ function drawScaleStick() {
 
   ctx.fillStyle = '#0f7e9b';
   ctx.fillText(label, midX - textW / 2, midY - 8);
-
   ctx.restore();
 }
 
 function drawTrackedPoints() {
   ['A', 'B'].forEach(sKey => {
     const pts = state.series[sKey];
-    if (pts.length === 0) return;
-    const isA = sKey === 'A';
-    const color = isA ? '#d67b19' : '#0f7e9b';
+    if (!pts || pts.length === 0) return;
+    const color = sKey === 'A' ? '#d67b19' : '#0f7e9b';
 
     pts.forEach((p, idx) => {
       ctx.save();
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
 
       if (state.markerType === 'circle') {
         ctx.beginPath();
         ctx.arc(p.videoX, p.videoY, state.markerRadius, 0, Math.PI * 2);
         ctx.stroke();
-
         ctx.beginPath();
         ctx.arc(p.videoX, p.videoY, 2.5, 0, Math.PI * 2);
         ctx.fill();
@@ -1154,16 +953,16 @@ function drawTrackedPoints() {
         ctx.fill();
       }
 
-      ctx.font = '10px sans-serif';
+      ctx.font = 'bold 10px sans-serif';
       ctx.fillText(`${idx + 1}`, p.videoX + 10, p.videoY - 6);
 
-      // Velocity vectors
+      // Optional finite-difference velocity vectors (clearly diagnostic)
       if (state.showVectors && (p.vx !== 0 || p.vy !== 0)) {
-        const arrowScale = 12;
+        const arrowScale = 10;
         const vxPix = p.vx * arrowScale;
         const vyPix = -p.vy * arrowScale;
         ctx.strokeStyle = '#095f76';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(p.videoX, p.videoY);
         ctx.lineTo(p.videoX + vxPix, p.videoY + vyPix);
@@ -1174,72 +973,114 @@ function drawTrackedPoints() {
   });
 }
 
-function updateScaleReadout() {
-  const dx = state.scaleStick.end.x - state.scaleStick.start.x;
-  const dy = state.scaleStick.end.y - state.scaleStick.start.y;
-  const pixelDist = Math.hypot(dx, dy);
-  if (pixelDist > 5) {
-    state.pixelsPerMeter = pixelDist / state.scaleStick.lengthMeters;
-    if (scaleReadout) {
-      scaleReadout.textContent = `Current Scale: 1 px = ${(1 / state.pixelsPerMeter).toFixed(4)} m (${state.pixelsPerMeter.toFixed(1)} px/m)`;
-    }
-  }
-}
-
-// Table & CSV Export
+// ============================================================================
+// Table, Setup Readouts & Honest Turnaround / Coverage Check
+// ============================================================================
 function updateTable() {
-  if (!pointsTableBody) return;
+  const tbody = el('pointsTableBody');
+  if (!tbody) return;
   const pts = state.series[state.activeSeries];
-  if (pts.length === 0) {
-    pointsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--subtle); padding: 2rem;">No tracking points yet. Click on the video to record points.</td></tr>';
+  if (!pts || pts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--subtle); padding: 1.5rem;">No points tracked yet. Click on the ball in the video (or click "⚡ Load Sample Points" to practice).</td></tr>';
     return;
   }
 
   let html = '';
   pts.forEach((p, idx) => {
     html += `
-      <tr style="cursor: pointer;" onclick="jumpToPointFrame(${idx})">
+      <tr style="cursor: pointer;" onclick="window.jumpToPointFrame(${idx})">
         <td><strong>${idx + 1}</strong></td>
+        <td>${p.frame}</td>
         <td>${p.time.toFixed(3)}</td>
         <td>${p.x.toFixed(3)}</td>
         <td>${p.y.toFixed(3)}</td>
-        <td>${p.vx.toFixed(2)}</td>
-        <td>${p.vy.toFixed(2)}</td>
+        <td><button class="btn-delete-pt" onclick="event.stopPropagation(); window.deleteTrackedPoint(${idx});" title="Delete point ${idx + 1}" style="border:none; background:transparent; color:#dc2626; cursor:pointer; font-weight:700;">✕</button></td>
       </tr>
     `;
   });
-  pointsTableBody.innerHTML = html;
+  tbody.innerHTML = html;
 }
 
 window.jumpToPointFrame = function(idx) {
   const pts = state.series[state.activeSeries];
-  if (pts[idx]) {
+  if (pts && pts[idx]) {
     updateTimeAndFrame(pts[idx].rawTime);
+    if (!state.isSynthetic && video) {
+      video.currentTime = pts[idx].rawTime;
+    }
   }
 };
 
-function exportCSV() {
+window.deleteTrackedPoint = function(idx) {
   const pts = state.series[state.activeSeries];
+  if (!pts || !pts[idx]) return;
+  pts.splice(idx, 1);
+  if (pts.length > 0) {
+    state.timeOffset = pts[0].rawTime;
+  }
+  recalculateKinematics();
+  autoFitAndDeriveAllGraphs();
+  updateTable();
+  updateSetupAndCoverageReadouts();
+  updatePosChart();
+  drawOverlay();
+};
+
+function updateSetupAndCoverageReadouts() {
+  const cov = state.coverageStatus;
+  if (el('setupReadoutY0')) {
+    el('setupReadoutY0').textContent = cov.y0 !== null ? `${cov.y0.toFixed(3)} m` : 'Not tracked yet';
+  }
+  if (el('setupReadoutT')) {
+    el('setupReadoutT').textContent = `${cov.T.toFixed(3)} s`;
+  }
+  const pts = state.series[state.activeSeries] || [];
+  if (el('setupReadoutPts')) {
+    el('setupReadoutPts').textContent = `${pts.length} (Aim for 10–15)`;
+  }
+  if (el('setupReadoutYMax')) {
+    el('setupReadoutYMax').textContent = cov.peakPoint
+      ? `${cov.peakPoint.y.toFixed(3)} m (at t = ${cov.peakPoint.time.toFixed(3)} s)`
+      : '—';
+  }
+
+  const alertBox1 = el('trackingCoverageAlert');
+  const alertBox2 = el('step2CoverageWarning');
+
   if (pts.length === 0) {
-    alert('No data points to export yet!');
+    if (alertBox1) alertBox1.style.display = 'none';
+    if (alertBox2) alertBox2.style.display = 'none';
     return;
   }
 
-  let csv = 'Point,Time (s),x (m),y (m),vx (m/s),vy (m/s),ax (m/s2),ay (m/s2)\n';
-  pts.forEach((p, idx) => {
-    csv += `${idx + 1},${p.time.toFixed(4)},${p.x.toFixed(4)},${p.y.toFixed(4)},${p.vx.toFixed(4)},${p.vy.toFixed(4)},${p.ax.toFixed(4)},${p.ay.toFixed(4)}\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `projectile-kinematics-series-${state.activeSeries}.csv`;
-  a.click();
+  if (!cov.hasValidTurnaround) {
+    if (alertBox1) {
+      alertBox1.style.display = 'block';
+      alertBox1.style.background = '#fef2f2';
+      alertBox1.style.border = '1px solid #dc2626';
+      alertBox1.style.color = '#991b1b';
+      alertBox1.innerHTML = `<strong>⚠️ Incomplete Flight Coverage:</strong> ${escapeHtml(cov.message)}`;
+    }
+    if (alertBox2) {
+      alertBox2.style.display = 'block';
+      alertBox2.innerHTML = `<strong>⚠️ Incomplete Trajectory / Missing Turnaround:</strong> ${escapeHtml(cov.message)} The app will <em>not</em> fabricate an endpoint apex. Return to Step 1 and track airborne frames across both ascent and descent (including near the highest point).`;
+    }
+  } else {
+    if (alertBox1) {
+      alertBox1.style.display = 'block';
+      alertBox1.style.background = '#e6f8ea';
+      alertBox1.style.border = '1px solid #1a7f37';
+      alertBox1.style.color = '#14532d';
+      alertBox1.innerHTML = `<strong>✓ Ascent, Apex &amp; Descent Captured:</strong> ${pts.length} airborne points tracked over [0.000 s, ${cov.T.toFixed(3)} s]. Highest tracked position is ${cov.peakPoint.y.toFixed(3)} m at t = ${cov.peakPoint.time.toFixed(3)} s.`;
+    }
+    if (alertBox2) {
+      alertBox2.style.display = 'none';
+    }
+  }
 }
 
 // ============================================================================
-// Regressions & Kinematic Curve Fitting
+// Regressions & One-Fit-Per-Axis Derivation (No Redundant Fitting or Clamping)
 // ============================================================================
 function linearRegression(points) {
   const n = points.length;
@@ -1293,20 +1134,18 @@ function quadraticRegression(points) {
     sumT * (sumT * sumT4 - sumT2 * sumT3) +
     sumT2 * (sumT * sumT3 - sumT2 * sumT2)
   );
-  if (Math.abs(D) < 1e-9) return null;
+  if (Math.abs(D) < 1e-11) return null;
 
   const Da = (
     sumY * (sumT2 * sumT4 - sumT3 * sumT3) -
     sumTY * (sumT * sumT4 - sumT2 * sumT3) +
     sumT2Y * (sumT * sumT3 - sumT2 * sumT2)
   );
-
   const Db = (
     n * (sumTY * sumT4 - sumT2Y * sumT3) -
     sumT * (sumY * sumT4 - sumT2Y * sumT2) +
     sumT2 * (sumY * sumT3 - sumTY * sumT2)
   );
-
   const Dc = (
     n * (sumT2 * sumT2Y - sumTY * sumT3) -
     sumT * (sumT * sumT2Y - sumTY * sumT2) +
@@ -1329,1555 +1168,1137 @@ function quadraticRegression(points) {
   return { A, B, C, r2 };
 }
 
-// Charts Initialization
-function initCharts() {
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } }
-    },
-    scales: {
-      x: {
-        title: { display: true, text: 'Time t (s)', font: { size: 11, weight: 'bold' } },
-        grid: { color: '#eef3f6' }
-      },
-      y: {
-        grid: { color: '#eef3f6' }
-      }
-    }
-  };
-
-  const ctxPos = document.getElementById('posChart').getContext('2d');
-  posChart = new Chart(ctxPos, {
-    type: 'scatter',
-    data: {
-      datasets: [
-        { label: 'y (m)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4.5 },
-        { label: 'x (m)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4.5 },
-        { label: 'Model Fit', data: [], type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
-      ]
-    },
-    options: {
-      ...chartOptions,
-      scales: {
-        ...chartOptions.scales,
-        y: { title: { display: true, text: 'Position (m)', font: { size: 11, weight: 'bold' } }, grid: { color: '#eef3f6' } }
-      }
-    }
-  });
-
-  const ctxVel = document.getElementById('velChart').getContext('2d');
-  velChart = new Chart(ctxVel, {
-    type: 'scatter',
-    data: {
-      datasets: [
-        { label: 'vy (m/s)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 4.5 },
-        { label: 'vx (m/s)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 4.5 },
-        { label: 'Linear Fit', data: [], type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
-      ]
-    },
-    options: {
-      ...chartOptions,
-      scales: {
-        ...chartOptions.scales,
-        y: { title: { display: true, text: 'Velocity (m/s)', font: { size: 11, weight: 'bold' } }, grid: { color: '#eef3f6' } }
-      }
-    }
-  });
-}
-
-function updateCharts() {
-  const pts = state.series[state.activeSeries];
-  if (!posChart || !velChart) return;
-
-  const yData = pts.map(p => ({ x: p.time, y: p.y }));
-  const xData = pts.map(p => ({ x: p.time, y: p.x }));
-
-  if (state.motionFilter === 'vertical') {
-    posChart.data.datasets[0].data = yData;
-    posChart.data.datasets[0].hidden = false;
-    posChart.data.datasets[1].data = [];
-    posChart.data.datasets[1].hidden = true;
-  } else if (state.motionFilter === 'horizontal') {
-    posChart.data.datasets[0].data = [];
-    posChart.data.datasets[0].hidden = true;
-    posChart.data.datasets[1].data = xData;
-    posChart.data.datasets[1].hidden = false;
-  } else {
-    posChart.data.datasets[0].data = yData;
-    posChart.data.datasets[0].hidden = false;
-    posChart.data.datasets[1].data = xData;
-    posChart.data.datasets[1].hidden = false;
-  }
-  posChart.update();
-
-  const vyData = pts.map(p => ({ x: p.time, y: p.vy }));
-  const vxData = pts.map(p => ({ x: p.time, y: p.vx }));
-  if (state.motionFilter === 'vertical') {
-    velChart.data.datasets[0].data = vyData;
-    velChart.data.datasets[0].hidden = false;
-    velChart.data.datasets[1].data = [];
-    velChart.data.datasets[1].hidden = true;
-  } else if (state.motionFilter === 'horizontal') {
-    velChart.data.datasets[0].data = [];
-    velChart.data.datasets[0].hidden = true;
-    velChart.data.datasets[1].data = vxData;
-    velChart.data.datasets[1].hidden = false;
-  } else {
-    velChart.data.datasets[0].data = vyData;
-    velChart.data.datasets[0].hidden = false;
-    velChart.data.datasets[1].data = vxData;
-    velChart.data.datasets[1].hidden = false;
-  }
-  velChart.update();
-}
-
-// ============================================================================
-// Step 3: 6-Graph Kinematics Studio & Tangent Tool
-// ============================================================================
-// KaTeX Math Rendering Helper
-function renderKaTeX(element, latexStr, isDisplay = true) {
-  if (!element || !latexStr) {
-    if (element) element.innerHTML = '';
-    return;
-  }
-  let clean = latexStr.trim();
-  if (clean.startsWith('\\[') && clean.endsWith('\\]')) clean = clean.slice(2, -2).trim();
-  if (clean.startsWith('\\(') && clean.endsWith('\\)')) clean = clean.slice(2, -2).trim();
-
-  if (window.katex && typeof window.katex.render === 'function') {
-    try {
-      window.katex.render(clean, element, { displayMode: isDisplay, throwOnError: false });
-      return;
-    } catch (e) {
-      console.warn('KaTeX render error:', e);
-    }
-  }
-  element.textContent = latexStr;
-}
-
-function autoFitAllGraphs() {
-  const pts = state.series[state.activeSeries];
+function autoFitAndDeriveAllGraphs() {
+  const pts = state.series[state.activeSeries] || [];
   if (pts.length < 3) {
-    alert('Please track at least 3 points on the video before fitting models!');
+    state.fitResults = { xPos: null, yPos: null, xVel: null, yVel: null, xAcc: null, yAcc: null };
+    state.coverageStatus = {
+      hasEnoughPoints: false,
+      hasInteriorPeak: false,
+      isConcaveDown: false,
+      hasValidTurnaround: false,
+      tMin: 0,
+      tMax: pts.length > 0 ? pts[pts.length - 1].time : 0,
+      T: pts.length > 0 ? pts[pts.length - 1].time - pts[0].time : 0,
+      y0: pts.length > 0 ? pts[0].y : null,
+      x0: pts.length > 0 ? pts[0].x : null,
+      xFinal: pts.length > 0 ? pts[pts.length - 1].x : null,
+      yFinal: pts.length > 0 ? pts[pts.length - 1].y : null,
+      dxTrack: pts.length > 1 ? pts[pts.length - 1].x - pts[0].x : null,
+      dyTrack: pts.length > 1 ? pts[pts.length - 1].y - pts[0].y : null,
+      peakPoint: pts.length > 0 ? pts[0] : null,
+      tZero: null,
+      message: `Only ${pts.length} point(s) tracked. Track at least 10–15 airborne points across ascent, near the apex, and descent.`
+    };
     return;
   }
-
-  // 1. yPos: Quadratic Fit y = At^2 + Bt + C
-  const yPts = pts.map(p => ({ x: p.time, y: p.y }));
-  state.fitResults.yPos = quadraticRegression(yPts);
-
-  // 2. xPos: Linear Fit x = mt + b
-  const xPts = pts.map(p => ({ x: p.time, y: p.x }));
-  state.fitResults.xPos = linearRegression(xPts);
-
-  // 3. Fit line through student-recorded tangent points if at least 2 exist
-  if (state.tangentPoints && state.tangentPoints.length >= 2) {
-    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
-  } else {
-    state.fitResults.yVel = null;
-  }
-
-  // 4. xVel: The horizontal position curve x(t) = v0x*t + x0 has constant slope Δx/Δt = v0x
-  const v0x = state.fitResults.xPos ? state.fitResults.xPos.slope : (pts[pts.length - 1].x - pts[0].x) / (pts[pts.length - 1].time - pts[0].time);
-  state.fitResults.xVel = { slope: 0.0, intercept: v0x, r2: 1.0000 };
-
-  // 5. yAcc: Vertical acceleration is the slope of the vertical velocity graph (ay)
-  const ayVal = state.fitResults.yVel ? state.fitResults.yVel.slope : (2 * state.fitResults.yPos.A);
-  state.fitResults.yAcc = { mean: ayVal, ref: -9.80 };
-
-  // 6. xAcc: Horizontal acceleration is the slope of the horizontal velocity graph (ax = 0)
-  state.fitResults.xAcc = { mean: 0.0, ref: 0.00 };
-
-  renderStudioGraph(state.activeGraphTab);
-  updateStatus('Auto-fitted all 6 kinematic graphs successfully with equations!');
-}
-
-function renderStudioGraph(graphType) {
-  state.activeGraphTab = graphType;
-  graphNavBtns.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.graph === graphType);
-  });
-
-  if (graphType === 'grid-all') {
-    if (singleGraphContainer) singleGraphContainer.style.display = 'none';
-    if (tangentStudioBar) tangentStudioBar.style.display = 'none';
-    if (gridAllContainer) gridAllContainer.style.display = 'grid';
-    renderAllGridGraphs();
-    return;
-  }
-
-  if (singleGraphContainer) singleGraphContainer.style.display = 'flex';
-  if (gridAllContainer) gridAllContainer.style.display = 'none';
-
-  // Tangent tool visibility: shown for y-pos and y-vel
-  if (tangentStudioBar) {
-    tangentStudioBar.style.display = (graphType === 'y-pos' || graphType === 'y-vel') ? 'flex' : 'none';
-  }
-
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 2) return;
-
-  // Ensure fits exist
-  if (!state.fitResults.yPos) autoFitAllGraphs();
-
-  const ctxS = activeGraphCanvas.getContext('2d');
-  if (studioChart) studioChart.destroy();
-
-  let title = '';
-  let generalEq = '';
-  let particularEq = '';
-  let r2Val = 'N/A';
-  let chartData = { datasets: [] };
-  let yAxisLabel = '';
 
   const tMin = pts[0].time;
   const tMax = pts[pts.length - 1].time;
+  const T = Math.max(0, tMax - tMin);
 
-  let ySuggestedMin = 0;
-  let ySuggestedMax = 5;
+  // 1. Fit x(t) = m*t + c once
+  const xFit = linearRegression(pts.map(p => ({ x: p.time, y: p.x })));
+  // 2. Fit y(t) = A*t^2 + B*t + C once
+  const yFit = quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
 
-  if (graphType === 'y-pos') {
-    title = '1. Vertical Position vs. Time [y(t)]';
-    const fit = state.fitResults.yPos;
-    const y0 = fit ? fit.C : pts[0].y;
-    const v0y = fit ? fit.B : 0;
-    const ay = fit ? 2 * fit.A : -9.8;
-    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : '';
+  state.fitResults.xPos = xFit;
+  state.fitResults.yPos = yFit;
 
-    generalEq = '\\[y(t) = \\frac{1}{2}a_y t^2 + v_{0y}t + y_0\\]';
-    particularEq = `\\[y(t) = (${fit ? fit.A.toFixed(3) : '-4.900'}\\text{ m/s}^2)t^2 + (${v0y.toFixed(3)}\\text{ m/s})t + (${y0.toFixed(3)}\\text{ m})\\]`;
-    yAxisLabel = 'Vertical Position y (m)';
+  // Find highest tracked point and check whether it is strictly inside the tracked window
+  let peakIdx = 0;
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].y > pts[peakIdx].y) peakIdx = i;
+  }
+  const hasInteriorPeak = peakIdx > 0 && peakIdx < pts.length - 1;
+  const isConcaveDown = Boolean(yFit && yFit.A < -0.05);
 
-    ySuggestedMin = 0;
-    ySuggestedMax = Math.max(1, ...pts.map(p => p.y)) * 1.25;
+  // Compute raw fitted zero crossing t_zero = -B / (2A) WITHOUT clamping to endpoints
+  let rawTZero = null;
+  let hasValidTurnaround = false;
+  let covMessage = '';
 
-    // 1. Quadratic fit line points
-    const fitLine = [];
-    const steps = 60;
-    for (let i = 0; i <= steps; i++) {
-      const t = tMin + (tMax - tMin) * (i / steps);
-      const yFit = fit ? (fit.A * t * t + fit.B * t + fit.C) : (y0 + v0y * t + 0.5 * ay * t * t);
-      fitLine.push({ x: t, y: yFit });
+  if (!isConcaveDown) {
+    covMessage = 'The vertical position fit y = At² + Bt + C does not open downward (A ≥ 0). Verify that +y points upward and track an airborne projectile across ascent and descent.';
+  } else {
+    rawTZero = -yFit.B / (2 * yFit.A);
+    const isZeroInsideWindow = rawTZero > tMin + 1e-4 && rawTZero < tMax - 1e-4;
+    if (!hasInteriorPeak || !isZeroInsideWindow) {
+      covMessage = `Tracked points cover [${tMin.toFixed(3)} s, ${tMax.toFixed(3)} s], but do not include a complete turnaround (apex) inside the tracked interval. Please track frames before AND after the highest point.`;
+      hasValidTurnaround = false;
+      rawTZero = null; // Never fabricate or clamp an out-of-window apex to an endpoint
+    } else {
+      hasValidTurnaround = true;
+      covMessage = `Valid turnaround inside [${tMin.toFixed(3)} s, ${tMax.toFixed(3)} s]: fitted vᵧ = 0 at t_zero = ${rawTZero.toFixed(3)} s.`;
     }
-
-    // 2. Active Tangent Line at state.activeTangentTime & Two Distinct Points P1(t1, y1), P2(t2, y2)
-    const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime || tMin));
-    const y0_tan = fit ? (fit.A * t0 * t0 + fit.B * t0 + fit.C) : (y0 + v0y * t0 + 0.5 * ay * t0 * t0);
-    const slope_tan = fit ? (2 * fit.A * t0 + fit.B) : (v0y + ay * t0);
-    const span = Math.max(0.1, (tMax - tMin) * 0.22);
-    const tStart = Math.max(0, t0 - span);
-    const tEnd = t0 + span;
-    const yStart = y0_tan + slope_tan * (tStart - t0);
-    const yEnd = y0_tan + slope_tan * (tEnd - t0);
-    const tangentLineData = [
-      { x: tStart, y: yStart },
-      { x: tEnd, y: yEnd }
-    ];
-
-    // Two distinct reference points P1(t1, y1) and P2(t2, y2) on the active tangent line
-    const p1Span = span * 0.65;
-    const t1_ref = Math.max(0, t0 - p1Span);
-    const t2_ref = t0 + p1Span;
-    const y1_ref = y0_tan + slope_tan * (t1_ref - t0);
-    const y2_ref = y0_tan + slope_tan * (t2_ref - t0);
-    const twoPointsData = [
-      { x: t1_ref, y: y1_ref },
-      { x: t2_ref, y: y2_ref }
-    ];
-
-    // Update Two-Point Readout in Tangent Bar
-    if (tangentTimeDisplay) tangentTimeDisplay.textContent = `${t0.toFixed(3)} s`;
-    if (tangentYDisplay) tangentYDisplay.textContent = `${y0_tan.toFixed(3)} m`;
-    if (tangentReadoutCoordsHint) {
-      tangentReadoutCoordsHint.textContent = `P₁(${t1_ref.toFixed(3)} s, ${y1_ref.toFixed(3)} m)  •  P₂(${t2_ref.toFixed(3)} s, ${y2_ref.toFixed(3)} m)`;
-    }
-    if (tangentSlopeDisplay) {
-      if ((state.manualTangentCount || 0) >= 3) {
-        tangentSlopeDisplay.textContent = `${slope_tan.toFixed(3)} m/s (Unlocked)`;
-        tangentSlopeDisplay.style.color = '#1a7f37';
-      } else {
-        tangentSlopeDisplay.textContent = `Compute (y₂−y₁)/(t₂−t₁) below (${state.manualTangentCount || 0}/3 verified)`;
-        tangentSlopeDisplay.style.color = '#d67b19';
-      }
-    }
-
-    // 3. Recorded tangent touchpoints along the trajectory
-    const touchpoints = (state.tangentPoints || []).map(p => ({
-      x: p.time,
-      y: fit ? (fit.A * p.time * p.time + fit.B * p.time + fit.C) : (y0 + v0y * p.time + 0.5 * ay * p.time * p.time)
-    }));
-
-    const tangentLegendLabel = ((state.manualTangentCount || 0) >= 3)
-      ? `Active Tangent (Slope Δy/Δt = ${slope_tan.toFixed(2)} m/s)`
-      : `Active Tangent Line (Use P₁ & P₂ to compute Δy/Δt)`;
-
-    chartData.datasets = [
-      { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 },
-      { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 2.5, pointRadius: 0, fill: false },
-      { label: tangentLegendLabel, data: tangentLineData, type: 'line', borderColor: '#0f7e9b', borderWidth: 3, borderDash: [6, 4], pointRadius: 0, fill: false },
-      { label: 'Tangent Line Points P₁ & P₂', data: twoPointsData, backgroundColor: '#ffffff', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 6, pointStyle: 'circle' },
-      { label: 'Active Touchpoint (t, y)', data: [{ x: t0, y: y0_tan }], backgroundColor: '#0f7e9b', borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 10 },
-      { label: 'Sampled Tangents (10 Points)', data: touchpoints, backgroundColor: '#0284c7', borderColor: '#0369a1', pointRadius: 6, pointStyle: 'rectRot' }
-    ];
-  } else if (graphType === 'x-pos') {
-    title = '2. Horizontal Position vs. Time [x(t)]';
-    const fit = state.fitResults.xPos;
-    const v0x = fit ? fit.slope : 0;
-    const x0 = fit ? fit.intercept : 0;
-    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : '';
-
-    generalEq = '\\[x(t) = v_{0x}t + x_0\\]';
-    particularEq = `\\[x(t) = (${v0x.toFixed(3)}\\text{ m/s})t + (${x0.toFixed(3)}\\text{ m})\\]`;
-    yAxisLabel = 'Horizontal Position x (m)';
-
-    ySuggestedMin = 0;
-    ySuggestedMax = Math.max(1, ...pts.map(p => p.x)) * 1.2;
-
-    const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
-    ];
-
-    chartData.datasets = [
-      { label: 'Measured x (m)', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 5 },
-      { label: 'Linear Fit (v₀ₓ)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 2.5, pointRadius: 0, fill: false }
-    ];
-  } else if (graphType === 'y-vel') {
-    title = '3. Vertical Velocity vs. Time [vy(t)] (From Sampled Tangent Slopes)';
-
-    const tangPts = state.tangentPoints || [];
-    const linearData = tangPts.map(p => ({ x: p.time, y: p.vy }));
-    const fit = linearData.length >= 2 ? linearRegression(linearData) : null;
-    state.fitResults.yVel = fit;
-
-    const ay = fit ? fit.slope : (state.fitResults.yPos ? 2 * state.fitResults.yPos.A : -9.8);
-    const v0y = fit ? fit.intercept : (state.fitResults.yPos ? state.fitResults.yPos.B : 0);
-    r2Val = fit ? `R² = ${fit.r2.toFixed(4)}` : (linearData.length < 2 ? '(Record at least 2 tangent slopes)' : '');
-
-    generalEq = '\\[v_y(t) = a_y t + v_{0y}\\]';
-    particularEq = fit
-      ? `\\[v_y(t) = (${ay.toFixed(3)}\\text{ m/s}^2)t + (${v0y.toFixed(3)}\\text{ m/s})\\]`
-      : `\\[\\text{Sample at least 2 tangent points on Graph 1 [y(t)] to construct } v_y(t)\\]`;
-    yAxisLabel = 'Vertical Velocity vy (m/s)';
-
-    const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
-    ySuggestedMin = -maxV;
-    ySuggestedMax = maxV;
-
-    const fitLine = fit ? [
-      { x: tMin, y: fit.slope * tMin + fit.intercept },
-      { x: tMax, y: fit.slope * tMax + fit.intercept }
-    ] : [
-      { x: tMin, y: ay * tMin + v0y },
-      { x: tMax, y: ay * tMax + v0y }
-    ];
-
-    const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
-    const areaUpVal = 0.5 * Math.max(0, v0y + ay * tMin) * Math.max(0, tApex - tMin);
-    const vFinal = ay * tMax + v0y;
-    const areaDownVal = 0.5 * Math.min(0, vFinal) * Math.max(0, tMax - tApex);
-
-    if (hintApexTimeRange) {
-      hintApexTimeRange.textContent = `Flight window: t = ${tMin.toFixed(3)} s to t = ${tMax.toFixed(3)} s  •  Zero crossing (vᵧ = 0): t_apex ≈ ${tApex.toFixed(3)} s`;
-    }
-
-    chartData.datasets = [
-      { label: `Sampled Tangents (${tangPts.length} / 10 Points)`, data: linearData, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' }
-    ];
-    if (fit || state.fitResults.yPos) {
-      chartData.datasets.push({ label: `Linear Fit (Slope aᵧ = ${ay.toFixed(2)} m/s²)`, data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false });
-    }
-    if (state.showSignedArea) {
-      const areaUpLine = [
-        { x: tMin, y: ay * tMin + v0y },
-        { x: tApex, y: 0 }
-      ];
-      const areaDownLine = [
-        { x: tApex, y: 0 },
-        { x: tMax, y: ay * tMax + v0y }
-      ];
-      chartData.datasets.push(
-        {
-          label: `Area₁ (+Δy_up = +${areaUpVal.toFixed(3)} m, Ascent)`,
-          data: areaUpLine,
-          type: 'line',
-          borderColor: 'rgba(15, 126, 155, 0.7)',
-          backgroundColor: 'rgba(15, 126, 155, 0.22)',
-          borderWidth: 1.5,
-          pointRadius: 4,
-          fill: 'origin'
-        },
-        {
-          label: `Area₂ (Δy_down = ${areaDownVal.toFixed(3)} m, Descent)`,
-          data: areaDownLine,
-          type: 'line',
-          borderColor: 'rgba(214, 123, 25, 0.7)',
-          backgroundColor: 'rgba(214, 123, 25, 0.22)',
-          borderWidth: 1.5,
-          pointRadius: 4,
-          fill: 'origin'
-        }
-      );
-    }
-  } else if (graphType === 'x-vel') {
-    title = '4. Horizontal Velocity vs. Time [vx(t)]';
-    const fit = state.fitResults.xVel;
-    const v0x = fit ? fit.intercept : (state.fitResults.xPos ? state.fitResults.xPos.slope : 0);
-    r2Val = 'R² = 1.0000';
-
-    generalEq = '\\[v_x(t) = v_{0x} = \\text{constant}\\]';
-    particularEq = `\\[v_x(t) = ${v0x.toFixed(3)}\\text{ m/s} \\quad (\\text{Slope } a_x = 0.000\\text{ m/s}^2)\\]`;
-    yAxisLabel = 'Horizontal Velocity vx (m/s)';
-
-    ySuggestedMin = 0;
-    ySuggestedMax = Math.max(3.5, v0x * 1.4);
-
-    // 10 Sampled points representing tangent slope Δx/Δt along the linear position fit
-    const vxSamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      vxSamples.push({ x: t, y: v0x });
-    }
-
-    const fitLine = [
-      { x: tMin, y: v0x },
-      { x: tMax, y: v0x }
-    ];
-    const dxRectArea = v0x * (tMax - tMin);
-
-    chartData.datasets = [
-      { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'rectRot' },
-      {
-        label: state.showSignedArea
-          ? `Constant Fit (v₀ₓ = ${v0x.toFixed(3)} m/s • Shaded Area Δx = ${dxRectArea.toFixed(3)} m)`
-          : `Constant Velocity Fit (v₀ₓ = ${v0x.toFixed(3)} m/s, Slope = 0)`,
-        data: fitLine,
-        type: 'line',
-        borderColor: '#0f7e9b',
-        backgroundColor: state.showSignedArea ? 'rgba(15, 126, 155, 0.18)' : 'transparent',
-        borderWidth: 2.5,
-        pointRadius: 0,
-        fill: state.showSignedArea ? 'origin' : false
-      }
-    ];
-  } else if (graphType === 'y-acc') {
-    title = '5. Vertical Acceleration vs. Time [ay(t)]';
-    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : (state.fitResults.yVel ? state.fitResults.yVel.slope : -9.8);
-    generalEq = '\\[a_y(t) = \\frac{\\Delta v_y}{\\Delta t} = a_y = \\text{constant}\\]';
-    particularEq = `\\[a_y(t) = ${meanAy.toFixed(3)}\\text{ m/s}^2 \\quad (\\text{Ref } g = -9.80\\text{ m/s}^2)\\]`;
-    yAxisLabel = 'Vertical Acc ay (m/s²)';
-
-    ySuggestedMin = -14;
-    ySuggestedMax = 2;
-
-    const aySamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      aySamples.push({ x: t, y: meanAy });
-    }
-
-    chartData.datasets = [
-      { label: 'Slope of Velocity Graph (Δvᵧ/Δt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 6, pointStyle: 'circle' },
-      { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2.5, pointRadius: 0, fill: false },
-      { label: 'Standard Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false }
-    ];
-  } else if (graphType === 'x-acc') {
-    title = '6. Horizontal Acceleration vs. Time [ax(t)]';
-    const meanAx = 0.0;
-    generalEq = '\\[a_x(t) = \\frac{\\Delta v_x}{\\Delta t} = 0\\text{ m/s}^2\\]';
-    particularEq = `\\[a_x(t) = 0.000\\text{ m/s}^2 \\quad (\\text{Ref } a_x = 0.00\\text{ m/s}^2)\\]`;
-    yAxisLabel = 'Horizontal Acc ax (m/s²)';
-
-    ySuggestedMin = -2;
-    ySuggestedMax = 2;
-
-    const axSamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      axSamples.push({ x: t, y: 0.0 });
-    }
-
-    chartData.datasets = [
-      { label: 'Slope of Velocity Graph (Δvₓ/Δt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 6, pointStyle: 'circle' },
-      { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2.5, pointRadius: 0, fill: false }
-    ];
   }
 
-  if (activeGraphEqTitle) activeGraphEqTitle.textContent = title;
-  if (activeGraphR2) activeGraphR2.textContent = r2Val;
-  renderKaTeX(activeGeneralEq, generalEq, true);
-  renderKaTeX(activeParticularEq, particularEq, true);
+  state.coverageStatus = {
+    hasEnoughPoints: pts.length >= 8,
+    hasInteriorPeak,
+    isConcaveDown,
+    hasValidTurnaround,
+    tMin,
+    tMax,
+    T,
+    y0: pts[0].y,
+    x0: pts[0].x,
+    xFinal: pts[pts.length - 1].x,
+    yFinal: pts[pts.length - 1].y,
+    dxTrack: pts[pts.length - 1].x - pts[0].x,
+    dyTrack: pts[pts.length - 1].y - pts[0].y,
+    peakPoint: pts[peakIdx],
+    tZero: rawTZero,
+    message: covMessage
+  };
 
-  studioChart = new Chart(ctxS, {
+  // Derive vx, ax, vy, ay directly from the position fits
+  state.fitResults.xVel = xFit ? { vx: xFit.slope } : null;
+  state.fitResults.xAcc = xFit ? { ax: 0.0 } : null;
+  state.fitResults.yVel = yFit ? { slope: 2 * yFit.A, intercept: yFit.B, tZero: rawTZero } : null;
+  state.fitResults.yAcc = yFit ? { ay: 2 * yFit.A, ref: FIXED_AY_REF } : null;
+}
+
+// ============================================================================
+// Step 2A: Position Preview Chart & Mandatory Prediction Gate Before Reveal
+// ============================================================================
+function initPosChart() {
+  const canvas = el('posChart');
+  if (!canvas) return;
+  posChart = new Chart(canvas.getContext('2d'), {
     type: 'scatter',
-    data: chartData,
+    data: {
+      datasets: [
+        { label: 'Tracked x(t) (m)', data: [], backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 5 },
+        { label: 'Tracked y(t) (m)', data: [], backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 5 }
+      ]
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
       plugins: {
-        legend: { position: 'top', labels: { font: { size: 11, weight: 'bold' } } }
+        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
       },
       scales: {
         x: {
-          title: { display: true, text: 'Time t (s)', font: { size: 12, weight: 'bold' } },
+          title: { display: true, text: 'Time t (s)', font: { size: 11, weight: 'bold' } },
           grid: {
-            color: (ctx) => (ctx.tick && ctx.tick.value === 0) ? '#0f7e9b' : '#eef3f6',
-            lineWidth: (ctx) => (ctx.tick && ctx.tick.value === 0) ? 2.5 : 1
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2 : 1
           }
         },
         y: {
-          title: { display: true, text: yAxisLabel, font: { size: 12, weight: 'bold' } },
-          suggestedMin: ySuggestedMin,
-          suggestedMax: ySuggestedMax,
+          title: { display: true, text: 'Position (m)', font: { size: 11, weight: 'bold' } },
           grid: {
-            color: (ctx) => (ctx.tick && ctx.tick.value === 0) ? '#0f7e9b' : '#eef3f6',
-            lineWidth: (ctx) => (ctx.tick && ctx.tick.value === 0) ? 3 : 1
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2.5 : 1
           }
         }
       }
     }
   });
+}
 
-  if (window.renderMathInElement) {
-    renderMathInElement(document.getElementById('stepView3'));
+function updatePosChart() {
+  if (!posChart) return;
+  const pts = state.series[state.activeSeries] || [];
+  const xData = pts.map(p => ({ x: p.time, y: p.x }));
+  const yData = pts.map(p => ({ x: p.time, y: p.y }));
+
+  if (state.motionFilter === 'horizontal') {
+    posChart.data.datasets[0].data = xData;
+    posChart.data.datasets[0].hidden = false;
+    posChart.data.datasets[1].data = [];
+    posChart.data.datasets[1].hidden = true;
+  } else if (state.motionFilter === 'vertical') {
+    posChart.data.datasets[0].data = [];
+    posChart.data.datasets[0].hidden = true;
+    posChart.data.datasets[1].data = yData;
+    posChart.data.datasets[1].hidden = false;
+  } else {
+    posChart.data.datasets[0].data = xData;
+    posChart.data.datasets[0].hidden = false;
+    posChart.data.datasets[1].data = yData;
+    posChart.data.datasets[1].hidden = false;
+  }
+  posChart.update();
+}
+
+function saveInitialPredictionAndReveal() {
+  if (state.firstAttemptPrediction.isSaved) {
+    // Already locked; just ensure the 6-graph section is visible
+    if (el('sixGraphRevealSection')) el('sixGraphRevealSection').style.display = 'block';
+    renderSixGraphPanel();
+    return;
+  }
+
+  const vxShape = el('predShapeVx') ? el('predShapeVx').value.trim() : '';
+  const vyShape = el('predShapeVy') ? el('predShapeVy').value.trim() : '';
+  const axShape = el('predShapeAx') ? el('predShapeAx').value.trim() : '';
+  const ayShape = el('predShapeAy') ? el('predShapeAy').value.trim() : '';
+  const initialNotes = el('predInitialNotes') ? el('predInitialNotes').value.trim() : '';
+
+  if (!vxShape || !vyShape || !axShape || !ayShape) {
+    alert('Please select your predicted shape for all four graphs (vx, vy, ax, and ay) before revealing the six-graph panel.');
+    return;
+  }
+  if (initialNotes.length < 10) {
+    alert('Please write a brief note describing your predicted velocity and acceleration graphs (at least one sentence) before revealing the generated plots.');
+    return;
+  }
+
+  state.firstAttemptPrediction = {
+    isSaved: true,
+    isLegacyMissing: false,
+    savedAt: new Date().toISOString(),
+    vxShape,
+    vyShape,
+    axShape,
+    ayShape,
+    initialNotes
+  };
+
+  updatePredictionGateUI();
+  renderSixGraphPanel();
+  if (el('sixGraphRevealSection')) {
+    el('sixGraphRevealSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
-function renderAllGridGraphs() {
-  const configs = [
-    { id: 'canvasGridYPos', type: 'y-pos' },
+function updatePredictionGateUI() {
+  const pred = state.firstAttemptPrediction;
+  const badge = el('badgePredictionGate');
+  const btn = el('btnSavePredictionAndReveal');
+  const revealSec = el('sixGraphRevealSection');
+  const summaryBox = el('savedPredictionSummaryBox');
+
+  const controls = ['predShapeVx', 'predShapeVy', 'predShapeAx', 'predShapeAy', 'predInitialNotes'];
+
+  if (pred.isSaved) {
+    if (!pred.isLegacyMissing) {
+      if (el('predShapeVx')) el('predShapeVx').value = pred.vxShape;
+      if (el('predShapeVy')) el('predShapeVy').value = pred.vyShape;
+      if (el('predShapeAx')) el('predShapeAx').value = pred.axShape;
+      if (el('predShapeAy')) el('predShapeAy').value = pred.ayShape;
+      if (el('predInitialNotes')) el('predInitialNotes').value = pred.initialNotes;
+    }
+
+    // Lock first-attempt inputs so later revisions never erase or overwrite them
+    controls.forEach(id => {
+      const node = el(id);
+      if (node) node.disabled = true;
+    });
+
+    if (badge) {
+      badge.textContent = pred.isLegacyMissing ? 'Legacy v1.0 Session (Revealed)' : '✓ First Prediction Saved & Locked';
+      badge.className = 'pct-diff-badge good';
+    }
+    if (btn) {
+      btn.textContent = '✓ Initial Prediction Locked (Six-Graph Panel Revealed Below)';
+      btn.disabled = true;
+    }
+    if (revealSec) {
+      revealSec.style.display = 'block';
+    }
+    if (summaryBox) {
+      if (pred.isLegacyMissing) {
+        summaryBox.innerHTML = '<em>First prediction was not recorded in this legacy v1.0 session file.</em>';
+      } else {
+        summaryBox.innerHTML = `
+          <div><strong>• Predicted vₓ(t):</strong> ${escapeHtml(pred.vxShape)}</div>
+          <div><strong>• Predicted vᵧ(t):</strong> ${escapeHtml(pred.vyShape)}</div>
+          <div><strong>• Predicted aₓ(t):</strong> ${escapeHtml(pred.axShape)}</div>
+          <div><strong>• Predicted aᵧ(t):</strong> ${escapeHtml(pred.ayShape)}</div>
+          <div style="margin-top:0.3rem;"><strong>• Initial Notes:</strong> ${escapeHtml(pred.initialNotes)}</div>
+        `;
+      }
+    }
+  } else {
+    controls.forEach(id => {
+      const node = el(id);
+      if (node) node.disabled = false;
+    });
+    if (badge) {
+      badge.textContent = 'Prediction Required Before Reveal';
+      badge.className = 'pct-diff-badge';
+    }
+    if (btn) {
+      btn.textContent = '💾 Save Initial Prediction & Reveal Six-Graph Panel';
+      btn.disabled = false;
+    }
+    if (revealSec) {
+      revealSec.style.display = 'none';
+    }
+    if (summaryBox) {
+      summaryBox.innerHTML = '<em>First prediction not saved yet.</em>';
+    }
+  }
+}
+
+// ============================================================================
+// Step 2B: Two-Column Six-Graph Panel (Horizontal Left | Vertical Right)
+// ============================================================================
+function getSixGraphEquationsText() {
+  const xFit = state.fitResults.xPos;
+  const yFit = state.fitResults.yPos;
+  if (!xFit || !yFit) {
+    return {
+      xPos: 'Track ≥ 3 points to fit x(t)',
+      yPos: 'Track ≥ 3 points to fit y(t)',
+      xVel: '—',
+      yVel: '—',
+      xAcc: 'aₓ(t) = 0.000 m/s²',
+      yAcc: '—'
+    };
+  }
+  const m = xFit.slope;
+  const c = xFit.intercept;
+  const A = yFit.A;
+  const B = yFit.B;
+  const C = yFit.C;
+  const ay = 2 * A;
+
+  const signStr = (val) => (val >= 0 ? `+ ${val.toFixed(3)}` : `- ${Math.abs(val).toFixed(3)}`);
+
+  return {
+    xPos: `x(t) = (${m.toFixed(3)} m/s)t ${signStr(c)} m   [R² = ${xFit.r2.toFixed(4)}]`,
+    yPos: `y(t) = (${A.toFixed(3)} m/s²)t² ${signStr(B)} m/s·t ${signStr(C)} m   [R² = ${yFit.r2.toFixed(4)}]`,
+    xVel: `vₓ(t) = ${m.toFixed(3)} m/s   (Derived constant slope from linear x fit)`,
+    yVel: `vᵧ(t) = (${ay.toFixed(3)} m/s²)t ${signStr(B)} m/s   (Derived from quadratic y fit)`,
+    xAcc: `aₓ(t) = 0.000 m/s²   (Zero in chosen linear x model)`,
+    yAcc: `aᵧ(t) = ${ay.toFixed(3)} m/s²   (Derived 2A; Ref aᵧ,ref = -9.8 m/s²)`
+  };
+}
+
+function buildChartConfigForGraph(type, isExportImage = false) {
+  const pts = state.series[state.activeSeries] || [];
+  const cov = state.coverageStatus;
+  const xFit = state.fitResults.xPos;
+  const yFit = state.fitResults.yPos;
+
+  const tMin = cov.tMin || 0;
+  const tMax = cov.tMax > tMin ? cov.tMax : 1.0;
+
+  const m = xFit ? xFit.slope : 0;
+  const c = xFit ? xFit.intercept : 0;
+  const A = yFit ? yFit.A : -4.9;
+  const B = yFit ? yFit.B : 0;
+  const C = yFit ? yFit.C : 0;
+  const ay = 2 * A;
+
+  let datasets = [];
+  let yAxisTitle = '';
+  let sugMin = 0;
+  let sugMax = 2;
+
+  if (type === 'x-pos') {
+    yAxisTitle = 'Horizontal Position x (m)';
+    const fitLine = [
+      { x: tMin, y: m * tMin + c },
+      { x: tMax, y: m * tMax + c }
+    ];
+    datasets = [
+      {
+        label: 'Tracked x (m)',
+        data: pts.map(p => ({ x: p.time, y: p.x })),
+        backgroundColor: '#0f7e9b',
+        borderColor: '#0f7e9b',
+        pointRadius: isExportImage ? 5 : 4
+      },
+      {
+        label: 'Linear Fit x = mt + c',
+        data: fitLine,
+        type: 'line',
+        borderColor: '#095f76',
+        borderWidth: isExportImage ? 3 : 2.2,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+    const allX = pts.map(p => p.x);
+    sugMin = Math.min(0, ...allX);
+    sugMax = Math.max(1.0, ...allX) * 1.18;
+  } else if (type === 'y-pos') {
+    yAxisTitle = 'Vertical Position y (m)';
+    const fitLine = [];
+    const steps = 45;
+    for (let i = 0; i <= steps; i++) {
+      const t = tMin + (tMax - tMin) * (i / steps);
+      fitLine.push({ x: t, y: A * t * t + B * t + C });
+    }
+    datasets = [
+      {
+        label: 'Tracked y (m)',
+        data: pts.map(p => ({ x: p.time, y: p.y })),
+        backgroundColor: '#d67b19',
+        borderColor: '#d67b19',
+        pointRadius: isExportImage ? 5 : 4
+      },
+      {
+        label: 'Quadratic Fit y = At² + Bt + C',
+        data: fitLine,
+        type: 'line',
+        borderColor: '#b06210',
+        borderWidth: isExportImage ? 3 : 2.2,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+
+    // Optional tangent line if student moved the optional tangent slider
+    if (!isExportImage && state.activeTangentTime !== null && yFit) {
+      const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime));
+      const y0Tan = A * t0 * t0 + B * t0 + C;
+      const slopeTan = 2 * A * t0 + B;
+      const span = Math.max(0.08, (tMax - tMin) * 0.2);
+      const t1 = Math.max(tMin, t0 - span);
+      const t2 = Math.min(tMax, t0 + span);
+      datasets.push({
+        label: `Optional Tangent (Slope = ${slopeTan.toFixed(2)} m/s)`,
+        data: [
+          { x: t1, y: y0Tan + slopeTan * (t1 - t0) },
+          { x: t2, y: y0Tan + slopeTan * (t2 - t0) }
+        ],
+        type: 'line',
+        borderColor: '#0f7e9b',
+        borderDash: [5, 4],
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: false
+      });
+    }
+
+    const allY = pts.map(p => p.y);
+    sugMin = Math.min(0, ...allY);
+    sugMax = Math.max(1.0, ...allY) * 1.22;
+  } else if (type === 'x-vel') {
+    yAxisTitle = 'Horizontal Velocity vₓ (m/s)';
+    datasets = [
+      {
+        label: `Derived vₓ = ${m.toFixed(3)} m/s`,
+        data: [{ x: tMin, y: m }, { x: tMax, y: m }],
+        type: 'line',
+        borderColor: '#0f7e9b',
+        borderWidth: isExportImage ? 3 : 2.5,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+    sugMin = Math.min(0, m * 1.2);
+    sugMax = Math.max(2.0, m * 1.35);
+  } else if (type === 'y-vel') {
+    yAxisTitle = 'Vertical Velocity vᵧ (m/s)';
+    const vStart = ay * tMin + B;
+    const vEnd = ay * tMax + B;
+    datasets = [
+      {
+        label: 'Derived vᵧ = 2At + B',
+        data: [{ x: tMin, y: vStart }, { x: tMax, y: vEnd }],
+        type: 'line',
+        borderColor: '#d67b19',
+        borderWidth: isExportImage ? 3 : 2.5,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+
+    // Shade signed ascent and descent areas ONLY if a valid turnaround exists inside (tMin, tMax)
+    if (state.showSignedArea && cov.hasValidTurnaround && cov.tZero !== null) {
+      const tz = cov.tZero;
+      const areaUp = 0.5 * vStart * (tz - tMin);
+      const areaDown = 0.5 * vEnd * (tMax - tz);
+      datasets.push(
+        {
+          label: `+Area_up (+${areaUp.toFixed(3)} m)`,
+          data: [{ x: tMin, y: vStart }, { x: tz, y: 0 }],
+          type: 'line',
+          borderColor: 'rgba(15, 126, 155, 0.7)',
+          backgroundColor: 'rgba(15, 126, 155, 0.22)',
+          borderWidth: 1.5,
+          pointRadius: 3,
+          fill: 'origin'
+        },
+        {
+          label: `Area_down (${areaDown.toFixed(3)} m)`,
+          data: [{ x: tz, y: 0 }, { x: tMax, y: vEnd }],
+          type: 'line',
+          borderColor: 'rgba(214, 123, 25, 0.7)',
+          backgroundColor: 'rgba(214, 123, 25, 0.22)',
+          borderWidth: 1.5,
+          pointRadius: 3,
+          fill: 'origin'
+        }
+      );
+    }
+
+    const maxAbsV = Math.max(4, Math.abs(vStart), Math.abs(vEnd)) * 1.25;
+    sugMin = -maxAbsV;
+    sugMax = maxAbsV;
+  } else if (type === 'x-acc') {
+    yAxisTitle = 'Horizontal Acc. aₓ (m/s²)';
+    datasets = [
+      {
+        label: 'Derived aₓ = 0.000 m/s² (Linear x Model)',
+        data: [{ x: tMin, y: 0 }, { x: tMax, y: 0 }],
+        type: 'line',
+        borderColor: '#0f7e9b',
+        borderWidth: isExportImage ? 3 : 2.5,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+    sugMin = -2;
+    sugMax = 2;
+  } else if (type === 'y-acc') {
+    yAxisTitle = 'Vertical Acc. aᵧ (m/s²)';
+    datasets = [
+      {
+        label: `Derived aᵧ = 2A (${ay.toFixed(3)} m/s²)`,
+        data: [{ x: tMin, y: ay }, { x: tMax, y: ay }],
+        type: 'line',
+        borderColor: '#d67b19',
+        borderWidth: isExportImage ? 3 : 2.5,
+        pointRadius: 0,
+        fill: false
+      },
+      {
+        label: 'Fixed Reference aᵧ,ref = -9.8 m/s²',
+        data: [{ x: tMin, y: FIXED_AY_REF }, { x: tMax, y: FIXED_AY_REF }],
+        type: 'line',
+        borderColor: '#4b6570',
+        borderDash: [6, 4],
+        borderWidth: 1.8,
+        pointRadius: 0,
+        fill: false
+      }
+    ];
+    sugMin = Math.min(-13, ay * 1.25);
+    sugMax = Math.max(2, ay + 2);
+  }
+
+  const fontSize = isExportImage ? 12 : 10;
+
+  return {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: !isExportImage,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { boxWidth: 12, font: { size: fontSize, weight: 'bold' } }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: tMin,
+          max: tMax,
+          title: { display: true, text: 'Time t (s)', font: { size: fontSize, weight: 'bold' } },
+          ticks: { font: { size: fontSize - 1 } },
+          grid: {
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2 : 1
+          }
+        },
+        y: {
+          title: { display: true, text: yAxisTitle, font: { size: fontSize, weight: 'bold' } },
+          suggestedMin: sugMin,
+          suggestedMax: sugMax,
+          ticks: { font: { size: fontSize - 1 } },
+          grid: {
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2.5 : 1
+          }
+        }
+      }
+    }
+  };
+}
+
+function renderSixGraphPanel() {
+  autoFitAndDeriveAllGraphs();
+  const eqs = getSixGraphEquationsText();
+  const cov = state.coverageStatus;
+
+  if (el('panelTimeIntervalBadge')) {
+    el('panelTimeIntervalBadge').textContent = `Aligned Interval: [${cov.tMin.toFixed(3)} s, ${cov.tMax.toFixed(3)} s] (T = ${cov.T.toFixed(3)} s)`;
+  }
+
+  // Update Equation Table & Card Footers
+  if (el('eqTableXPos')) el('eqTableXPos').textContent = eqs.xPos;
+  if (el('eqTableYPos')) el('eqTableYPos').textContent = eqs.yPos;
+  if (el('eqTableXVel')) el('eqTableXVel').textContent = eqs.xVel;
+  if (el('eqTableYVel')) el('eqTableYVel').textContent = eqs.yVel;
+  if (el('eqTableXAcc')) el('eqTableXAcc').textContent = eqs.xAcc;
+  if (el('eqTableYAcc')) el('eqTableYAcc').textContent = eqs.yAcc;
+
+  if (el('gridPartXPos')) el('gridPartXPos').textContent = eqs.xPos;
+  if (el('gridPartYPos')) el('gridPartYPos').textContent = eqs.yPos;
+  if (el('gridPartXVel')) el('gridPartXVel').textContent = eqs.xVel;
+  if (el('gridPartYVel')) el('gridPartYVel').textContent = eqs.yVel;
+  if (el('gridPartXAcc')) el('gridPartXAcc').textContent = eqs.xAcc;
+  if (el('gridPartYAcc')) el('gridPartYAcc').textContent = eqs.yAcc;
+
+  const panelSpecs = [
     { id: 'canvasGridXPos', type: 'x-pos' },
-    { id: 'canvasGridYVel', type: 'y-vel' },
+    { id: 'canvasGridYPos', type: 'y-pos' },
     { id: 'canvasGridXVel', type: 'x-vel' },
-    { id: 'canvasGridYAcc', type: 'y-acc' },
-    { id: 'canvasGridXAcc', type: 'x-acc' }
+    { id: 'canvasGridYVel', type: 'y-vel' },
+    { id: 'canvasGridXAcc', type: 'x-acc' },
+    { id: 'canvasGridYAcc', type: 'y-acc' }
   ];
 
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 2) return;
-
-  if (!state.fitResults.yPos) autoFitAllGraphs();
-
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  const fitY = state.fitResults.yPos;
-  const fitX = state.fitResults.xPos;
-  const fitYVel = state.fitResults.yVel;
-
-  const v0x = fitX ? fitX.slope : 0;
-  const x0 = fitX ? fitX.intercept : 0;
-  const ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.80);
-  const v0y = fitYVel ? fitYVel.intercept : (fitY ? fitY.B : 0);
-  const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : ay;
-
-  // Update Grid Card Header Badges & Footers with Equations & Units
-  if (gridBadgeYPos) gridBadgeYPos.textContent = fitY ? `R² = ${fitY.r2.toFixed(4)}` : 'Quadratic Parabola';
-  if (gridGenYPos) gridGenYPos.textContent = 'General: y(t) = ½aᵧt² + v₀ᵧt + y₀';
-  if (gridPartYPos && fitY) {
-    gridPartYPos.textContent = `Particular: y(t) = (${fitY.A >= 0 ? '+' : ''}${fitY.A.toFixed(3)} m/s²)t² + (${fitY.B.toFixed(3)} m/s)t + (${fitY.C.toFixed(3)} m)`;
-  }
-
-  if (gridBadgeXPos) gridBadgeXPos.textContent = fitX ? `R² = ${fitX.r2.toFixed(4)}` : 'Linear Fit';
-  if (gridGenXPos) gridGenXPos.textContent = 'General: x(t) = v₀ₓt + x₀';
-  if (gridPartXPos && fitX) {
-    gridPartXPos.textContent = `Particular: x(t) = (${v0x.toFixed(3)} m/s)t + (${x0.toFixed(3)} m)`;
-  }
-
-  if (gridBadgeYVel) gridBadgeYVel.textContent = fitYVel ? `R² = ${fitYVel.r2.toFixed(4)}` : '10 Tangent Slopes';
-  if (gridGenYVel) gridGenYVel.textContent = 'General: vᵧ(t) = aᵧt + v₀ᵧ';
-  if (gridPartYVel) {
-    gridPartYVel.textContent = `Particular: vᵧ(t) = (${ay.toFixed(3)} m/s²)t + (${v0y.toFixed(3)} m/s)`;
-  }
-
-  if (gridBadgeXVel) gridBadgeXVel.textContent = 'Uniform Motion';
-  if (gridGenXVel) gridGenXVel.textContent = 'General: vₓ(t) = v₀ₓ = constant';
-  if (gridPartXVel) {
-    gridPartXVel.textContent = `Particular: vₓ(t) = ${v0x.toFixed(3)} m/s (Slope aₓ = 0.000 m/s²)`;
-  }
-
-  if (gridBadgeYAcc) gridBadgeYAcc.textContent = 'Ref g = -9.80 m/s²';
-  if (gridGenYAcc) gridGenYAcc.textContent = 'General: aᵧ(t) = aᵧ = constant';
-  if (gridPartYAcc) {
-    gridPartYAcc.textContent = `Particular: aᵧ(t) = ${meanAy.toFixed(3)} m/s² (Ref g = -9.80 m/s²)`;
-  }
-
-  if (gridBadgeXAcc) gridBadgeXAcc.textContent = 'Ref aₓ = 0.00 m/s²';
-  if (gridGenXAcc) gridGenXAcc.textContent = 'General: aₓ(t) = 0 m/s²';
-  if (gridPartXAcc) {
-    gridPartXAcc.textContent = 'Particular: aₓ(t) = 0.000 m/s² (Zero horizontal forces)';
-  }
-
-  configs.forEach(cfg => {
-    const canvas = document.getElementById(cfg.id);
+  panelSpecs.forEach(spec => {
+    const canvas = el(spec.id);
     if (!canvas) return;
-    if (gridCharts[cfg.id]) gridCharts[cfg.id].destroy();
-
-    const ctx = canvas.getContext('2d');
-    let datasets = [];
-    let sugMin = 0;
-    let sugMax = 5;
-
-    if (cfg.type === 'y-pos') {
-      const fitLineY = [];
-      const steps = 40;
-      for (let i = 0; i <= steps; i++) {
-        const t = tMin + (tMax - tMin) * (i / steps);
-        const yVal = fitY ? (fitY.A * t * t + fitY.B * t + fitY.C) : pts[0].y;
-        fitLineY.push({ x: t, y: yVal });
-      }
-      datasets = [
-        { label: 'Measured y', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 3 },
-        { label: 'Quadratic Fit', data: fitLineY, type: 'line', borderColor: '#b06210', borderWidth: 2, pointRadius: 0, fill: false }
-      ];
-      sugMin = 0;
-      sugMax = Math.max(1, ...pts.map(p => p.y)) * 1.25;
-    } else if (cfg.type === 'x-pos') {
-      const fitLineX = [
-        { x: tMin, y: fitX ? fitX.slope * tMin + fitX.intercept : pts[0].x },
-        { x: tMax, y: fitX ? fitX.slope * tMax + fitX.intercept : pts[pts.length - 1].x }
-      ];
-      datasets = [
-        { label: 'Measured x', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 3 },
-        { label: 'Linear Fit', data: fitLineX, type: 'line', borderColor: '#095f76', borderWidth: 2, pointRadius: 0, fill: false }
-      ];
-      sugMin = 0;
-      sugMax = Math.max(1, ...pts.map(p => p.x)) * 1.2;
-    } else if (cfg.type === 'y-vel') {
-      const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
-      const fitLineYVel = [
-        { x: tMin, y: ay * tMin + v0y },
-        { x: tMax, y: ay * tMax + v0y }
-      ];
-      datasets = [
-        { label: '10 Tangents', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5, pointStyle: 'rectRot' },
-        { label: 'Linear Fit', data: fitLineYVel, type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false }
-      ];
-      if (state.showSignedArea) {
-        const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
-        datasets.push(
-          { label: '+Δy_up', data: [{ x: tMin, y: ay * tMin + v0y }, { x: tApex, y: 0 }], type: 'line', borderColor: 'rgba(15, 126, 155, 0.5)', backgroundColor: 'rgba(15, 126, 155, 0.2)', borderWidth: 1, pointRadius: 0, fill: 'origin' },
-          { label: 'Δy_down', data: [{ x: tApex, y: 0 }, { x: tMax, y: ay * tMax + v0y }], type: 'line', borderColor: 'rgba(214, 123, 25, 0.5)', backgroundColor: 'rgba(214, 123, 25, 0.2)', borderWidth: 1, pointRadius: 0, fill: 'origin' }
-        );
-      }
-      sugMin = -8;
-      sugMax = 8;
-    } else if (cfg.type === 'x-vel') {
-      const vxSamples = [];
-      for (let i = 1; i <= 10; i++) {
-        const t = tMin + (tMax - tMin) * (i / 11);
-        vxSamples.push({ x: t, y: v0x });
-      }
-      datasets = [
-        { label: 'Sampled Slopes', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5, pointStyle: 'rectRot' },
-        {
-          label: 'Constant Fit',
-          data: [{ x: tMin, y: v0x }, { x: tMax, y: v0x }],
-          type: 'line',
-          borderColor: '#0f7e9b',
-          backgroundColor: state.showSignedArea ? 'rgba(15, 126, 155, 0.16)' : 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: state.showSignedArea ? 'origin' : false
-        }
-      ];
-      sugMin = 0;
-      sugMax = Math.max(3.5, v0x * 1.4);
-    } else if (cfg.type === 'y-acc') {
-      const aySamples = [];
-      for (let i = 1; i <= 10; i++) {
-        const t = tMin + (tMax - tMin) * (i / 11);
-        aySamples.push({ x: t, y: meanAy });
-      }
-      datasets = [
-        { label: 'Δvᵧ/Δt', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 3.5 },
-        { label: 'Acc Fit', data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 2, pointRadius: 0, fill: false },
-        { label: 'Ref g (-9.80)', data: [{ x: tMin, y: -9.8 }, { x: tMax, y: -9.8 }], type: 'line', borderColor: '#64748b', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false }
-      ];
-      sugMin = -14;
-      sugMax = 2;
-    } else if (cfg.type === 'x-acc') {
-      const axSamples = [];
-      for (let i = 1; i <= 10; i++) {
-        const t = tMin + (tMax - tMin) * (i / 11);
-        axSamples.push({ x: t, y: 0.0 });
-      }
-      datasets = [
-        { label: 'Δvₓ/Δt', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 3.5 },
-        { label: 'Zero Fit', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 2, pointRadius: 0, fill: false }
-      ];
-      sugMin = -2;
-      sugMax = 2;
+    if (gridCharts[spec.id]) {
+      gridCharts[spec.id].destroy();
     }
-
-    gridCharts[cfg.id] = new Chart(ctx, {
-      type: 'scatter',
-      data: { datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            grid: {
-              color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#f1f5f9',
-              lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2 : 1
-            },
-            ticks: { font: { size: 9 } }
-          },
-          y: {
-            suggestedMin: sugMin,
-            suggestedMax: sugMax,
-            grid: {
-              color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#f1f5f9',
-              lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2 : 1
-            },
-            ticks: { font: { size: 9 } }
-          }
-        }
-      }
-    });
+    const cfg = buildChartConfigForGraph(spec.type, false);
+    gridCharts[spec.id] = new Chart(canvas.getContext('2d'), cfg);
   });
 }
 
-// Tangent Line Sampler & Two-Point Tangent Slope Verification (Exam Problem 4)
-function updateTangentTool(sliderVal) {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) return;
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  const t = tMin + (tMax - tMin) * (sliderVal / 100);
-  state.activeTangentTime = t;
-
-  if (state.activeGraphTab === 'y-pos') {
-    renderStudioGraph('y-pos');
-  }
-}
-
-function updateTangentProgressBadges() {
-  if (tangentPointCountBadge) {
-    tangentPointCountBadge.textContent = `Sampled: ${state.tangentPoints.length} / 10 Tangent Points`;
-    if (state.tangentPoints.length >= 10) {
-      tangentPointCountBadge.style.background = '#e6f8ea';
-      tangentPointCountBadge.style.color = '#1a7f37';
-    } else {
-      tangentPointCountBadge.style.background = '#eef7fa';
-      tangentPointCountBadge.style.color = '#0f7e9b';
-    }
-  }
-  if (twoPointVerifiedBadge) {
-    const cnt = state.manualTangentCount || 0;
-    twoPointVerifiedBadge.textContent = `Manual Slopes: ${cnt} / 3 Verified ${cnt >= 3 ? '✓' : ''}`;
-    if (cnt >= 3) {
-      twoPointVerifiedBadge.style.background = '#e6f8ea';
-      twoPointVerifiedBadge.style.color = '#1a7f37';
-      twoPointVerifiedBadge.style.borderColor = '#1a7f37';
-    } else {
-      twoPointVerifiedBadge.style.background = '#fff7ed';
-      twoPointVerifiedBadge.style.color = '#d67b19';
-      twoPointVerifiedBadge.style.borderColor = '#fdba74';
-    }
-  }
-}
-
-function verifyAndRecordTwoPointTangent() {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) return;
-  const t0 = state.activeTangentTime || pts[0].time;
-  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  const trueSlope = fit ? (2 * fit.A * t0 + fit.B) : 0;
-
-  const t1 = inpTanT1 && inpTanT1.value !== '' ? parseFloat(inpTanT1.value) : NaN;
-  const y1 = inpTanY1 && inpTanY1.value !== '' ? parseFloat(inpTanY1.value) : NaN;
-  const t2 = inpTanT2 && inpTanT2.value !== '' ? parseFloat(inpTanT2.value) : NaN;
-  const y2 = inpTanY2 && inpTanY2.value !== '' ? parseFloat(inpTanY2.value) : NaN;
-  const sSlope = inpTanStudentSlope && inpTanStudentSlope.value !== '' ? parseFloat(inpTanStudentSlope.value) : NaN;
-
-  if ([t1, y1, t2, y2, sSlope].some(v => Number.isNaN(v))) {
-    if (tanFeedbackMsg) {
-      tanFeedbackMsg.style.color = '#dc2626';
-      tanFeedbackMsg.textContent = '⚠ Enter all two-point coordinates (t₁, y₁), (t₂, y₂) and your calculated slope vᵧ = (y₂ − y₁)/(t₂ − t₁).';
-    }
-    return;
-  }
-
-  if (Math.abs(t2 - t1) < 0.01) {
-    if (tanFeedbackMsg) {
-      tanFeedbackMsg.style.color = '#dc2626';
-      tanFeedbackMsg.textContent = '⚠ Points P₁ and P₂ must be at two distinct times (t₂ ≠ t₁). Use the P₁ and P₂ coordinates shown above!';
-    }
-    return;
-  }
-
-  const calcSlopeFromStudentPts = (y2 - y1) / (t2 - t1);
-  const diffFormula = Math.abs(sSlope - calcSlopeFromStudentPts);
-  const diffTrue = Math.abs(sSlope - trueSlope);
-
-  if (diffFormula > 0.25 || diffTrue > 0.45) {
-    if (tanFeedbackMsg) {
-      tanFeedbackMsg.style.color = '#dc2626';
-      tanFeedbackMsg.textContent = `✖ Check your two-point slope calculation! From your points, (y₂−y₁)/(t₂−t₁) = (${y2.toFixed(3)} − ${y1.toFixed(3)}) / (${t2.toFixed(3)} − ${t1.toFixed(3)}) = ${calcSlopeFromStudentPts.toFixed(3)} m/s. Make sure P₁ and P₂ lie on the active tangent line.`;
-    }
-    return;
-  }
-
-  // Valid manual two-point tangent slope!
-  state.manualTangentCount = (state.manualTangentCount || 0) + 1;
-  state.tangentPoints.push({
-    time: t0,
-    vy: sSlope,
-    t1, y1, t2, y2,
-    manualVerified: true
-  });
-  state.tangentPoints.sort((a, b) => a.time - b.time);
-
-  if (state.tangentPoints.length >= 2) {
-    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
-  }
-
-  updateTangentProgressBadges();
-  renderStudioGraph(state.activeGraphTab);
-
-  if (tanFeedbackMsg) {
-    tanFeedbackMsg.style.color = '#1a7f37';
-    if (state.manualTangentCount >= 3) {
-      tanFeedbackMsg.textContent = `✓ Verified! vᵧ = (${y2.toFixed(3)} − ${y1.toFixed(3)})/(${t2.toFixed(3)} − ${t1.toFixed(3)}) = ${sSlope.toFixed(3)} m/s logged at t = ${t0.toFixed(3)} s. (${state.manualTangentCount}/3 manual slopes complete — Quick-Log unlocked for remaining points!)`;
-    } else {
-      tanFeedbackMsg.textContent = `✓ Verified! vᵧ = ${sSlope.toFixed(3)} m/s logged at t = ${t0.toFixed(3)} s. (${state.manualTangentCount}/3 manual two-point slopes verified — move slider to another time for point #${state.manualTangentCount + 1}).`;
-    }
-  }
-  updateStatus(`Verified two-point tangent slope: vy = ${sSlope.toFixed(3)} m/s at t = ${t0.toFixed(3)} s (${state.manualTangentCount}/3 manual).`);
-}
-
-function recordTangentPoint() {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) return;
-
-  if ((state.manualTangentCount || 0) < 3) {
-    if (tanFeedbackMsg) {
-      tanFeedbackMsg.style.color = '#d67b19';
-      tanFeedbackMsg.textContent = `🔒 Complete at least 3 manual Two-Point Tangent Slope calculations ((y₂−y₁)/(t₂−t₁)) on the left first (${state.manualTangentCount || 0}/3 done) before using Quick-Log!`;
-    }
-    return;
-  }
-
-  const t = state.activeTangentTime || pts[0].time;
-  const fit = state.fitResults.yPos || quadraticRegression(pts.map(p => ({ x: p.time, y: p.y })));
-  const slope = fit ? (2 * fit.A * t + fit.B) : 0;
-
-  // Add to tangentPoints
-  state.tangentPoints.push({ time: t, vy: slope, manualVerified: false });
-  state.tangentPoints.sort((a, b) => a.time - b.time);
-
-  if (state.tangentPoints.length >= 2) {
-    state.fitResults.yVel = linearRegression(state.tangentPoints.map(p => ({ x: p.time, y: p.vy })));
-  }
-
-  updateTangentProgressBadges();
-  renderStudioGraph(state.activeGraphTab);
-  if (tanFeedbackMsg) {
-    tanFeedbackMsg.style.color = '#0f7e9b';
-    tanFeedbackMsg.textContent = `✓ Quick-logged tangent point #${state.tangentPoints.length}: vᵧ = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s.`;
-  }
-  updateStatus(`Recorded tangent slope: vy = ${slope.toFixed(3)} m/s at t = ${t.toFixed(3)} s`);
-}
-
-function clearTangentPoints() {
-  state.tangentPoints = [];
-  state.manualTangentCount = 0;
-  state.fitResults.yVel = null;
-
-  updateTangentProgressBadges();
-  if (tanFeedbackMsg) {
-    tanFeedbackMsg.style.color = '#4b6570';
-    tanFeedbackMsg.textContent = 'Reset tangent points. Compute 3 manual two-point tangent slopes first to unlock quick-logging.';
-  }
-
-  renderStudioGraph(state.activeGraphTab);
-  updateStatus('Reset tangent points. Use the Two-Point Tangent Slope inputs to verify 3 slopes first.');
-}
-
 // ============================================================================
-// Step 3 Module A & B: Graph Translation & Physical Interval Verification
+// Step 2C: Reference Readouts, Student Work Sync & Practice Feedback
 // ============================================================================
-function verifyGraphInterpretation() {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) return;
-  if (!state.fitResults.yPos) autoFitAllGraphs();
+function getExpectedPhysicsValues() {
+  const cov = state.coverageStatus;
+  const xFit = state.fitResults.xPos;
+  const yFit = state.fitResults.yPos;
+  if (!xFit || !yFit || !cov || cov.y0 === null) return null;
 
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  const fitY = state.fitResults.yPos;
-  const fitYVel = state.fitResults.yVel;
-  const ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.8);
-  const v0y = fitYVel ? fitYVel.intercept : (fitY ? fitY.B : 0);
-  const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
+  const T = cov.T;
+  const y0 = cov.y0;
+  const m = xFit.slope;
+  const c = xFit.intercept;
+  const A = yFit.A;
+  const B = yFit.B;
+  const C = yFit.C;
+  const ayFit = 2 * A;
 
-  // Part A: Graph Shape Translation
-  const vYtoVy = selTransYtoVy ? selTransYtoVy.value : '';
-  const vVytoAy = selTransVytoAy ? selTransVytoAy.value : '';
-  const vTransX = selTransX ? selTransX.value : '';
+  const tUpParsed = parseFloat(state.observedTUp);
+  const hasObservedTUp = Number.isFinite(tUpParsed) && tUpParsed > 0;
+  const tUp = hasObservedTUp ? tUpParsed : null;
 
-  const partACorrect = (vYtoVy === 'linear_neg_cross') && (vVytoAy === 'const_neg_line') && (vTransX === 'correct_x');
-  if (badgeGraphTransStatus) {
-    if (partACorrect) {
-      badgeGraphTransStatus.textContent = '✓ All 3 Graph Translations Verified!';
-      badgeGraphTransStatus.className = 'pct-diff-badge success';
-    } else if (!vYtoVy && !vVytoAy && !vTransX) {
-      badgeGraphTransStatus.textContent = 'Awaiting Selection';
-      badgeGraphTransStatus.className = 'pct-diff-badge';
-    } else {
-      badgeGraphTransStatus.textContent = '⚠ Check Graph Shape Rules (Slope → Value)';
-      badgeGraphTransStatus.className = 'pct-diff-badge warn';
-    }
-  }
+  // Predictions using fixed reference acceleration ay,ref = -9.8 m/s^2 and observed video t_up
+  const vy0Pred = tUp !== null ? -FIXED_AY_REF * tUp : null; // 9.8 * t_up
+  const dxPred = m * T;
+  const dyPred = vy0Pred !== null ? (vy0Pred * T + 0.5 * FIXED_AY_REF * T * T) : null;
+  const yFinalPred = dyPred !== null ? (y0 + dyPred) : null;
+  const dyUpPred = (vy0Pred !== null && tUp !== null)
+    ? (vy0Pred * tUp + 0.5 * FIXED_AY_REF * tUp * tUp)
+    : null;
+  const yMaxPred = dyUpPred !== null ? (y0 + dyUpPred) : null;
 
-  // Part B: Physical Motion Interval Analysis (Exam Problem 3e, 3f, 3g)
-  const stopBeh = selStopBehavior ? selStopBehavior.value : '';
-  const stopT = inpStopTimeApex && inpStopTimeApex.value !== '' ? parseFloat(inpStopTimeApex.value) : NaN;
-  const stopExp = txtStopExplanation ? txtStopExplanation.value.trim() : '';
+  const v0Pred = vy0Pred !== null ? Math.hypot(m, vy0Pred) : null;
+  const thetaPred = (vy0Pred !== null && Math.abs(m) > 1e-6)
+    ? (Math.atan2(vy0Pred, m) * 180 / Math.PI)
+    : null;
 
-  const posStart = inpPosDirStart && inpPosDirStart.value !== '' ? parseFloat(inpPosDirStart.value) : NaN;
-  const posEnd = inpPosDirEnd && inpPosDirEnd.value !== '' ? parseFloat(inpPosDirEnd.value) : NaN;
-  const negStart = inpNegDirStart && inpNegDirStart.value !== '' ? parseFloat(inpNegDirStart.value) : NaN;
-  const negEnd = inpNegDirEnd && inpNegDirEnd.value !== '' ? parseFloat(inpNegDirEnd.value) : NaN;
+  // Fitted signed-area check values (using derived vy = 2At + B and fitted initial height C)
+  const hasTurnaround = cov.hasValidTurnaround && cov.tZero !== null;
+  const tZero = hasTurnaround ? cov.tZero : null;
+  const areaUp = tZero !== null ? 0.5 * B * tZero : null;
+  const vFinalFit = ayFit * T + B;
+  const areaDown = tZero !== null ? 0.5 * vFinalFit * (T - tZero) : null;
+  const netDyArea = (areaUp !== null && areaDown !== null) ? (areaUp + areaDown) : null;
+  const yFinalFromArea = netDyArea !== null ? (C + netDyArea) : null;
+  const yFitAtT = A * T * T + B * T + C;
 
-  const accStart = inpNegAccStart && inpNegAccStart.value !== '' ? parseFloat(inpNegAccStart.value) : NaN;
-  const accEnd = inpNegAccEnd && inpNegAccEnd.value !== '' ? parseFloat(inpNegAccEnd.value) : NaN;
-  const accExp = txtAccSignExplanation ? txtAccSignExplanation.value.trim() : '';
-
-  const tol = Math.max(0.12, (tMax - tMin) * 0.15);
-  const stopOk = (stopBeh === 'instant_apex') && !Number.isNaN(stopT) && Math.abs(stopT - tApex) <= tol;
-  const dirOk = !Number.isNaN(posStart) && !Number.isNaN(posEnd) && !Number.isNaN(negStart) && !Number.isNaN(negEnd) &&
-    Math.abs(posStart - tMin) <= tol && Math.abs(posEnd - tApex) <= tol &&
-    Math.abs(negStart - tApex) <= tol && Math.abs(negEnd - tMax) <= tol;
-  const accOk = !Number.isNaN(accStart) && !Number.isNaN(accEnd) &&
-    Math.abs(accStart - tMin) <= tol && Math.abs(accEnd - tMax) <= tol;
-
-  if (badgeIntervalStatus) {
-    if (stopOk && dirOk && accOk) {
-      badgeIntervalStatus.textContent = `✓ All Intervals Verified (t_apex ≈ ${tApex.toFixed(2)} s, Full Flight [${tMin.toFixed(2)}s, ${tMax.toFixed(2)}s])`;
-      badgeIntervalStatus.className = 'pct-diff-badge success';
-    } else {
-      const issues = [];
-      if (!stopOk) issues.push(`3e Apex t ≈ ${tApex.toFixed(2)}s`);
-      if (!dirOk) issues.push(`3f Up [${tMin.toFixed(2)}, ${tApex.toFixed(2)}] & Down [${tApex.toFixed(2)}, ${tMax.toFixed(2)}]`);
-      if (!accOk) issues.push(`3g Accel < 0 on entire flight [${tMin.toFixed(2)}, ${tMax.toFixed(2)}]`);
-      badgeIntervalStatus.textContent = `⚠ Check: ${issues.join(' • ')}`;
-      badgeIntervalStatus.className = 'pct-diff-badge warn';
-    }
-  }
-
-  state.graphInterpretation = {
-    transYtoVy: vYtoVy,
-    transVytoAy: vVytoAy,
-    transX: vTransX,
-    stopBehavior: stopBeh,
-    stopTimeApex: !Number.isNaN(stopT) ? stopT : '',
-    stopExplanation: stopExp,
-    posDirStart: !Number.isNaN(posStart) ? posStart : '',
-    posDirEnd: !Number.isNaN(posEnd) ? posEnd : '',
-    negDirStart: !Number.isNaN(negStart) ? negStart : '',
-    negDirEnd: !Number.isNaN(negEnd) ? negEnd : '',
-    negAccStart: !Number.isNaN(accStart) ? accStart : '',
-    negAccEnd: !Number.isNaN(accEnd) ? accEnd : '',
-    accSignExplanation: accExp,
-    verifiedTrans: partACorrect,
-    verifiedIntervals: (stopOk && dirOk && accOk)
-  };
-
-  updateAuthenticityBadge();
-  updateStatus('Checked Graph Shape Translations and Physical Motion Intervals.');
-}
-
-// ============================================================================
-// Step 4: Guided Calculations Workspace & Verification
-// ============================================================================
-
-function getAuthenticitySignature() {
-  const sName = (studentNameInput && studentNameInput.value.trim()) || 'Student';
-  const tName = (teacherSelect && teacherSelect.value) || 'Physics Teacher';
-  const pts = state.series[state.activeSeries] || [];
-  const ptsSummary = pts.map(p => `${p.time.toFixed(2)}:${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(';');
-  const seed = `${sName.toUpperCase()}|${tName}|${ptsSummary}|${state.pixelsPerMeter.toFixed(1)}`;
-
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-  for (let i = 0; i < seed.length; i++) {
-    const ch = seed.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-
-  const val1 = (h1 >>> 0) % 0xffff;
-  const val2 = (h2 >>> 0) % 0xffff;
-  const val3 = (val1 ^ val2);
-
-  const hex1 = val1.toString(16).toUpperCase().padStart(4, '0');
-  const hex2 = val2.toString(16).toUpperCase().padStart(4, '0');
-  const hex3 = val3.toString(16).toUpperCase().padStart(4, '0');
-
-  const token = `PK-SPORTS-${hex1}-${hex2}-${hex3}`;
   return {
-    token,
-    student: sName,
-    teacher: tName,
-    timestamp: new Date().toISOString(),
-    pointsCount: pts.length,
-    hashFingerprint: (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16)
+    T,
+    tUp,
+    y0,
+    x0Track: cov.x0,
+    xFinalTrack: cov.xFinal,
+    yFinalTrack: cov.yFinal,
+    dxTrack: cov.dxTrack,
+    dyTrack: cov.dyTrack,
+    yMaxTrack: cov.peakPoint ? cov.peakPoint.y : null,
+    tPeakTrack: cov.peakPoint ? cov.peakPoint.time : null,
+    m,
+    c,
+    A,
+    B,
+    C,
+    ayFit,
+    vy0Pred,
+    dxPred,
+    dyPred,
+    yFinalPred,
+    dyUpPred,
+    yMaxPred,
+    v0Pred,
+    thetaPred,
+    hasTurnaround,
+    tZero,
+    areaUp,
+    areaDown,
+    netDyArea,
+    yFinalFromArea,
+    yFitAtT
   };
 }
 
-function updateAuthenticityBadge() {
-  const auth = getAuthenticitySignature();
-  state.authenticityToken = auth.token;
-  const badge = document.getElementById('authenticityBadge');
-  if (badge) {
-    badge.textContent = auth.token;
-    badge.title = `Originality Signature: Student: ${auth.student} • Points: ${auth.pointsCount} • Hash: ${auth.hashFingerprint}`;
+function updateReferenceQuantitiesBar() {
+  const exp = getExpectedPhysicsValues();
+  if (!exp) return;
+
+  if (el('refReadoutT')) el('refReadoutT').textContent = `${exp.T.toFixed(3)} s`;
+  if (el('inpCalcTUp') && document.activeElement !== el('inpCalcTUp')) {
+    el('inpCalcTUp').value = state.observedTUp || '';
+  }
+  if (el('refReadoutY0')) el('refReadoutY0').textContent = `y₀ = ${exp.y0.toFixed(3)} m`;
+  if (el('refReadoutFitC')) el('refReadoutFitC').textContent = `C = ${exp.C.toFixed(3)} m`;
+  if (el('refReadoutEndpoints')) {
+    el('refReadoutEndpoints').textContent = `Δx = ${exp.dxTrack.toFixed(3)} m, Δy = ${exp.dyTrack.toFixed(3)} m`;
+  }
+  if (el('refReadoutYFinal')) {
+    el('refReadoutYFinal').textContent = `y(T) = ${exp.yFinalTrack.toFixed(3)} m`;
+  }
+  if (el('refReadoutYMaxTrack')) {
+    el('refReadoutYMaxTrack').textContent = `y_max = ${exp.yMaxTrack.toFixed(3)} m`;
+  }
+  if (el('refReadoutFitB')) {
+    el('refReadoutFitB').textContent = `B = ${exp.B.toFixed(3)} m/s`;
   }
 }
 
-function updateCalculationFormulas() {
-  if (window.renderMathInElement) {
-    renderMathInElement(document.getElementById('stepView4'), {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '\\[', right: '\\]', display: true },
-        { left: '\\(', right: '\\)', display: false },
-        { left: '$', right: '$', display: false }
-      ],
-      throwOnError: false
-    });
+function syncStudentInputsFromDOM() {
+  const keys = Object.keys(state.studentResponses);
+  keys.forEach(k => {
+    const node = el(k);
+    if (node) {
+      state.studentResponses[k] = node.value;
+    }
+  });
+  if (el('txtPredictionRevision')) {
+    state.predictionRevision = el('txtPredictionRevision').value;
+  }
+  if (el('txtGraphConnections')) {
+    state.graphConnections = el('txtGraphConnections').value;
+  }
+  if (el('studentNameInput')) {
+    state.studentName = el('studentNameInput').value;
+  }
+  if (el('teacherSelect')) {
+    state.teacherName = el('teacherSelect').value;
+  }
+  updateWrittenStatusBadges();
+}
+
+function populateDOMFromStudentState() {
+  Object.keys(state.studentResponses).forEach(k => {
+    const node = el(k);
+    if (node && state.studentResponses[k] !== undefined) {
+      node.value = state.studentResponses[k];
+    }
+  });
+  if (el('txtPredictionRevision')) el('txtPredictionRevision').value = state.predictionRevision || '';
+  if (el('txtGraphConnections')) el('txtGraphConnections').value = state.graphConnections || '';
+  if (el('studentNameInput')) el('studentNameInput').value = state.studentName || '';
+  if (el('teacherSelect') && state.teacherName) el('teacherSelect').value = state.teacherName;
+  if (el('inpObservedTUp')) el('inpObservedTUp').value = state.observedTUp || '';
+  if (el('inpCalcTUp')) el('inpCalcTUp').value = state.observedTUp || '';
+  updateWrittenStatusBadges();
+}
+
+function updateWrittenStatusBadges() {
+  const revBadge = el('statusRevisionBadge');
+  if (revBadge) {
+    const hasRev = (state.predictionRevision || '').trim().length >= 10;
+    revBadge.textContent = hasRev ? 'Submitted for teacher review' : 'Not submitted';
+    revBadge.className = hasRev ? 'pct-diff-badge' : 'pct-diff-badge';
+  }
+
+  const connBadge = el('statusConnectionsBadge');
+  if (connBadge) {
+    const hasConn = (state.graphConnections || '').trim().length >= 15;
+    connBadge.textContent = hasConn ? 'Submitted for teacher review' : 'Not submitted';
+  }
+
+  const reasonBadge = el('badgeMotionReasoning');
+  if (reasonBadge) {
+    const sr = state.studentResponses;
+    const hasWritten = (sr.txtStopExplanation || '').trim().length >= 10 &&
+      (sr.txtAccSignExplanation || '').trim().length >= 10 &&
+      (sr.reflectionText || '').trim().length >= 10;
+    reasonBadge.textContent = hasWritten ? 'Submitted for teacher review' : 'Not submitted';
   }
 }
 
-function checkAndVerifyCalculations() {
-  const pts = state.series[state.activeSeries];
-  if (pts.length < 3) {
-    alert('Please track at least 3 points on the video before verifying calculations!');
+function setFeedbackBox(boxId, status, message) {
+  state.feedbackState[boxId] = { status, text: message };
+  const node = el(boxId);
+  if (!node) return;
+  if (!message) {
+    node.style.display = 'none';
+    node.textContent = '';
+    return;
+  }
+  node.style.display = 'block';
+  node.className = `practice-feedback-msg ${status}`;
+  node.innerHTML = message;
+}
+
+function checkNumbersForPracticeFeedback() {
+  syncStudentInputsFromDOM();
+  autoFitAndDeriveAllGraphs();
+  const exp = getExpectedPhysicsValues();
+  if (!exp) {
+    alert('Please track at least 5 airborne points in Step 1 before checking numbers.');
     return;
   }
 
-  if (!state.fitResults.yPos) autoFitAllGraphs();
+  const sr = state.studentResponses;
+  const parseNum = (str) => {
+    if (str === undefined || str === null || String(str).trim() === '') return null;
+    const v = parseFloat(str);
+    return Number.isFinite(v) ? v : null;
+  };
+  const withinTol = (val, target, relTol = 0.06, absTol = 0.06) => {
+    if (val === null || target === null) return false;
+    return Math.abs(val - target) <= Math.max(absTol, Math.abs(target) * relTol);
+  };
 
-  const fitY = state.fitResults.yPos;
-  const fitX = state.fitResults.xPos;
-  const fitYVel = state.fitResults.yVel;
-
-  // Expected model values from curve fits
-  const exp_x0 = fitX ? fitX.intercept : pts[0].x;
-  const exp_vx0 = fitX ? fitX.slope : (pts[pts.length - 1].x - pts[0].x) / (pts[pts.length - 1].time - pts[0].time);
-  const exp_ax = 0.0;
-
-  const exp_y0 = fitY ? fitY.C : pts[0].y;
-  const exp_vy0 = fitY ? fitY.B : 0.0;
-  const exp_ay = fitYVel ? fitYVel.slope : (fitY ? 2 * fitY.A : -9.8);
-
-  // Graph / Video Measured Values
-  const measAy = exp_ay;
-  const measAx = 0.0;
-  const measHang = pts[pts.length - 1].time - pts[0].time;
-  const measRange = pts[pts.length - 1].x - pts[0].x;
-  const measMaxH = Math.max(...pts.map(p => p.y));
-
-  // Populate Master Kinematic Comparison Table Measured Column
-  if (tblMeasAy) tblMeasAy.textContent = `${measAy.toFixed(3)} m/s²`;
-  if (tblMeasAx) tblMeasAx.textContent = `${measAx.toFixed(3)} m/s²`;
-  if (tblMeasHang) tblMeasHang.textContent = `${measHang.toFixed(3)} s`;
-  if (tblMeasRange) tblMeasRange.textContent = `${measRange.toFixed(3)} m`;
-  if (tblMeasMaxH) tblMeasMaxH.textContent = `${measMaxH.toFixed(3)} m`;
-
-  // Auto-fill measured inputs in problem cards if empty
-  if (inpMeasHangTime && !inpMeasHangTime.value) inpMeasHangTime.value = measHang.toFixed(3);
-  if (inpMeasRange && !inpMeasRange.value) inpMeasRange.value = measRange.toFixed(3);
-  if (inpMeasMaxHeight && !inpMeasMaxHeight.value) inpMeasMaxHeight.value = measMaxH.toFixed(3);
-
-  // Two-way sync: Synchronize table inputs (tblInp*) with problem card inputs (inp*)
-  if (document.activeElement === tblInpAy && inpAy) {
-    inpAy.value = tblInpAy.value;
-  } else if (tblInpAy && inpAy && document.activeElement === inpAy) {
-    tblInpAy.value = inpAy.value;
-  } else if (tblInpAy && inpAy) {
-    if (tblInpAy.value !== '' && inpAy.value === '') inpAy.value = tblInpAy.value;
-    else if (inpAy.value !== '' && tblInpAy.value === '') tblInpAy.value = inpAy.value;
-  }
-
-  if (document.activeElement === tblInpAx && inpAx) {
-    inpAx.value = tblInpAx.value;
-  } else if (tblInpAx && inpAx && document.activeElement === inpAx) {
-    tblInpAx.value = inpAx.value;
-  } else if (tblInpAx && inpAx) {
-    if (tblInpAx.value !== '' && inpAx.value === '') inpAx.value = tblInpAx.value;
-    else if (inpAx.value !== '' && tblInpAx.value === '') tblInpAx.value = inpAx.value;
-  }
-
-  if (document.activeElement === tblInpHang && inpCalcHangTime) {
-    inpCalcHangTime.value = tblInpHang.value;
-  } else if (tblInpHang && inpCalcHangTime && document.activeElement === inpCalcHangTime) {
-    tblInpHang.value = inpCalcHangTime.value;
-  } else if (tblInpHang && inpCalcHangTime) {
-    if (tblInpHang.value !== '' && inpCalcHangTime.value === '') inpCalcHangTime.value = tblInpHang.value;
-    else if (inpCalcHangTime.value !== '' && tblInpHang.value === '') tblInpHang.value = inpCalcHangTime.value;
-  }
-
-  if (document.activeElement === tblInpRange && inpCalcRange) {
-    inpCalcRange.value = tblInpRange.value;
-  } else if (tblInpRange && inpCalcRange && document.activeElement === inpCalcRange) {
-    tblInpRange.value = inpCalcRange.value;
-  } else if (tblInpRange && inpCalcRange) {
-    if (tblInpRange.value !== '' && inpCalcRange.value === '') inpCalcRange.value = tblInpRange.value;
-    else if (inpCalcRange.value !== '' && tblInpRange.value === '') tblInpRange.value = inpCalcRange.value;
-  }
-
-  if (document.activeElement === tblInpMaxH && inpCalcMaxHeight) {
-    inpCalcMaxHeight.value = tblInpMaxH.value;
-  } else if (tblInpMaxH && inpCalcMaxHeight && document.activeElement === inpCalcMaxHeight) {
-    tblInpMaxH.value = inpCalcMaxHeight.value;
-  } else if (tblInpMaxH && inpCalcMaxHeight) {
-    if (tblInpMaxH.value !== '' && inpCalcMaxHeight.value === '') inpCalcMaxHeight.value = tblInpMaxH.value;
-    else if (inpCalcMaxHeight.value !== '' && tblInpMaxH.value === '') tblInpMaxH.value = inpCalcMaxHeight.value;
-  }
-
-  // Theoretical Hang Time
-  const yFinal = pts[pts.length - 1].y;
-  const A = 0.5 * exp_ay;
-  const B = exp_vy0;
-  const C = exp_y0 - yFinal;
-  const disc = B * B - 4 * A * C;
-  let exp_tHang = 0;
-  if (disc >= 0 && Math.abs(A) > 1e-6) {
-    const t1 = (-B + Math.sqrt(disc)) / (2 * A);
-    const t2 = (-B - Math.sqrt(disc)) / (2 * A);
-    exp_tHang = Math.max(t1, t2);
+  // --- 5a: Horizontal velocity v0x = dx / dt ---
+  const v0xVal = parseNum(sr.inpVx0);
+  let ok5a = false;
+  if (v0xVal === null) {
+    setFeedbackBox('fb5a', 'hint', 'Enter your calculated horizontal slope v₀ₓ = Δx / Δt (m/s).');
+  } else if (withinTol(v0xVal, exp.m)) {
+    ok5a = true;
+    setFeedbackBox('fb5a', 'good', `✓ Numbers checked: v₀ₓ = ${v0xVal.toFixed(3)} m/s matches the fitted x–t slope (${exp.m.toFixed(3)} m/s). Make sure your written work shows two points and explains why v₀ₓ is constant.`);
   } else {
-    exp_tHang = measHang;
+    setFeedbackBox('fb5a', 'warn', `Check your slope calculation Δx / Δt using two points on the fitted x–t line. Expected slope is near ${exp.m.toFixed(3)} m/s.`);
   }
 
-  const exp_range = exp_vx0 * exp_tHang;
-  const exp_maxH = exp_y0 + (exp_vy0 * exp_vy0) / (2 * Math.abs(exp_ay));
-  const exp_v0 = Math.hypot(exp_vx0, exp_vy0);
-  const exp_theta = Math.atan2(exp_vy0, exp_vx0) * (180 / Math.PI);
-
-  // Student inputs
-  const studentX0 = (inpX0 && inpX0.value !== '') ? parseFloat(inpX0.value) : null;
-  const studentVx0 = (inpVx0 && inpVx0.value !== '') ? parseFloat(inpVx0.value) : null;
-  const studentAx = (inpAx && inpAx.value !== '') ? parseFloat(inpAx.value) : null;
-
-  const studentY0 = (inpY0 && inpY0.value !== '') ? parseFloat(inpY0.value) : null;
-  const studentVy0 = (inpVy0 && inpVy0.value !== '') ? parseFloat(inpVy0.value) : null;
-  const studentAy = (inpAy && inpAy.value !== '') ? parseFloat(inpAy.value) : null;
-
-  const studentCalcRange = (inpCalcRange && inpCalcRange.value !== '') ? parseFloat(inpCalcRange.value) : null;
-  const studentMeasRange = (inpMeasRange && inpMeasRange.value !== '') ? parseFloat(inpMeasRange.value) : null;
-
-  const studentCalcHang = (inpCalcHangTime && inpCalcHangTime.value !== '') ? parseFloat(inpCalcHangTime.value) : null;
-  const studentMeasHang = (inpMeasHangTime && inpMeasHangTime.value !== '') ? parseFloat(inpMeasHangTime.value) : null;
-
-  const studentCalcMaxH = (inpCalcMaxHeight && inpCalcMaxHeight.value !== '') ? parseFloat(inpCalcMaxHeight.value) : null;
-  const studentMeasMaxH = (inpMeasMaxHeight && inpMeasMaxHeight.value !== '') ? parseFloat(inpMeasMaxHeight.value) : null;
-
-  const studentV0 = (inpSpeedV0 && inpSpeedV0.value !== '') ? parseFloat(inpSpeedV0.value) : null;
-  const studentTheta = (inpAngleTheta && inpAngleTheta.value !== '') ? parseFloat(inpAngleTheta.value) : null;
-
-  // 1. Horizontal Acceleration difference
-  if (studentAx !== null) {
-    const diff = Math.abs(studentAx - 0.0);
-    if (lblAxDiff) lblAxDiff.textContent = `${diff.toFixed(3)} m/s²`;
-    if (tblDiffAx) tblDiffAx.textContent = `Δ = ${diff.toFixed(3)} m/s²`;
-    if (badgeAxCompare) {
-      badgeAxCompare.textContent = diff < 0.1 ? '✓ Verified (aₓ ≈ 0)' : '⚠ Check Horizontal Acc';
-      badgeAxCompare.className = 'pct-diff-badge ' + (diff < 0.1 ? 'success' : 'warn');
-    }
+  // --- 5b: Vertical acceleration ay,fit = dvy / dt ---
+  const ayVal = parseNum(sr.inpAy);
+  let ok5b = false;
+  if (ayVal === null) {
+    setFeedbackBox('fb5b', 'hint', 'Enter your calculated slope aᵧ,fit = Δvᵧ / Δt (m/s²) from two points on the derived vᵧ–t line.');
+  } else if (ayVal > 0 && withinTol(-ayVal, exp.ayFit)) {
+    setFeedbackBox('fb5b', 'warn', 'Check the sign of your vertical acceleration slope: vᵧ decreases over time, so Δvᵧ / Δt must be negative.');
+  } else if (withinTol(ayVal, exp.ayFit)) {
+    ok5b = true;
+    setFeedbackBox('fb5b', 'good', `✓ Numbers checked: aᵧ,fit = ${ayVal.toFixed(3)} m/s² matches the derived vᵧ–t slope (${exp.ayFit.toFixed(3)} m/s²). Remember to compare it with aᵧ,ref = −9.8 m/s² in your written work.`);
   } else {
-    if (lblAxDiff) lblAxDiff.textContent = 'Awaiting Input';
-    if (tblDiffAx) tblDiffAx.textContent = '—';
-    if (badgeAxCompare) {
-      badgeAxCompare.textContent = 'Awaiting Input';
-      badgeAxCompare.className = 'pct-diff-badge';
-    }
+    setFeedbackBox('fb5b', 'warn', `Check your two-point slope (vᵧ₂ − vᵧ₁)/(t₂ − t₁) on the derived vᵧ–t line (expected near ${exp.ayFit.toFixed(3)} m/s²).`);
   }
 
-  // Vertical Acceleration percent diff from measured & standard
-  let ayPctDiff = 0;
-  if (studentAy !== null) {
-    ayPctDiff = ((Math.abs(studentAy) - 9.8) / 9.8) * 100;
-    const diffAyMeas = studentAy - measAy;
-    const pctAyMeas = measAy !== 0 ? (diffAyMeas / Math.abs(measAy)) * 100 : 0;
+  const badgeAB = el('badgeSlopesAB');
+  if (badgeAB) {
+    badgeAB.textContent = (ok5a && ok5b) ? 'Numbers checked' : 'Check hints below';
+    badgeAB.className = `pct-diff-badge ${(ok5a && ok5b) ? 'good' : 'warn'}`;
+  }
 
-    if (badgeAyPctDiff) {
-      badgeAyPctDiff.textContent = `${ayPctDiff >= 0 ? '+' : ''}${ayPctDiff.toFixed(2)}% Diff (vs 9.80)`;
-      badgeAyPctDiff.className = `pct-diff-badge ${Math.abs(ayPctDiff) < 6 ? 'success' : Math.abs(ayPctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-    if (tblDiffAy) {
-      tblDiffAy.textContent = `${pctAyMeas >= 0 ? '+' : ''}${pctAyMeas.toFixed(2)}% (Δ = ${diffAyMeas >= 0 ? '+' : ''}${diffAyMeas.toFixed(3)} m/s²)`;
-    }
-    if (badgeAyCompare) {
-      badgeAyCompare.textContent = Math.abs(pctAyMeas) < 6 ? '✓ Excellent (<6%)' : Math.abs(pctAyMeas) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeAyCompare.className = `pct-diff-badge ${Math.abs(pctAyMeas) < 6 ? 'success' : Math.abs(pctAyMeas) < 12 ? 'warn' : 'error'}`;
-    }
+  // --- 5c: Predicted v0y,pred = -ay,ref * t_up ---
+  const vy0PredVal = parseNum(sr.inpVy0Pred);
+  let ok5c = false;
+  if (exp.tUp === null) {
+    setFeedbackBox('fb5c', 'warn', 'First enter your observed video rise time t_up (s) from Step 1.');
+  } else if (vy0PredVal === null) {
+    setFeedbackBox('fb5c', 'hint', 'Calculate v₀ᵧ,pred = −aᵧ,ref · t_up using aᵧ,ref = −9.8 m/s² and your observed t_up.');
+  } else if (vy0PredVal < 0 && withinTol(Math.abs(vy0PredVal), exp.vy0Pred)) {
+    setFeedbackBox('fb5c', 'warn', 'Check the sign: at the first tracked frame (t = 0), the ball is moving upward (+y), so v₀ᵧ,pred = −(−9.8 m/s²)·t_up is positive.');
+  } else if (withinTol(vy0PredVal, exp.B, 0.01, 0.01) && !withinTol(exp.vy0Pred, exp.B, 0.02, 0.02)) {
+    setFeedbackBox('fb5c', 'warn', 'Use v₀ᵧ,pred = −(−9.8 m/s²)·t_up from your observed video rise time t_up rather than copying B directly from the fit; then compare v₀ᵧ,pred with B.');
+  } else if (withinTol(vy0PredVal, exp.vy0Pred)) {
+    ok5c = true;
+    setFeedbackBox('fb5c', 'good', `✓ Numbers checked: v₀ᵧ,pred = ${vy0PredVal.toFixed(3)} m/s (using t_up = ${exp.tUp.toFixed(3)} s and aᵧ,ref = −9.8 m/s²). Compare this with fitted B = ${exp.B.toFixed(3)} m/s in your notes.`);
   } else {
-    if (badgeAyPctDiff) {
-      badgeAyPctDiff.textContent = 'Awaiting Input';
-      badgeAyPctDiff.className = 'pct-diff-badge';
-    }
-    if (tblDiffAy) tblDiffAy.textContent = '—';
-    if (badgeAyCompare) {
-      badgeAyCompare.textContent = 'Awaiting Input';
-      badgeAyCompare.className = 'pct-diff-badge';
-    }
+    setFeedbackBox('fb5c', 'warn', `Check your multiplication: v₀ᵧ,pred = −(−9.8 m/s²)(${exp.tUp.toFixed(3)} s) ≈ ${exp.vy0Pred.toFixed(3)} m/s.`);
   }
 
-  // 2. Range Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
-  let rangePctDiff = 0;
-  const activeMeasRange = studentMeasRange !== null ? studentMeasRange : measRange;
-  if (studentCalcRange !== null) {
-    rangePctDiff = activeMeasRange !== 0 ? ((studentCalcRange - activeMeasRange) / Math.abs(activeMeasRange)) * 100 : 0;
-    if (badgeRangePctDiff) {
-      badgeRangePctDiff.textContent = `${rangePctDiff >= 0 ? '+' : ''}${rangePctDiff.toFixed(2)}% Diff`;
-      badgeRangePctDiff.className = `pct-diff-badge ${Math.abs(rangePctDiff) < 6 ? 'success' : Math.abs(rangePctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-    if (tblDiffRange) tblDiffRange.textContent = `${rangePctDiff >= 0 ? '+' : ''}${rangePctDiff.toFixed(2)}%`;
-    if (badgeRangeCompare) {
-      badgeRangeCompare.textContent = Math.abs(rangePctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(rangePctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeRangeCompare.className = `pct-diff-badge ${Math.abs(rangePctDiff) < 6 ? 'success' : Math.abs(rangePctDiff) < 12 ? 'warn' : 'error'}`;
-    }
+  // --- 5d: Displacements dx, dy at T and final height y_final = y0 + dy ---
+  const dxVal = parseNum(sr.inpCalcRange);
+  const dyVal = parseNum(sr.inpPredDy);
+  const yfVal = parseNum(sr.inpPredYFinal);
+  let ok5d = false;
+  if (dxVal === null || dyVal === null || yfVal === null) {
+    setFeedbackBox('fb5d', 'hint', 'Enter all three values for 5d: predicted Δx, predicted Δy over duration T, and predicted final height y_final = y₀ + Δy.');
   } else {
-    if (badgeRangePctDiff) {
-      badgeRangePctDiff.textContent = 'Awaiting Input';
-      badgeRangePctDiff.className = 'pct-diff-badge';
-    }
-    if (tblDiffRange) tblDiffRange.textContent = '—';
-    if (badgeRangeCompare) {
-      badgeRangeCompare.textContent = 'Awaiting Input';
-      badgeRangeCompare.className = 'pct-diff-badge';
-    }
-  }
+    // Allow student to use either their entered v0x/vy0Pred or the exact expected ones
+    const usedVx = v0xVal !== null ? v0xVal : exp.m;
+    const usedVy0 = vy0PredVal !== null ? vy0PredVal : (exp.vy0Pred || exp.B);
+    const targetDx = usedVx * exp.T;
+    const targetDy = usedVy0 * exp.T + 0.5 * FIXED_AY_REF * exp.T * exp.T;
+    const targetYf = exp.y0 + targetDy;
 
-  // 3. Hang Time Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
-  let hangPctDiff = 0;
-  const activeMeasHang = studentMeasHang !== null ? studentMeasHang : measHang;
-  if (studentCalcHang !== null) {
-    hangPctDiff = activeMeasHang !== 0 ? ((studentCalcHang - activeMeasHang) / Math.abs(activeMeasHang)) * 100 : 0;
-    if (badgeHangTimePctDiff) {
-      badgeHangTimePctDiff.textContent = `${hangPctDiff >= 0 ? '+' : ''}${hangPctDiff.toFixed(2)}% Diff`;
-      badgeHangTimePctDiff.className = `pct-diff-badge ${Math.abs(hangPctDiff) < 6 ? 'success' : Math.abs(hangPctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-    if (tblDiffHang) tblDiffHang.textContent = `${hangPctDiff >= 0 ? '+' : ''}${hangPctDiff.toFixed(2)}%`;
-    if (badgeHangCompare) {
-      badgeHangCompare.textContent = Math.abs(hangPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(hangPctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeHangCompare.className = `pct-diff-badge ${Math.abs(hangPctDiff) < 6 ? 'success' : Math.abs(hangPctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-  } else {
-    if (badgeHangTimePctDiff) {
-      badgeHangTimePctDiff.textContent = 'Awaiting Input';
-      badgeHangTimePctDiff.className = 'pct-diff-badge';
-    }
-    if (tblDiffHang) tblDiffHang.textContent = '—';
-    if (badgeHangCompare) {
-      badgeHangCompare.textContent = 'Awaiting Input';
-      badgeHangCompare.className = 'pct-diff-badge';
-    }
-  }
+    const dxMatch = withinTol(dxVal, targetDx) || withinTol(dxVal, exp.dxPred);
+    const dyMatch = withinTol(dyVal, targetDy) || withinTol(dyVal, exp.dyPred);
+    const yfMatch = withinTol(yfVal, targetYf) || withinTol(yfVal, exp.yFinalPred);
 
-  // 4. Max Height Percent Difference: % Diff = (Calculated - Measured) / Measured * 100%
-  let maxHPctDiff = 0;
-  const activeMeasMaxH = studentMeasMaxH !== null ? studentMeasMaxH : measMaxH;
-  if (studentCalcMaxH !== null) {
-    maxHPctDiff = activeMeasMaxH !== 0 ? ((studentCalcMaxH - activeMeasMaxH) / Math.abs(activeMeasMaxH)) * 100 : 0;
-    if (badgeMaxHeightPctDiff) {
-      badgeMaxHeightPctDiff.textContent = `${maxHPctDiff >= 0 ? '+' : ''}${maxHPctDiff.toFixed(2)}% Diff`;
-      badgeMaxHeightPctDiff.className = `pct-diff-badge ${Math.abs(maxHPctDiff) < 6 ? 'success' : Math.abs(maxHPctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-    if (tblDiffMaxH) tblDiffMaxH.textContent = `${maxHPctDiff >= 0 ? '+' : ''}${maxHPctDiff.toFixed(2)}%`;
-    if (badgeMaxHCompare) {
-      badgeMaxHCompare.textContent = Math.abs(maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(maxHPctDiff) < 12 ? '⚠ Acceptable (<12%)' : '✖ Check Work';
-      badgeMaxHCompare.className = `pct-diff-badge ${Math.abs(maxHPctDiff) < 6 ? 'success' : Math.abs(maxHPctDiff) < 12 ? 'warn' : 'error'}`;
-    }
-  } else {
-    if (badgeMaxHeightPctDiff) {
-      badgeMaxHeightPctDiff.textContent = 'Awaiting Input';
-      badgeMaxHeightPctDiff.className = 'pct-diff-badge';
-    }
-    if (tblDiffMaxH) tblDiffMaxH.textContent = '—';
-    if (badgeMaxHCompare) {
-      badgeMaxHCompare.textContent = 'Awaiting Input';
-      badgeMaxHCompare.className = 'pct-diff-badge';
-    }
-  }
-
-  // 5 & 6. Speed & Launch Angle Consistency Check
-  if (studentV0 !== null && studentTheta !== null) {
-    const reVx = studentV0 * Math.cos(studentTheta * Math.PI / 180);
-    const reVy = studentV0 * Math.sin(studentTheta * Math.PI / 180);
-    if (lblConsistencyCheck) {
-      lblConsistencyCheck.innerHTML = `Recomputed: \\(v_{0x} = v_0 \\cos\\theta = ${reVx.toFixed(3)}\\text{ m/s}\\), \\(v_{0y} = v_0 \\sin\\theta = ${reVy.toFixed(3)}\\text{ m/s}\\). Agreement verified!`;
-    }
-  } else {
-    if (lblConsistencyCheck) {
-      lblConsistencyCheck.textContent = 'Enter your v₀ and θ above, then click Check & Verify to verify vector components.';
-    }
-  }
-
-  // Section 1B: Velocity-Time Slope & Signed-Area Displacement Verification (Exam Problem 3b, 3c, 3d)
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  const tApex = Math.abs(exp_ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -exp_vy0 / exp_ay)) : (tMin + tMax) / 2;
-  const exp_areaUp = 0.5 * Math.max(0, exp_vy0 + exp_ay * tMin) * Math.max(0, tApex - tMin);
-  const exp_vFinal = exp_ay * tMax + exp_vy0;
-  const exp_areaDown = 0.5 * Math.min(0, exp_vFinal) * Math.max(0, tMax - tApex);
-  const exp_netDyArea = exp_areaUp + exp_areaDown;
-  const exp_yMaxArea = exp_y0 + exp_areaUp;
-  const exp_yFinalArea = exp_y0 + exp_netDyArea;
-
-  const sSlopeAy = inpSlopeAyFromVt && inpSlopeAyFromVt.value !== '' ? parseFloat(inpSlopeAyFromVt.value) : null;
-  const sAreaUp = inpAreaUp && inpAreaUp.value !== '' ? parseFloat(inpAreaUp.value) : null;
-  const sAreaDown = inpAreaDown && inpAreaDown.value !== '' ? parseFloat(inpAreaDown.value) : null;
-  const sNetDy = inpNetDyArea && inpNetDyArea.value !== '' ? parseFloat(inpNetDyArea.value) : null;
-  const sYMaxArea = inpYMaxFromArea && inpYMaxFromArea.value !== '' ? parseFloat(inpYMaxFromArea.value) : null;
-  const sYFinalArea = inpYFinalFromArea && inpYFinalFromArea.value !== '' ? parseFloat(inpYFinalFromArea.value) : null;
-
-  if (badgeSignedAreaVerify) {
-    if ([sSlopeAy, sAreaUp, sAreaDown, sNetDy, sYMaxArea, sYFinalArea].every(v => v === null)) {
-      badgeSignedAreaVerify.textContent = 'Awaiting Input';
-      badgeSignedAreaVerify.className = 'pct-diff-badge';
+    if (dxMatch && dyMatch && !yfMatch && withinTol(yfVal, dyVal, 0.02, 0.02)) {
+      setFeedbackBox('fb5d', 'warn', `Don't forget to add the first tracked height y₀ (${exp.y0.toFixed(3)} m) to Δy to find the final height y_final = y₀ + Δy.`);
+    } else if (dxMatch && dyMatch && yfMatch) {
+      ok5d = true;
+      setFeedbackBox('fb5d', 'good', `✓ Numbers checked: Δx = ${dxVal.toFixed(3)} m, Δy = ${dyVal.toFixed(3)} m, and y_final = ${yfVal.toFixed(3)} m. Make sure your written work compares these with the tracked endpoint changes.`);
     } else {
-      const okSlope = sSlopeAy !== null && Math.abs(sSlopeAy - exp_ay) < 1.2 && sSlopeAy < 0;
-      const okUp = sAreaUp !== null && Math.abs(sAreaUp - exp_areaUp) < 0.35 && sAreaUp >= 0;
-      const okDown = sAreaDown !== null && Math.abs(sAreaDown - exp_areaDown) < 0.35 && sAreaDown <= 0;
-      const okNet = sNetDy !== null && Math.abs(sNetDy - exp_netDyArea) < 0.35;
-      const okYMax = sYMaxArea !== null && Math.abs(sYMaxArea - exp_yMaxArea) < 0.35;
-      const okYFinal = sYFinalArea !== null && Math.abs(sYFinalArea - exp_yFinalArea) < 0.35;
-
-      if (okSlope && okUp && okDown && okNet && okYMax && okYFinal) {
-        badgeSignedAreaVerify.textContent = '✓ Signed-Area & Slope Verified!';
-        badgeSignedAreaVerify.className = 'pct-diff-badge success';
-      } else {
-        const errs = [];
-        if (!okSlope) errs.push('Slope aᵧ < 0');
-        if (!okUp) errs.push(`+Δy_up ≈ +${exp_areaUp.toFixed(2)}m`);
-        if (!okDown) errs.push(`Δy_down ≈ ${exp_areaDown.toFixed(2)}m (negative!)`);
-        if (!okNet) errs.push(`Δy_total ≈ ${exp_netDyArea.toFixed(2)}m`);
-        if (!okYMax) errs.push(`y_max = y₀+Δy_up ≈ ${exp_yMaxArea.toFixed(2)}m`);
-        if (!okYFinal) errs.push(`y_final = y₀+Δy_total ≈ ${exp_yFinalArea.toFixed(2)}m`);
-        badgeSignedAreaVerify.textContent = `⚠ Check: ${errs.slice(0, 3).join(' • ')}`;
-        badgeSignedAreaVerify.className = 'pct-diff-badge warn';
-      }
+      setFeedbackBox('fb5d', 'warn', `Check your substitutions over total tracked duration T = ${exp.T.toFixed(3)} s: Δx = v₀ₓT, Δy = v₀ᵧ,pred·T + ½(−9.8)T², and y_final = y₀ + Δy.`);
     }
   }
 
-  state.signedAreaValues = {
-    slopeAyFromVt: sSlopeAy !== null ? sSlopeAy : exp_ay,
-    areaUp: sAreaUp !== null ? sAreaUp : exp_areaUp,
-    areaDown: sAreaDown !== null ? sAreaDown : exp_areaDown,
-    netDyArea: sNetDy !== null ? sNetDy : exp_netDyArea,
-    yMaxFromArea: sYMaxArea !== null ? sYMaxArea : exp_yMaxArea,
-    yFinalFromArea: sYFinalArea !== null ? sYFinalArea : exp_yFinalArea,
-    workSignedArea: workSignedArea ? workSignedArea.value : ''
-  };
+  // --- 5e: Maximum height using t_up (not T) and measured y0 ---
+  const dyUpVal = parseNum(sr.inpPredDyUp);
+  const yMaxVal = parseNum(sr.inpCalcMaxHeight);
+  let ok5e = false;
+  if (exp.tUp === null) {
+    setFeedbackBox('fb5e', 'warn', 'Enter observed video t_up first.');
+  } else if (dyUpVal === null || yMaxVal === null) {
+    setFeedbackBox('fb5e', 'hint', 'Enter both upward displacement Δy_up and maximum height y_max = y₀ + Δy_up.');
+  } else {
+    const usedVy0 = vy0PredVal !== null ? vy0PredVal : exp.vy0Pred;
+    const targetDyUp = usedVy0 * exp.tUp + 0.5 * FIXED_AY_REF * exp.tUp * exp.tUp;
+    const targetYMax = exp.y0 + targetDyUp;
+    const wrongT_Dy = usedVy0 * exp.T + 0.5 * FIXED_AY_REF * exp.T * exp.T;
 
-  // Save student's values to state
-  state.calcValues = {
-    x0: studentX0 !== null ? studentX0 : exp_x0,
-    vx0: studentVx0 !== null ? studentVx0 : exp_vx0,
-    ax: studentAx !== null ? studentAx : exp_ax,
-    y0: studentY0 !== null ? studentY0 : exp_y0,
-    vy0: studentVy0 !== null ? studentVy0 : exp_vy0,
-    ay: studentAy !== null ? studentAy : exp_ay,
-    rangeCalc: studentCalcRange !== null ? studentCalcRange : exp_range,
-    rangeMeas: activeMeasRange,
-    rangePctDiff,
-    hangCalc: studentCalcHang !== null ? studentCalcHang : exp_tHang,
-    hangMeas: activeMeasHang,
-    hangPctDiff,
-    maxHCalc: studentCalcMaxH !== null ? studentCalcMaxH : exp_maxH,
-    maxHMeas: activeMeasMaxH,
-    maxHPctDiff,
-    v0: studentV0 !== null ? studentV0 : exp_v0,
-    theta: studentTheta !== null ? studentTheta : exp_theta,
-    ayPctDiff,
-    axDiff: studentAx !== null ? Math.abs(studentAx) : 0
-  };
-
-  // Save student derivation text work
-  state.studentWork = {
-    workMaxH: workMaxHeight ? workMaxHeight.value : '',
-    workHang: workHangTime ? workHangTime.value : '',
-    workRange: workRange ? workRange.value : '',
-    workVector: workVector ? workVector.value : ''
-  };
-
-  updateAuthenticityBadge();
-  if (window.renderMathInElement) {
-    renderMathInElement(document.getElementById('stepView4'), {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '\\[', right: '\\]', display: true },
-        { left: '\\(', right: '\\)', display: false },
-        { left: '$', right: '$', display: false }
-      ],
-      throwOnError: false
-    });
-  }
-  updateStatus('Verified student calculations and updated Master Comparison Table.');
-}
-
-// Reflection Sentence Counter
-function updateReflectionCounter() {
-  const text = (reflectionText ? reflectionText.value : '').trim();
-  state.reflectionText = text;
-
-  if (!text) {
-    if (sentenceBadge) {
-      sentenceBadge.textContent = '0 / 5 Sentences';
-      sentenceBadge.className = 'sentence-counter-badge';
+    if (withinTol(dyUpVal, wrongT_Dy) && Math.abs(exp.T - exp.tUp) > 0.08) {
+      setFeedbackBox('fb5e', 'warn', `Use observed rise time t_up (${exp.tUp.toFixed(3)} s) — NOT total tracked duration T (${exp.T.toFixed(3)} s) — when calculating upward displacement to the apex!`);
+    } else if (withinTol(dyUpVal, targetDyUp) && withinTol(yMaxVal, dyUpVal, 0.02, 0.02)) {
+      setFeedbackBox('fb5e', 'warn', `Remember to add your first tracked height y₀ (${exp.y0.toFixed(3)} m) to Δy_up to get y_max = y₀ + Δy_up.`);
+    } else if ((withinTol(dyUpVal, targetDyUp) || withinTol(dyUpVal, exp.dyUpPred)) &&
+               (withinTol(yMaxVal, targetYMax) || withinTol(yMaxVal, exp.yMaxPred))) {
+      ok5e = true;
+      setFeedbackBox('fb5e', 'good', `✓ Numbers checked: Δy_up = ${dyUpVal.toFixed(3)} m and y_max = ${yMaxVal.toFixed(3)} m (highest tracked point is ${exp.yMaxTrack.toFixed(3)} m).`);
+    } else {
+      setFeedbackBox('fb5e', 'warn', `Check Δy_up = v₀ᵧ,pred·t_up + ½(−9.8)t_up² using t_up = ${exp.tUp.toFixed(3)} s, then add y₀ = ${exp.y0.toFixed(3)} m.`);
     }
-    return;
   }
 
-  // Split on sentence terminators (. ! ?)
-  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 5);
-  const count = sentences.length;
+  // --- 5f: Initial speed v0 and launch angle theta ---
+  const v0Val = parseNum(sr.inpSpeedV0);
+  const thetaVal = parseNum(sr.inpAngleTheta);
+  let ok5f = false;
+  if (v0Val === null || thetaVal === null) {
+    setFeedbackBox('fb5f', 'hint', 'Enter both initial speed v₀ (m/s) and launch angle θ (degrees above +x).');
+  } else {
+    const usedVx = v0xVal !== null ? v0xVal : exp.m;
+    const usedVy0 = vy0PredVal !== null ? vy0PredVal : (exp.vy0Pred || exp.B);
+    const targetV0 = Math.hypot(usedVx, usedVy0);
+    const targetTheta = Math.atan2(usedVy0, usedVx) * 180 / Math.PI;
 
-  if (sentenceBadge) {
-    sentenceBadge.textContent = `${count} / 5 Sentences ${count >= 5 ? '✓' : ''}`;
-    sentenceBadge.className = `sentence-counter-badge ${count >= 5 ? 'complete' : ''}`;
+    if ((withinTol(v0Val, targetV0) || withinTol(v0Val, exp.v0Pred)) &&
+        (withinTol(thetaVal, targetTheta, 0.06, 1.5) || withinTol(thetaVal, exp.thetaPred, 0.06, 1.5))) {
+      ok5f = true;
+      setFeedbackBox('fb5f', 'good', `✓ Numbers checked: v₀ = ${v0Val.toFixed(3)} m/s at θ = ${thetaVal.toFixed(2)}° above +x.`);
+    } else {
+      setFeedbackBox('fb5f', 'warn', 'Check v₀ = √(v₀ₓ² + v₀ᵧ,pred²) and θ = tan⁻¹(v₀ᵧ,pred / v₀ₓ) in degrees.');
+    }
   }
+
+  const badgeCF = el('badgePredictionsCF');
+  if (badgeCF) {
+    const allCF = ok5c && ok5d && ok5e && ok5f;
+    badgeCF.textContent = allCF ? 'Numbers checked' : 'Check hints below';
+    badgeCF.className = `pct-diff-badge ${allCF ? 'good' : 'warn'}`;
+  }
+
+  // --- Signed-Area Check on Fitted vy-t & Fitted C ---
+  const tzVal = parseNum(sr.inpZeroCrossT);
+  const aUpVal = parseNum(sr.inpAreaUp);
+  const aDownVal = parseNum(sr.inpAreaDown);
+  const netAreaVal = parseNum(sr.inpNetDyArea);
+  const yfAreaVal = parseNum(sr.inpYFinalFromArea);
+  let okArea = false;
+
+  if (!exp.hasTurnaround) {
+    setFeedbackBox('fbSignedArea', 'warn', 'Signed-area split requires a valid turnaround inside [0, T]. Track both ascent and descent in Step 1.');
+  } else if (tzVal === null || aUpVal === null || aDownVal === null || netAreaVal === null || yfAreaVal === null) {
+    setFeedbackBox('fbSignedArea', 'hint', 'Complete all five signed-area fields: t_zero, +Area_up, Area_down, Δy_area, and C + Δy_area.');
+  } else if (aDownVal > 0 && withinTol(-aDownVal, exp.areaDown)) {
+    setFeedbackBox('fbSignedArea', 'warn', 'Check the sign of the area below zero — during descent (t > t_zero), vᵧ < 0 so Area_down must be negative!');
+  } else if (withinTol(tzVal, exp.tZero) &&
+             withinTol(aUpVal, exp.areaUp) &&
+             withinTol(aDownVal, exp.areaDown) &&
+             withinTol(netAreaVal, exp.netDyArea, 0.08, 0.05) &&
+             withinTol(yfAreaVal, exp.yFinalFromArea, 0.08, 0.05)) {
+    okArea = true;
+    setFeedbackBox('fbSignedArea', 'good', `✓ Numbers checked: C + Δy_area = ${yfAreaVal.toFixed(3)} m matches the fitted vertical position y_fit(T) = ${exp.yFitAtT.toFixed(3)} m.`);
+  } else {
+    setFeedbackBox('fbSignedArea', 'warn', `Check your triangle areas on the fitted vᵧ–t line: t_zero = −B/(2A) ≈ ${exp.tZero.toFixed(3)} s, +Area_up = ½·B·t_zero, Area_down = ½·vᵧ(T)·(T − t_zero) (negative!), and add fitted C = ${exp.C.toFixed(3)} m.`);
+  }
+
+  const badgeArea = el('badgeSignedAreaVerify');
+  if (badgeArea) {
+    badgeArea.textContent = okArea ? 'Numbers checked' : 'Check hints below';
+    badgeArea.className = `pct-diff-badge ${okArea ? 'good' : 'warn'}`;
+  }
+
+  // --- Direction Intervals & Negative Acceleration Interval ---
+  const pStart = parseNum(sr.inpPosDirStart);
+  const pEnd = parseNum(sr.inpPosDirEnd);
+  const nStart = parseNum(sr.inpNegDirStart);
+  const nEnd = parseNum(sr.inpNegDirEnd);
+  const accStart = parseNum(sr.inpNegAccStart);
+  const accEnd = parseNum(sr.inpNegAccEnd);
+
+  if (!exp.hasTurnaround) {
+    setFeedbackBox('fbIntervals', 'warn', 'Cannot verify upward/downward intervals until the tracked trajectory includes an interior apex.');
+  } else if (pStart === null || pEnd === null || nStart === null || nEnd === null) {
+    setFeedbackBox('fbIntervals', 'hint', 'Enter the time bounds for both the upward interval (vᵧ > 0) and downward interval (vᵧ < 0), excluding the instant t_zero where vᵧ = 0.');
+  } else if (withinTol(pStart, 0, 0.05, 0.03) &&
+             withinTol(pEnd, exp.tZero, 0.06, 0.04) &&
+             withinTol(nStart, exp.tZero, 0.06, 0.04) &&
+             withinTol(nEnd, exp.T, 0.06, 0.04)) {
+    const accOk = accStart !== null && accEnd !== null &&
+      withinTol(accStart, 0, 0.05, 0.03) && withinTol(accEnd, exp.T, 0.06, 0.04);
+    if (accOk) {
+      setFeedbackBox('fbIntervals', 'good', `✓ Interval bounds checked: Upward on (0.000 s, ${exp.tZero.toFixed(3)} s), downward on (${exp.tZero.toFixed(3)} s, ${exp.T.toFixed(3)} s) excluding the turnaround instant t_zero, and aᵧ < 0 throughout [0.000 s, ${exp.T.toFixed(3)} s]. Written explanations are submitted for teacher review.`);
+    } else {
+      setFeedbackBox('fbIntervals', 'warn', `Upward and downward intervals match! Check the interval where aᵧ < 0 (gravity acts downward throughout the entire airborne flight [0, ${exp.T.toFixed(3)} s]).`);
+    }
+  } else {
+    setFeedbackBox('fbIntervals', 'warn', `Check your direction intervals: upward motion (vᵧ > 0) is from 0 to t_zero (${exp.tZero.toFixed(3)} s), and downward motion (vᵧ < 0) is from t_zero (${exp.tZero.toFixed(3)} s) to T (${exp.T.toFixed(3)} s), excluding the turnaround instant.`);
+  }
+
+  state.feedbackState.checkedAt = new Date().toISOString();
+  updateWrittenStatusBadges();
 }
 
 // ============================================================================
-// Step 5: Presentation Deck Preview & 1-Click PPTX Exporter
+// Step 3: 10-Point Rubric Status & Non-Truncated Printable Report
 // ============================================================================
+function updateRubricChecklistUI() {
+  syncStudentInputsFromDOM();
+  autoFitAndDeriveAllGraphs();
+  const cov = state.coverageStatus;
+  const sr = state.studentResponses;
+  const hasVal = (v) => v !== undefined && v !== null && String(v).trim() !== '';
 
-// High-Resolution Offscreen Video + Trajectory Snapshot (shows all points, scale stick, and origin)
+  // Criterion 1 (2 pts): Calibration & tracking evidence
+  const c1Ok = cov.hasEnoughPoints && cov.hasValidTurnaround && hasVal(state.observedTUp);
+  if (el('chkStatus1')) {
+    el('chkStatus1').innerHTML = c1Ok
+      ? '<span class="pct-diff-badge good">Ready (Tracked + t_up)</span>'
+      : '<span class="pct-diff-badge warn">Needs ≥8 pts + apex + t_up</span>';
+  }
+
+  // Criterion 2 (2 pts): Saved predictions, reasoned revision & graph connections
+  const c2Ok = state.firstAttemptPrediction.isSaved &&
+    hasVal(state.predictionRevision) &&
+    hasVal(state.graphConnections);
+  if (el('chkStatus2')) {
+    el('chkStatus2').innerHTML = c2Ok
+      ? '<span class="pct-diff-badge good">Included in Report</span>'
+      : '<span class="pct-diff-badge warn">Save prediction + revision + connections</span>';
+  }
+
+  // Criterion 3 (2 pts): Shown slopes & 5c–5f calculations
+  const c3Ok = hasVal(sr.inpVx0) && hasVal(sr.work5aVx) &&
+    hasVal(sr.inpAy) && hasVal(sr.work5bAy) &&
+    hasVal(sr.inpVy0Pred) && hasVal(sr.work5cVy0) &&
+    hasVal(sr.inpCalcRange) && hasVal(sr.inpPredDy) && hasVal(sr.inpPredYFinal) && hasVal(sr.work5dDisp) &&
+    hasVal(sr.inpPredDyUp) && hasVal(sr.inpCalcMaxHeight) && hasVal(sr.workMaxHeight) &&
+    hasVal(sr.inpSpeedV0) && hasVal(sr.inpAngleTheta) && hasVal(sr.workVector);
+  if (el('chkStatus3')) {
+    el('chkStatus3').innerHTML = c3Ok
+      ? '<span class="pct-diff-badge good">All 5a–5f Submitted</span>'
+      : '<span class="pct-diff-badge warn">Some 5a–5f fields blank</span>';
+  }
+
+  // Criterion 4 (3 pts): Signed area, initial height, direction intervals & apex reasoning
+  const c4Ok = hasVal(sr.inpZeroCrossT) && hasVal(sr.inpAreaUp) && hasVal(sr.inpAreaDown) &&
+    hasVal(sr.inpNetDyArea) && hasVal(sr.inpYFinalFromArea) && hasVal(sr.workSignedArea) &&
+    hasVal(sr.inpPosDirStart) && hasVal(sr.inpPosDirEnd) &&
+    hasVal(sr.inpNegDirStart) && hasVal(sr.inpNegDirEnd) &&
+    hasVal(sr.txtStopExplanation) && hasVal(sr.txtAccSignExplanation);
+  if (el('chkStatus4')) {
+    el('chkStatus4').innerHTML = c4Ok
+      ? '<span class="pct-diff-badge good">Included in Report</span>'
+      : '<span class="pct-diff-badge warn">Complete area &amp; interval fields</span>';
+  }
+
+  // Criterion 5 (1 pt): Specific measurement limitation
+  const c5Ok = hasVal(sr.reflectionText) && sr.reflectionText.trim().length >= 15;
+  if (el('chkStatus5')) {
+    el('chkStatus5').innerHTML = c5Ok
+      ? '<span class="pct-diff-badge good">Included in Report</span>'
+      : '<span class="pct-diff-badge warn">Not submitted</span>';
+  }
+
+  const readyCount = [c1Ok, c2Ok, c3Ok, c4Ok, c5Ok].filter(Boolean).length;
+  const badge = el('rubricReadinessBadge');
+  if (badge) {
+    badge.textContent = `${readyCount} / 5 Rubric Sections Populated`;
+    badge.className = `pct-diff-badge ${readyCount === 5 ? 'good' : 'warn'}`;
+  }
+}
+
+// High-resolution snapshot of video + calibration stick + origin + tracked trajectory
 function getVideoSnapshotData() {
-  const w = 960;
-  const h = 540;
+  const w = 880;
+  const h = 495;
   const offCanvas = document.createElement('canvas');
   offCanvas.width = w;
   offCanvas.height = h;
   const offCtx = offCanvas.getContext('2d');
 
-  // Solid clean background
   offCtx.fillStyle = '#f8fafc';
   offCtx.fillRect(0, 0, w, h);
 
-  // 1. Draw video frame or synthetic field if available
-  let drewBackground = false;
-  if (video && video.videoWidth > 0 && !state.isSynthetic) {
+  if (!state.isSynthetic && video && video.videoWidth > 0) {
     try {
       offCtx.drawImage(video, 0, 0, w, h);
-      drewBackground = true;
     } catch (e) {}
   } else if (state.isSynthetic && state.syntheticCanvas) {
+    renderSyntheticFrame(state.currentTime);
     try {
       offCtx.drawImage(state.syntheticCanvas, 0, 0, w, h);
-      drewBackground = true;
     } catch (e) {}
   }
 
-  if (!drewBackground) {
-    // Sports turf & sky backdrop
-    const grad = offCtx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#e0f2fe');
-    grad.addColorStop(0.7, '#f0fdf4');
-    grad.addColorStop(1, '#bbf7d0');
-    offCtx.fillStyle = grad;
-    offCtx.fillRect(0, 0, w, h);
-
-    // Ground plane
-    offCtx.fillStyle = '#86efac';
-    offCtx.fillRect(0, h * 0.82, w, h * 0.18);
-    offCtx.strokeStyle = '#15803d';
-    offCtx.lineWidth = 3;
-    offCtx.beginPath();
-    offCtx.moveTo(0, h * 0.82);
-    offCtx.lineTo(w, h * 0.82);
-    offCtx.stroke();
-  }
-
-  const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : (video && video.videoWidth > 0 ? video.videoWidth : w);
-  const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : (video && video.videoHeight > 0 ? video.videoHeight : h);
+  const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : w;
+  const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : h;
   const scaleX = w / srcW;
   const scaleY = h / srcH;
 
-  // 2. Draw Calibrated Coordinate Origin Axes
+  // Draw Origin Axes
   if (state.origin) {
     const ox = state.origin.x * scaleX;
     const oy = state.origin.y * scaleY;
-    const angle = state.originAngle || 0;
-
     offCtx.save();
     offCtx.translate(ox, oy);
-    offCtx.rotate(-angle);
+    offCtx.rotate(-(state.originAngle || 0));
 
-    // +x axis (Teal)
     offCtx.strokeStyle = '#0f7e9b';
-    offCtx.lineWidth = 3;
+    offCtx.lineWidth = 2.8;
     offCtx.beginPath();
     offCtx.moveTo(-35, 0);
     offCtx.lineTo(135, 0);
     offCtx.stroke();
 
-    // +x arrow
-    offCtx.fillStyle = '#0f7e9b';
-    offCtx.beginPath();
-    offCtx.moveTo(135, -5);
-    offCtx.lineTo(146, 0);
-    offCtx.lineTo(135, 5);
-    offCtx.fill();
-
-    // +y axis (Amber)
     offCtx.strokeStyle = '#d67b19';
-    offCtx.lineWidth = 3;
+    offCtx.lineWidth = 2.8;
     offCtx.beginPath();
     offCtx.moveTo(0, 35);
     offCtx.lineTo(0, -135);
     offCtx.stroke();
 
-    // +y arrow
-    offCtx.fillStyle = '#d67b19';
-    offCtx.beginPath();
-    offCtx.moveTo(-5, -135);
-    offCtx.lineTo(0, -146);
-    offCtx.lineTo(5, -135);
-    offCtx.fill();
-
-    // Origin point reticle
     offCtx.fillStyle = '#0f7e9b';
     offCtx.beginPath();
-    offCtx.arc(0, 0, 8, 0, Math.PI * 2);
+    offCtx.arc(0, 0, 7, 0, Math.PI * 2);
     offCtx.fill();
     offCtx.strokeStyle = '#ffffff';
-    offCtx.lineWidth = 2.5;
+    offCtx.lineWidth = 2;
     offCtx.stroke();
 
-    // Labels
-    offCtx.font = 'bold 13px -apple-system, sans-serif';
+    offCtx.font = 'bold 12px sans-serif';
     offCtx.fillStyle = '#0f7e9b';
-    offCtx.fillText('+x', 150, 5);
+    offCtx.fillText('+x', 140, 4);
     offCtx.fillStyle = '#d67b19';
-    offCtx.fillText('+y', -10, -150);
-
-    // Origin (0,0) label box
-    offCtx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-    offCtx.fillRect(10, 10, 88, 22);
-    offCtx.strokeStyle = '#0f7e9b';
-    offCtx.lineWidth = 1;
-    offCtx.strokeRect(10, 10, 88, 22);
-    offCtx.fillStyle = '#0f7e9b';
-    offCtx.font = 'bold 11px monospace';
-    offCtx.fillText('Origin (0,0)', 14, 25);
-
+    offCtx.fillText('+y', -12, -142);
     offCtx.restore();
   }
 
-  // 3. Draw Calibrated Scale Reference Stick
+  // Draw Scale Stick
   if (state.scaleStick && state.scaleStick.start && state.scaleStick.end) {
     const sx = state.scaleStick.start.x * scaleX;
     const sy = state.scaleStick.start.y * scaleY;
@@ -2886,1816 +2307,851 @@ function getVideoSnapshotData() {
 
     offCtx.save();
     offCtx.strokeStyle = '#d67b19';
-    offCtx.lineWidth = 3.5;
+    offCtx.lineWidth = 3;
     offCtx.beginPath();
     offCtx.moveTo(sx, sy);
     offCtx.lineTo(ex, ey);
     offCtx.stroke();
 
-    // Endcap handles
-    [{ x: sx, y: sy }, { x: ex, y: ey }].forEach(p => {
-      offCtx.fillStyle = '#ffffff';
-      offCtx.strokeStyle = '#d67b19';
-      offCtx.lineWidth = 2.5;
-      offCtx.beginPath();
-      offCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
-      offCtx.fill();
-      offCtx.stroke();
-
-      offCtx.fillStyle = '#d67b19';
-      offCtx.beginPath();
-      offCtx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-      offCtx.fill();
-    });
-
-    // Scale label badge
     const midX = (sx + ex) / 2;
     const midY = (sy + ey) / 2;
-    const scaleLabel = `Scale: ${state.scaleStick.lengthMeters.toFixed(2)} m`;
-    offCtx.font = 'bold 12px -apple-system, sans-serif';
-    const textW = offCtx.measureText(scaleLabel).width;
-
+    const label = `Scale: ${state.scaleStick.lengthMeters.toFixed(2)} m`;
+    offCtx.font = 'bold 11px sans-serif';
+    const tw = offCtx.measureText(label).width;
     offCtx.fillStyle = '#ffffff';
-    offCtx.fillRect(midX - textW / 2 - 8, midY - 24, textW + 16, 20);
+    offCtx.fillRect(midX - tw / 2 - 6, midY - 22, tw + 12, 18);
     offCtx.strokeStyle = '#d67b19';
-    offCtx.lineWidth = 1.5;
-    offCtx.strokeRect(midX - textW / 2 - 8, midY - 24, textW + 16, 20);
-
-    offCtx.fillStyle = '#d67b19';
-    offCtx.fillText(scaleLabel, midX - textW / 2, midY - 10);
+    offCtx.strokeRect(midX - tw / 2 - 6, midY - 22, tw + 12, 18);
+    offCtx.fillStyle = '#b06210';
+    offCtx.fillText(label, midX - tw / 2, midY - 9);
     offCtx.restore();
   }
 
-  // 4. Draw Trajectory Spline & All Tracked Points
+  // Draw Tracked Points
   const pts = state.series[state.activeSeries] || [];
   if (pts.length > 0) {
-    // Trajectory spline
-    offCtx.strokeStyle = 'rgba(15, 126, 155, 0.85)';
-    offCtx.lineWidth = 3;
+    offCtx.strokeStyle = 'rgba(15, 126, 155, 0.8)';
+    offCtx.lineWidth = 2.2;
     offCtx.beginPath();
-    pts.forEach((pt, idx) => {
-      const px = (pt.videoX !== undefined ? pt.videoX : (pt.canvasX || 0)) * scaleX;
-      const py = (pt.videoY !== undefined ? pt.videoY : (pt.canvasY || 0)) * scaleY;
+    pts.forEach((p, idx) => {
+      const px = p.videoX * scaleX;
+      const py = p.videoY * scaleY;
       if (idx === 0) offCtx.moveTo(px, py);
       else offCtx.lineTo(px, py);
     });
     offCtx.stroke();
 
-    // Data points with sequence numbers and status colors
-    pts.forEach((pt, idx) => {
-      const px = (pt.videoX !== undefined ? pt.videoX : (pt.canvasX || 0)) * scaleX;
-      const py = (pt.videoY !== undefined ? pt.videoY : (pt.canvasY || 0)) * scaleY;
-      const isStart = idx === 0;
-      const isEnd = idx === pts.length - 1;
-      const isApex = idx === Math.floor(pts.length / 2);
-
+    pts.forEach((p, idx) => {
+      const px = p.videoX * scaleX;
+      const py = p.videoY * scaleY;
       offCtx.beginPath();
-      offCtx.arc(px, py, isStart || isEnd || isApex ? 8 : 6, 0, 2 * Math.PI);
-      offCtx.fillStyle = isStart ? '#16a34a' : (isEnd ? '#0f7e9b' : (isApex ? '#d67b19' : '#0284c7'));
+      offCtx.arc(px, py, 6, 0, Math.PI * 2);
+      offCtx.fillStyle = idx === 0 ? '#1a7f37' : '#d67b19';
       offCtx.fill();
       offCtx.strokeStyle = '#ffffff';
-      offCtx.lineWidth = 2;
+      offCtx.lineWidth = 1.8;
       offCtx.stroke();
 
-      // Sequence number
-      offCtx.fillStyle = '#0c3644';
-      offCtx.font = 'bold 11px monospace';
-      offCtx.fillText(`${idx + 1}`, px + 8, py - 6);
+      offCtx.fillStyle = '#123140';
+      offCtx.font = 'bold 10px monospace';
+      offCtx.fillText(`${idx + 1}`, px + 7, py - 5);
     });
   }
-
-  // 5. Header banner on snapshot
-  offCtx.fillStyle = 'rgba(15, 126, 155, 0.94)';
-  offCtx.fillRect(20, 20, 500, 42);
-  offCtx.strokeStyle = '#c8dbe3';
-  offCtx.lineWidth = 1;
-  offCtx.strokeRect(20, 20, 500, 42);
-  offCtx.fillStyle = '#ffffff';
-  offCtx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  offCtx.fillText(`🎯 MotionTracker: Calibrated Video Capture (${pts.length} Points • Scale & Origin Set)`, 32, 46);
 
   return offCanvas.toDataURL('image/png');
 }
 
-// High-Resolution Offscreen Chart Image Generator (independent of DOM visibility)
-function generateChartImageData(graphType) {
-  const pts = state.series[state.activeSeries];
-  if (!pts || pts.length < 2) return null;
+function generateChartImageData(type) {
+  const pts = state.series[state.activeSeries] || [];
+  if (pts.length < 3) return null;
 
   const canvas = document.createElement('canvas');
-  canvas.width = 1000;
-  canvas.height = 650;
-  const ctx = canvas.getContext('2d');
+  canvas.width = 720;
+  canvas.height = 400;
+  const cCtx = canvas.getContext('2d');
+  cCtx.fillStyle = '#ffffff';
+  cCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Solid white background for PowerPoint clarity
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const tMin = pts[0].time;
-  const tMax = pts[pts.length - 1].time;
-  let chartConfig = null;
-
-  if (graphType === 'y-pos') {
-    const fit = state.fitResults.yPos;
-    const y0 = fit ? fit.C : pts[0].y;
-    const v0y = fit ? fit.B : 0;
-    const ay = fit ? 2 * fit.A : -9.8;
-
-    const fitLine = [];
-    const steps = 40;
-    for (let i = 0; i <= steps; i++) {
-      const t = tMin + (tMax - tMin) * (i / steps);
-      const yFit = fit ? (fit.A * t * t + fit.B * t + fit.C) : (y0 + v0y * t + 0.5 * ay * t * t);
-      fitLine.push({ x: t, y: yFit });
-    }
-
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Measured y (m)', data: pts.map(p => ({ x: p.time, y: p.y })), backgroundColor: '#d67b19', borderColor: '#d67b19', pointRadius: 6 },
-          { label: 'Quadratic Fit', data: fitLine, type: 'line', borderColor: '#b06210', borderWidth: 3.5, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Vertical Position y (m)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: 0,
-            suggestedMax: Math.max(1, ...pts.map(p => p.y)) * 1.25,
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
-        }
-      }
-    };
-  } else if (graphType === 'x-pos') {
-    const fit = state.fitResults.xPos;
-    const fitLine = [
-      { x: tMin, y: fit ? fit.slope * tMin + fit.intercept : 0 },
-      { x: tMax, y: fit ? fit.slope * tMax + fit.intercept : 0 }
-    ];
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Measured x (m)', data: pts.map(p => ({ x: p.time, y: p.x })), backgroundColor: '#0f7e9b', borderColor: '#0f7e9b', pointRadius: 6 },
-          { label: 'Linear Fit (v₀ₓ)', data: fitLine, type: 'line', borderColor: '#095f76', borderWidth: 3.5, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Horizontal Position x (m)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: 0,
-            suggestedMax: Math.max(1, ...pts.map(p => p.x)) * 1.2,
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
-        }
-      }
-    };
-  } else if (graphType === 'y-vel') {
-    const tangPts = (state.tangentPoints && state.tangentPoints.length >= 2) ? state.tangentPoints : [];
-    const fit = state.fitResults.yVel || linearRegression(tangPts.map(p => ({ x: p.time, y: p.vy })));
-    const ay = fit ? fit.slope : (state.fitResults.yPos ? 2 * state.fitResults.yPos.A : -9.8);
-    const v0y = fit ? fit.intercept : (state.fitResults.yPos ? state.fitResults.yPos.B : 0);
-    const maxV = Math.max(5, Math.abs(v0y), Math.abs(ay * (tMax - tMin) + v0y)) * 1.25;
-
-    const fitLine = [
-      { x: tMin, y: ay * tMin + v0y },
-      { x: tMax, y: ay * tMax + v0y }
-    ];
-    const tApex = Math.abs(ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -v0y / ay)) : (tMin + tMax) / 2;
-    const areaUpVal = 0.5 * Math.max(0, v0y + ay * tMin) * Math.max(0, tApex - tMin);
-    const areaDownVal = 0.5 * Math.min(0, ay * tMax + v0y) * Math.max(0, tMax - tApex);
-
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: '10 Tangent Velocities (Δy/Δt)', data: tangPts.map(p => ({ x: p.time, y: p.vy })), backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'rectRot' },
-          { label: 'Linear Fit (Slope = ay)', data: fitLine, type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false },
-          { label: `Area₁ (+Δy_up = +${areaUpVal.toFixed(2)} m)`, data: [{ x: tMin, y: ay * tMin + v0y }, { x: tApex, y: 0 }], type: 'line', borderColor: 'rgba(15, 126, 155, 0.7)', backgroundColor: 'rgba(15, 126, 155, 0.22)', borderWidth: 1.5, pointRadius: 4, fill: 'origin' },
-          { label: `Area₂ (Δy_down = ${areaDownVal.toFixed(2)} m)`, data: [{ x: tApex, y: 0 }, { x: tMax, y: ay * tMax + v0y }], type: 'line', borderColor: 'rgba(214, 123, 25, 0.7)', backgroundColor: 'rgba(214, 123, 25, 0.22)', borderWidth: 1.5, pointRadius: 4, fill: 'origin' }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Vertical Velocity vy (m/s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: -maxV,
-            suggestedMax: maxV,
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 13, weight: 'bold' } } }
-        }
-      }
-    };
-  } else if (graphType === 'x-vel') {
-    const v0x = state.fitResults.xVel ? state.fitResults.xVel.intercept : (state.fitResults.xPos ? state.fitResults.xPos.slope : 0);
-    const fitLine = [
-      { x: tMin, y: v0x },
-      { x: tMax, y: v0x }
-    ];
-    const dxRectArea = v0x * (tMax - tMin);
-
-    const vxSamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      vxSamples.push({ x: t, y: v0x });
-    }
-
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Sampled Tangent Slopes (Δx/Δt)', data: vxSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'rectRot' },
-          { label: `Constant Fit (v₀ₓ = ${v0x.toFixed(3)} m/s • Area Δx = ${dxRectArea.toFixed(2)} m)`, data: fitLine, type: 'line', borderColor: '#0f7e9b', backgroundColor: 'rgba(15, 126, 155, 0.18)', borderWidth: 3.5, pointRadius: 0, fill: 'origin' }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Horizontal Velocity vx (m/s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: 0,
-            suggestedMax: Math.max(3.5, v0x * 1.4),
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
-        }
-      }
-    };
-  } else if (graphType === 'y-acc') {
-    const meanAy = state.fitResults.yAcc ? state.fitResults.yAcc.mean : -9.80;
-    const aySamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      aySamples.push({ x: t, y: meanAy });
-    }
-
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Slope of Velocity Graph (Δvᵧ/Δt)', data: aySamples, backgroundColor: '#d67b19', borderColor: '#b06210', pointRadius: 7, pointStyle: 'circle' },
-          { label: `Measured Acceleration Fit (aᵧ = ${meanAy.toFixed(3)} m/s²)`, data: [{ x: tMin, y: meanAy }, { x: tMax, y: meanAy }], type: 'line', borderColor: '#d67b19', borderWidth: 3.5, pointRadius: 0, fill: false },
-          { label: 'Reference g (-9.80 m/s²)', data: [{ x: tMin, y: -9.80 }, { x: tMax, y: -9.80 }], type: 'line', borderColor: '#64748b', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Vertical Acceleration ay (m/s²)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: -14,
-            suggestedMax: 2,
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
-        }
-      }
-    };
-  } else if (graphType === 'x-acc') {
-    const axSamples = [];
-    for (let i = 1; i <= 10; i++) {
-      const t = tMin + (tMax - tMin) * (i / 11);
-      axSamples.push({ x: t, y: 0.0 });
-    }
-
-    chartConfig = {
-      type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Slope of Velocity Graph (Δvₓ/Δt)', data: axSamples, backgroundColor: '#0f7e9b', borderColor: '#095f76', pointRadius: 7, pointStyle: 'circle' },
-          { label: 'Constant Zero Acceleration Fit (aₓ = 0.000 m/s²)', data: [{ x: tMin, y: 0.0 }, { x: tMax, y: 0.0 }], type: 'line', borderColor: '#0f7e9b', borderWidth: 3.5, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        animation: false,
-        responsive: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time t (s)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 2.5 : 1 }
-          },
-          y: {
-            title: { display: true, text: 'Horizontal Acceleration ax (m/s²)', font: { size: 16, weight: 'bold' } },
-            ticks: { font: { size: 13 } },
-            suggestedMin: -2,
-            suggestedMax: 2,
-            grid: { color: (c) => (c.tick && c.tick.value === 0) ? '#0f7e9b' : '#e2e8f0', lineWidth: (c) => (c.tick && c.tick.value === 0) ? 3 : 1 }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 14, weight: 'bold' } } }
-        }
-      }
-    };
-  }
-
-  if (!chartConfig) return null;
-  const tempChart = new Chart(ctx, chartConfig);
-  tempChart.render();
+  const cfg = buildChartConfigForGraph(type, true);
+  const tempChart = new Chart(cCtx, cfg);
+  tempChart.update();
   const dataUrl = canvas.toDataURL('image/png');
   tempChart.destroy();
   return dataUrl;
 }
 
-function renderSlideDeckPreview(slideIdx) {
-  state.currentSlideIdx = slideIdx;
-
-  const allThumbs = document.querySelectorAll('.slide-thumb');
-  allThumbs.forEach(thumb => {
-    thumb.classList.toggle('active', parseInt(thumb.dataset.slideIdx, 10) === slideIdx);
-  });
-
-  if (!slideViewport) return;
-
-  const sName = (studentNameInput ? studentNameInput.value : '') || 'Student Name';
-  const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
-  const cVals = state.calcValues;
-
-  let slideHTML = '';
-  if (slideIdx === 1) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 1 of 11: Title & Honor Code';
-    let videoPreviewImg = '';
-    try {
-      const snap = getVideoSnapshotData();
-      if (snap) {
-        videoPreviewImg = `<img src="${snap}" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">`;
-      }
-    } catch (e) {
-      console.warn('Slide 1 preview snapshot error:', e);
-    }
-    slideHTML = `
-      <div style="flex: 1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center;">
-        <div style="display: flex; flex-direction: column; justify-content: center;">
-          <h1 style="font-size: 2.1rem; font-weight: 800; color: #0f7e9b; margin: 0 0 0.4rem 0;">Physics of Sports Analytics</h1>
-          <h3 style="font-size: 1.2rem; font-weight: 500; color: #4b6570; margin: 0 0 1.25rem 0;">Video Analysis of Projectile Motion</h3>
-          <div style="font-size: 0.95rem; color: #123140; margin-bottom: 1.5rem; line-height: 1.6;">
-            <strong>Student Name:</strong> ${sName}<br>
-            <strong>Teacher:</strong> ${tName}<br>
-            <strong>Course:</strong> High School Physics
-          </div>
-          <div style="background: #e6f4f8; border-left: 4px solid #0f7e9b; padding: 0.75rem 1rem; border-radius: 4px; font-style: italic; font-size: 0.85rem; color: #095f76;">
-            "On my honor, I have neither given nor received unauthorized aid on this assignment."
-          </div>
-        </div>
-        <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: center; min-height: 260px;">
-          ${videoPreviewImg || '<span style="color: #7a94a0; font-size: 0.85rem;">[Video Tracking Preview Snapshot]</span>'}
-        </div>
-      </div>
-    `;
-  } else if (slideIdx >= 2 && slideIdx <= 7) {
-    const titles = {
-      2: 'Slide 2 of 11: Vertical Position Graph',
-      3: 'Slide 3 of 11: Vertical Velocity Graph',
-      4: 'Slide 4 of 11: Vertical Acceleration Graph',
-      5: 'Slide 5 of 11: Horizontal Position Graph',
-      6: 'Slide 6 of 11: Horizontal Velocity Graph',
-      7: 'Slide 7 of 11: Horizontal Acceleration Graph'
-    };
-    if (slidePreviewTitle) slidePreviewTitle.textContent = titles[slideIdx];
-
-    const slideInfo = {
-      2: {
-        graphType: 'y-pos',
-        title: 'Vertical Position Graph [y(t)]',
-        gen: 'y(t) = ½·ay·t² + v₀y·t + y₀',
-        part: `y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)`,
-        notes: `• Quadratic fit confirms constant downward acceleration.<br>• y₀ = ${cVals.y0.toFixed(3)} m<br>• v₀y = ${cVals.vy0.toFixed(3)} m/s<br>• ay = ${cVals.ay.toFixed(3)} m/s²`
-      },
-      3: {
-        graphType: 'y-vel',
-        title: 'Vertical Velocity Graph [vy(t)]',
-        gen: 'vy(t) = ay·t + v₀y',
-        part: `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
-        notes: `• Includes 10 points derived directly from two-point tangent slopes (Δy/Δt).<br>• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².<br>• Shaded triangles show +Δy_up (ascent) and Δy_down (descent).`
-      },
-      4: {
-        graphType: 'y-acc',
-        title: 'Vertical Acceleration Graph [ay(t)]',
-        gen: 'ay(t) = constant',
-        part: `ay(t) = ${cVals.ay.toFixed(3)} m/s² (Standard g = -9.80 m/s²)`,
-        notes: `• Measured vertical acceleration: ${cVals.ay.toFixed(3)} m/s².<br>• Reference acceleration of free fall: -9.80 m/s².<br>• Percent Difference: ${cVals.ayPctDiff.toFixed(2)}%.`
-      },
-      5: {
-        graphType: 'x-pos',
-        title: 'Horizontal Position Graph [x(t)]',
-        gen: 'x(t) = v₀x·t + x₀',
-        part: `x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)`,
-        notes: `• Linear fit demonstrates uniform motion in horizontal axis.<br>• Slope indicates initial horizontal velocity: v₀x = ${cVals.vx0.toFixed(3)} m/s.<br>• Initial position: x₀ = ${cVals.x0.toFixed(3)} m.`
-      },
-      6: {
-        graphType: 'x-vel',
-        title: 'Horizontal Velocity Graph [vx(t)]',
-        gen: 'vx(t) = v₀x',
-        part: `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
-        notes: `• Velocity remains essentially constant throughout flight.<br>• Shaded rectangle area under vx(t) equals horizontal range Δx = v₀x·Δt.<br>• Measured horizontal acceleration: ax = ${cVals.ax.toFixed(3)} m/s².`
-      },
-      7: {
-        graphType: 'x-acc',
-        title: 'Horizontal Acceleration Graph [ax(t)]',
-        gen: 'ax(t) = 0 m/s²',
-        part: `ax(t) = ${cVals.ax.toFixed(3)} m/s²`,
-        notes: `• Reference comparison: |ax - 0| = ${cVals.axDiff.toFixed(3)} m/s².<br>• Absence of horizontal net force produces zero acceleration.`
-      }
-    };
-
-    const sData = slideInfo[slideIdx];
-    const chartImg = generateChartImageData(sData.graphType);
-
-    slideHTML = `
-      <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; align-items: center;">
-        <div>
-          <h2 style="font-size: 1.45rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.85rem 0;">${sData.title}</h2>
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #7a94a0; text-transform: uppercase;">General Equation:</div>
-            <div style="font-size: 0.95rem; font-weight: 600; color: #123140; margin: 0.2rem 0 0.5rem 0;">${sData.gen}</div>
-            <div style="font-size: 0.72rem; font-weight: 700; color: #7a94a0; text-transform: uppercase;">Particular Equation (with Units):</div>
-            <div style="font-size: 0.95rem; font-weight: 600; color: #0f7e9b; margin-top: 0.2rem;">${sData.part}</div>
-          </div>
-          <div style="font-size: 0.85rem; color: #4b6570; line-height: 1.55;">${sData.notes}</div>
-        </div>
-        <div style="background: #ffffff; border: 1px solid #c8dbe3; border-radius: 8px; padding: 0.4rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-          ${chartImg ? `<img src="${chartImg}" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 4px;">` : '<span style="color: #7a94a0;">[Graph Image]</span>'}
-        </div>
-      </div>
-    `;
-  } else if (slideIdx === 8) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 8 of 11: Motion Graph Translation, Intervals & Signed Area';
-    const pts = state.series[state.activeSeries] || [];
-    const tMin = pts.length > 0 ? pts[0].time : 0;
-    const tMax = pts.length > 1 ? pts[pts.length - 1].time : 1;
-    const tApex = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMin, Math.min(tMax, -cVals.vy0 / cVals.ay)) : (tMin + tMax) / 2;
-    const gi = state.graphInterpretation || {};
-    const sa = state.signedAreaValues || {};
-    const areaUp = sa.areaUp !== undefined && sa.areaUp !== '' ? Number(sa.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApex - tMin);
-    const areaDown = sa.areaDown !== undefined && sa.areaDown !== '' ? Number(sa.areaDown) : 0.5 * Math.min(0, cVals.ay * tMax + cVals.vy0) * Math.max(0, tMax - tApex);
-    const netDy = sa.netDyArea !== undefined && sa.netDyArea !== '' ? Number(sa.netDyArea) : (areaUp + areaDown);
-    const yMaxArea = sa.yMaxFromArea !== undefined && sa.yMaxFromArea !== '' ? Number(sa.yMaxFromArea) : (cVals.y0 + areaUp);
-    const yFinalArea = sa.yFinalFromArea !== undefined && sa.yFinalFromArea !== '' ? Number(sa.yFinalArea) : (cVals.y0 + netDy);
-
-    slideHTML = `
-      <div style="flex: 1; display: flex; flex-direction: column;">
-        <h2 style="font-size: 1.32rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Motion Graph Translation, Physical Intervals &amp; Signed-Area Method</h2>
-        <p style="font-size: 0.78rem; color: #4b6570; margin: 0 0 0.55rem 0;">Connecting position tangent slopes (Δy/Δt), velocity-time signed area (∑Area), and physical intervals of motion.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; flex: 1;">
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">1. Graph Shape Translation &amp; Two-Point Tangents</div>
-            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
-              • <strong>Two-Point Tangent Slope:</strong> vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual slopes verified, ${state.tangentPoints.length}/10 total).<br>
-              • <strong>Vertical Chain:</strong> Concave-down parabola y(t) → linear vᵧ(t) crossing 0 at t_apex → constant negative aᵧ(t) = ${cVals.ay.toFixed(2)} m/s².<br>
-              • <strong>Horizontal Chain:</strong> Linear x(t) → constant positive vₓ(t) = ${cVals.vx0.toFixed(2)} m/s → zero acceleration aₓ(t) = 0.
-            </div>
-          </div>
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">2. Stopping &amp; Direction of Motion Intervals</div>
-            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
-              • <strong>Vertical Stopping (vᵧ = 0):</strong> Instantaneously at apex <strong>t_apex = ${(gi.stopTimeApex !== '' && gi.stopTimeApex !== undefined) ? Number(gi.stopTimeApex).toFixed(3) : tApex.toFixed(3)} s</strong> (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0).<br>
-              • <strong>Moving Up (+y, vᵧ &gt; 0):</strong> [${tMin.toFixed(2)} s, ${tApex.toFixed(2)} s]<br>
-              • <strong>Moving Down (−y, vᵧ &lt; 0):</strong> [${tApex.toFixed(2)} s, ${tMax.toFixed(2)} s]
-            </div>
-          </div>
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">3. Sign of Acceleration Across Flight</div>
-            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
-              • <strong>Negative Accel Interval (aᵧ &lt; 0):</strong> Entire flight <strong>[${tMin.toFixed(2)} s, ${tMax.toFixed(2)} s]</strong>.<br>
-              • <strong>Physical Justification:</strong> ${gi.accSignExplanation || 'Slope Δvᵧ/Δt is constant and negative throughout ascent, apex, and descent because gravity pulls downward the entire flight.'}
-            </div>
-          </div>
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.6rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #d67b19; text-transform: uppercase;">4. Signed Area Under vᵧ(t) Graph (Δy = ∑Area)</div>
-            <div style="font-size: 0.78rem; color: #123140; line-height: 1.45; margin-top: 0.25rem;">
-              • <strong>Ascent Area₁ (+Δy_up):</strong> +${areaUp.toFixed(3)} m | <strong>Descent Area₂ (Δy_down):</strong> ${areaDown.toFixed(3)} m<br>
-              • <strong>Net Displacement (Δy_total):</strong> ${netDy.toFixed(3)} m<br>
-              • <strong>Apex Height (y₀ + Δy_up):</strong> <strong style="color:#0f7e9b;">${yMaxArea.toFixed(3)} m</strong> | <strong>Final y:</strong> ${yFinalArea.toFixed(3)} m
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (slideIdx === 9) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 9 of 11: Kinematic Calculations & Predictions';
-    const workH = (workMaxHeight ? workMaxHeight.value : '') || '';
-    const workT = (workHangTime ? workHangTime.value : '') || '';
-    const workR = (workRange ? workRange.value : '') || '';
-    const workV = (workVector ? workVector.value : '') || '';
-
-    slideHTML = `
-      <div style="flex: 1; display: flex; flex-direction: column;">
-        <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Kinematic Calculations &amp; Theoretical Predictions</h2>
-        <p style="font-size: 0.8rem; color: #4b6570; margin: 0 0 0.65rem 0;">Theoretical projectile motion parameters derived algebraically from velocity components without shortcuts.</p>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; flex: 1;">
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">1. Launch Speed &amp; Angle</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">v₀ = √(v₀ₓ² + v₀y²) = <strong style="color: #d67b19;">${cVals.v0.toFixed(3)} m/s</strong></div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin-bottom: 0.25rem;">θ = arctan(v₀y / v₀ₓ) = <strong style="color: #d67b19;">${cVals.theta.toFixed(2)}°</strong></div>
-            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workV || `Components: v₀ₓ=${cVals.vx0.toFixed(2)}, v₀y=${cVals.vy0.toFixed(2)}`}</div>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">2. Maximum Apex Height (y_max)</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">v_fy² = v_iy² + 2ay·Δy → y_max = y₀ - (v₀y² / 2ay)</div>
-            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.maxHCalc.toFixed(3)} m</strong> | Measured: <strong>${cVals.maxHMeas.toFixed(3)} m</strong></div>
-            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workH || 'Apex vy = 0 m/s'}</div>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">3. Flight Hang Time (t_hang)</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">y(t) = y₀ + v₀y·t + ½·ay·t² = 0</div>
-            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.hangCalc.toFixed(3)} s</strong> | Measured: <strong>${cVals.hangMeas.toFixed(3)} s</strong></div>
-            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workT || 'Solved for flight landing time'}</div>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 0.65rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #0f7e9b; text-transform: uppercase;">4. Horizontal Range (Δx)</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #123140; margin: 0.2rem 0;">Δx = v₀ₓ · t_hang (ax = 0 m/s²)</div>
-            <div style="font-size: 0.8rem; color: #4b6570; margin-bottom: 0.25rem;">Calculated: <strong style="color: #0f7e9b;">${cVals.rangeCalc.toFixed(3)} m</strong> | Measured: <strong>${cVals.rangeMeas.toFixed(3)} m</strong></div>
-            <div style="font-size: 0.7rem; color: #64748b; font-family: monospace; max-height: 40px; overflow-y: auto;">Work: ${workR || 'Uniform horizontal motion'}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (slideIdx === 10) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 10 of 11: Model Verification & Comparison Table';
-    slideHTML = `
-      <div style="flex: 1; display: flex; flex-direction: column;">
-        <h2 style="font-size: 1.35rem; font-weight: 700; color: #0f7e9b; margin: 0 0 0.2rem 0;">Model Verification: Measured vs. Theoretical Comparison</h2>
-        <p style="font-size: 0.8rem; color: #4b6570; margin: 0 0 0.5rem 0;">Direct comparison of video-measured parameters against theoretical kinematics (% Diff = (Calc - Meas)/Meas × 100%).</p>
-        
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; border: 1px solid #c8dbe3; background: #ffffff;">
-          <thead>
-            <tr style="background: #0f7e9b; color: #ffffff;">
-              <th style="padding: 0.4rem 0.55rem; text-align: left;">Kinematic Parameter</th>
-              <th style="padding: 0.4rem 0.55rem; text-align: center;">Measured (Graph / Video)</th>
-              <th style="padding: 0.4rem 0.55rem; text-align: center;">Theoretical / Calculated</th>
-              <th style="padding: 0.4rem 0.55rem; text-align: center;">Percent Difference</th>
-              <th style="padding: 0.4rem 0.55rem; text-align: center;">Model Agreement</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid #c8dbe3;">
-              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Vertical Acc (ay)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.ay.toFixed(3)} m/s²</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">-9.800 m/s² (Ref)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.ayPctDiff) < 6 ? 'success' : Math.abs(cVals.ayPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-            </tr>
-            <tr style="border-bottom: 1px solid #c8dbe3; background: #f8fafc;">
-              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Horizontal Acc (ax)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.ax.toFixed(3)} m/s²</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">0.000 m/s² (Newton I)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge success">✓ Verified (ax ≈ 0)</span></td>
-            </tr>
-            <tr style="border-bottom: 1px solid #c8dbe3;">
-              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Max Apex Height (y_max)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.maxHMeas.toFixed(3)} m</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.maxHCalc.toFixed(3)} m</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.maxHPctDiff) < 6 ? 'success' : Math.abs(cVals.maxHPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-            </tr>
-            <tr style="border-bottom: 1px solid #c8dbe3; background: #f8fafc;">
-              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Flight Hang Time (t_hang)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.hangMeas.toFixed(3)} s</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.hangCalc.toFixed(3)} s</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.hangPctDiff) < 6 ? 'success' : Math.abs(cVals.hangPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-            </tr>
-            <tr>
-              <td style="padding: 0.35rem 0.55rem; font-weight: 600;">Horizontal Range (Δx)</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.rangeMeas.toFixed(3)} m</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;">${cVals.rangeCalc.toFixed(3)} m</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center; font-weight: 700;">${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%</td>
-              <td style="padding: 0.35rem 0.55rem; text-align: center;"><span class="print-badge ${Math.abs(cVals.rangePctDiff) < 6 ? 'success' : Math.abs(cVals.rangePctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div style="margin-top: 0.45rem; font-size: 0.74rem; color: #4b6570; font-style: italic;">
-          • Tight percentage differences (&lt; 6%) validate independence of horizontal and vertical motions and verify the parabolic free-fall projectile model.
-        </div>
-      </div>
-    `;
-  } else if (slideIdx === 11) {
-    if (slidePreviewTitle) slidePreviewTitle.textContent = 'Slide 11 of 11: Real World Reflection';
-    const refTxt = (state.reflectionText || '').trim();
-    slideHTML = `
-      <div style="flex: 1; display: flex; flex-direction: column;">
-        <h2 style="font-size: 1.7rem; font-weight: 700; color: #0f7e9b; margin: 0 0 1rem 0;">Real-World Reflection</h2>
-        <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 8px; padding: 1.5rem; flex: 1; font-size: 0.98rem; color: #123140; line-height: 1.7;">
-          ${refTxt ? refTxt : '<div style="color: #94a3b8; font-style: italic; text-align: center; padding: 2rem 1rem; border: 2px dashed #cbd5e1; border-radius: 6px;">[Student reflection is currently blank. Complete Section 8 in Step 4 to enter your 5+ sentence reflection.]</div>'}
-        </div>
-      </div>
-    `;
+// Strict helper: NEVER fall back to model answers when formatting student work!
+function fmtStudentVal(rawVal, unit = '') {
+  if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
+    return '<span class="not-submitted-tag">Not submitted</span>';
   }
-
-  // Append discreet originality verification footnote
-  const auth = getAuthenticitySignature();
-  slideHTML += `
-    <div style="margin-top: 0.75rem; font-size: 0.72rem; color: #7a94a0; font-family: monospace; display: flex; justify-content: space-between; border-top: 1px solid #eef3f6; padding-top: 0.4rem;">
-      <span>PhysicsKit Authenticity Engine</span>
-      <span>Originality Token: <strong>${auth.token}</strong></span>
-    </div>
-  `;
-
-  slideViewport.innerHTML = slideHTML;
+  return `<strong>${escapeHtml(String(rawVal).trim())}${unit ? ' ' + escapeHtml(unit) : ''}</strong>`;
 }
 
-// 1-Click PPTX Generator (Embeds Crisp High-Res Offscreen Chart Images, Calculations, Table & Plagiarism Token)
-async function exportPresentationPPTX() {
-  if (typeof PptxGenJS === 'undefined') {
-    alert('PptxGenJS library is still loading. Please try again in a moment.');
-    return;
+function fmtStudentText(rawText) {
+  if (rawText === undefined || rawText === null || String(rawText).trim() === '') {
+    return '<span class="not-submitted-tag">Not submitted</span>';
   }
-
-  updateStatus('Generating rubric-aligned 10-slide PowerPoint presentation with embedded graphs, calculations, and comparison tables...');
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-
-  const auth = getAuthenticitySignature();
-  const sName = auth.student;
-  const tName = auth.teacher;
-  const cVals = state.calcValues;
-
-  // Metadata properties for authenticity verification
-  pptx.title = "Physics of Sports Analytics - Lab Project";
-  pptx.author = auth.student;
-  pptx.company = "The Thinking Experiment • PhysicsKit";
-  pptx.subject = `Originality Signature: ${auth.token} • Points Fingerprint: ${auth.hashFingerprint}`;
-  pptx.revision = auth.token;
-
-  const addVerificationFooter = (slide) => {
-    slide.addText(`PhysicsKit Originality Verified • ID: ${auth.token} • ${auth.timestamp.slice(0, 10)} • Student: ${auth.student}`, {
-      x: 0.8, y: 7.05, w: 11.5, h: 0.3,
-      fontSize: 9, color: '7A94A0', fontFace: 'Arial'
-    });
-  };
-
-  // Slide 1: Title Slide (with Video Snapshot on right)
-  const s1 = pptx.addSlide();
-  s1.addText('Physics of Sports Analytics', {
-    x: 0.8, y: 1.2, w: 5.6, h: 0.9,
-    fontSize: 32, bold: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-  s1.addText('Video Analysis of Projectile Motion', {
-    x: 0.8, y: 2.1, w: 5.6, h: 0.5,
-    fontSize: 18, color: '4B6570', fontFace: 'Arial'
-  });
-  s1.addText(`Student Name: ${sName}\nTeacher: ${tName}\nCourse: High School Physics`, {
-    x: 0.8, y: 2.9, w: 5.6, h: 1.3,
-    fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 22
-  });
-  s1.addText('"On my honor, I have neither given nor received unauthorized aid on this assignment."', {
-    x: 0.8, y: 4.5, w: 5.6, h: 0.6,
-    fontSize: 12, italic: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-
-  // Digital Authenticity Seal Box on Slide 1
-  s1.addText(`DIGITAL AUTHENTICITY SEAL\nVerification ID: ${auth.token}\nStudent: ${auth.student}\nTracking Frames: ${auth.pointsCount} points\nStatus: Verified Original Work`, {
-    x: 0.8, y: 5.4, w: 5.6, h: 1.2,
-    fontSize: 9.5, color: '0F7E9B', fontFace: 'Courier New', lineSpacing: 15
-  });
-
-  // Embed video overlay screenshot on Slide 1
-  try {
-    const snap = getVideoSnapshotData();
-    if (snap) {
-      s1.addImage({ data: snap, x: 6.6, y: 1.2, w: 5.8, h: 4.4 });
-    }
-  } catch (e) {
-    console.warn('Video snapshot error:', e);
-  }
-  addVerificationFooter(s1);
-
-  // Helper to add Graph Slides (2-7) with offscreen-rendered high-res images
-  const addGraphSlide = (title, genEq, partEq, notesText, graphType) => {
-    const slide = pptx.addSlide();
-    slide.addText(title, {
-      x: 0.8, y: 0.6, w: 11.5, h: 0.6,
-      fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
-    });
-
-    slide.addText(`GENERAL EQUATION:\n${genEq}\n\nPARTICULAR EQUATION:\n${partEq}\n\nANALYSIS:\n${notesText}`, {
-      x: 0.8, y: 1.3, w: 5.4, h: 5.3,
-      fontSize: 13, color: '123140', fontFace: 'Arial', lineSpacing: 20
-    });
-
-    const chartImg = generateChartImageData(graphType);
-    if (chartImg) {
-      slide.addImage({ data: chartImg, x: 6.5, y: 1.2, w: 6.0, h: 5.2 });
-    }
-    addVerificationFooter(slide);
-  };
-
-  // Slide 2: Vertical Position Graph
-  addGraphSlide(
-    'Vertical Position Graph',
-    'y(t) = ½·ay·t² + v₀y·t + y₀',
-    `y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)`,
-    `• Quadratic curve of best fit confirms acceleration.\n• y₀ = ${cVals.y0.toFixed(3)} m\n• v₀y = ${cVals.vy0.toFixed(3)} m/s\n• ay = ${cVals.ay.toFixed(3)} m/s²`,
-    'y-pos'
-  );
-
-  // Slide 3: Vertical Velocity Graph (with 10 tangent slopes explicitly documented)
-  addGraphSlide(
-    'Vertical Velocity Graph',
-    'vy(t) = ay·t + v₀y',
-    `vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s)`,
-    `• Velocity values constructed from 10 tangent slopes along y(t).\n• Slope represents vertical acceleration: ay = ${cVals.ay.toFixed(3)} m/s².\n• Y-intercept indicates initial vertical speed: v₀y = ${cVals.vy0.toFixed(3)} m/s.`,
-    'y-vel'
-  );
-
-  // Slide 4: Vertical Acceleration Graph
-  addGraphSlide(
-    'Vertical Acceleration Graph',
-    'ay(t) = constant',
-    `ay(t) = ${cVals.ay.toFixed(3)} m/s² (Ref g = -9.80 m/s²)`,
-    `• Experimental vertical acceleration: ${cVals.ay.toFixed(3)} m/s².\n• Free fall standard: -9.80 m/s².\n• Percent Difference: ${cVals.ayPctDiff.toFixed(2)}%.`,
-    'y-acc'
-  );
-
-  // Slide 5: Horizontal Position Graph
-  addGraphSlide(
-    'Horizontal Position Graph',
-    'x(t) = v₀x·t + x₀',
-    `x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)`,
-    `• Linear fit demonstrates uniform motion in horizontal axis.\n• Initial velocity: v₀x = ${cVals.vx0.toFixed(3)} m/s.\n• Initial position: x₀ = ${cVals.x0.toFixed(3)} m.`,
-    'x-pos'
-  );
-
-  // Slide 6: Horizontal Velocity Graph
-  addGraphSlide(
-    'Horizontal Velocity Graph',
-    'vx(t) = v₀x',
-    `vx(t) = ${cVals.vx0.toFixed(3)} m/s`,
-    `• Slope = 0 confirms absence of horizontal net force.\n• Constant velocity: vx = ${cVals.vx0.toFixed(3)} m/s.`,
-    'x-vel'
-  );
-
-  // Slide 7: Horizontal Acceleration Graph
-  addGraphSlide(
-    'Horizontal Acceleration Graph',
-    'ax(t) = 0 m/s²',
-    `ax(t) = ${cVals.ax.toFixed(3)} m/s²`,
-    `• Consistent with Newton's First Law.\n• Measured horizontal acceleration |ax - 0| = ${cVals.axDiff.toFixed(3)} m/s².`,
-    'x-acc'
-  );
-
-  // Slide 8: Motion Graph Translation, Physical Intervals & Signed-Area Method
-  const ptsSlide = state.series[state.activeSeries] || [];
-  const tMinSlide = ptsSlide.length > 0 ? ptsSlide[0].time : 0;
-  const tMaxSlide = ptsSlide.length > 1 ? ptsSlide[ptsSlide.length - 1].time : 1;
-  const tApexSlide = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMinSlide, Math.min(tMaxSlide, -cVals.vy0 / cVals.ay)) : (tMinSlide + tMaxSlide) / 2;
-  const giSlide = state.graphInterpretation || {};
-  const saSlide = state.signedAreaValues || {};
-  const areaUpSlide = saSlide.areaUp !== undefined && saSlide.areaUp !== '' ? Number(saSlide.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApexSlide - tMinSlide);
-  const areaDownSlide = saSlide.areaDown !== undefined && saSlide.areaDown !== '' ? Number(saSlide.areaDown) : 0.5 * Math.min(0, cVals.ay * tMaxSlide + cVals.vy0) * Math.max(0, tMaxSlide - tApexSlide);
-  const netDySlide = saSlide.netDyArea !== undefined && saSlide.netDyArea !== '' ? Number(saSlide.netDyArea) : (areaUpSlide + areaDownSlide);
-  const yMaxAreaSlide = saSlide.yMaxFromArea !== undefined && saSlide.yMaxFromArea !== '' ? Number(saSlide.yMaxFromArea) : (cVals.y0 + areaUpSlide);
-  const yFinalAreaSlide = saSlide.yFinalFromArea !== undefined && saSlide.yFinalFromArea !== '' ? Number(saSlide.yFinalFromArea) : (cVals.y0 + netDySlide);
-
-  const s8m = pptx.addSlide();
-  s8m.addText('Motion Graph Translation, Intervals & Signed-Area Method', {
-    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
-    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-  s8m.addText('Unit 2 Motion Graph Mastery: Connecting tangent slopes (Δy/Δt), signed v-t areas (∑Area), and physical intervals.', {
-    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
-    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
-  });
-
-  s8m.addText(`1. GRAPH SHAPE TRANSLATION & TWO-POINT TANGENTS\n• Two-Point Slope Formula: vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual slopes verified, ${state.tangentPoints.length}/10 total)\n• Vertical Chain: Parabola y(t) → linear vᵧ(t) crossing 0 → constant aᵧ = ${cVals.ay.toFixed(2)} m/s²\n• Horizontal Chain: Linear x(t) → constant vₓ = ${cVals.vx0.toFixed(2)} m/s → zero aₓ = 0 m/s²`, {
-    x: 0.8, y: 1.6, w: 5.6, h: 2.3,
-    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  s8m.addText(`2. STOPPING & DIRECTION OF MOTION INTERVALS\n• Vertical Stopping (vᵧ = 0): Instantaneously at apex t_apex = ${tApexSlide.toFixed(3)} s (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0)\n• Moving Upward (+y, vᵧ > 0): [${tMinSlide.toFixed(2)} s, ${tApexSlide.toFixed(2)} s]\n• Moving Downward (−y, vᵧ < 0): [${tApexSlide.toFixed(2)} s, ${tMaxSlide.toFixed(2)} s]`, {
-    x: 6.8, y: 1.6, w: 5.6, h: 2.3,
-    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  s8m.addText(`3. SIGN OF ACCELERATION ACROSS FLIGHT\n• Negative Acceleration Interval (aᵧ < 0): Entire flight [${tMinSlide.toFixed(2)} s, ${tMaxSlide.toFixed(2)} s]\n• Why aᵧ < 0 even while rising: ${giSlide.accSignExplanation || 'The slope Δvᵧ/Δt of the velocity-time line is constant and negative throughout ascent, apex, and descent because gravity pulls downward the entire flight.'}`, {
-    x: 0.8, y: 4.2, w: 5.6, h: 2.4,
-    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  s8m.addText(`4. SIGNED AREA UNDER vᵧ(t) GRAPH (Δy = ∑Area)\n• Positive Ascent Triangle Area₁ (+Δy_up): +${areaUpSlide.toFixed(3)} m\n• Negative Descent Triangle Area₂ (Δy_down): ${areaDownSlide.toFixed(3)} m\n• Total Net Displacement (Δy_total = Area₁ + Area₂): ${netDySlide.toFixed(3)} m\n• Apex Height (y₀ + Δy_up): ${yMaxAreaSlide.toFixed(3)} m  |  Final Position (y₀ + Δy_total): ${yFinalAreaSlide.toFixed(3)} m`, {
-    x: 6.8, y: 4.2, w: 5.6, h: 2.4,
-    fontSize: 11, color: '123140', fontFace: 'Arial', lineSpacing: 17,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-  addVerificationFooter(s8m);
-
-  // Slide 9: Kinematic Calculations & Theoretical Predictions
-  const s8 = pptx.addSlide();
-  s8.addText('Kinematic Calculations & Theoretical Predictions', {
-    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
-    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-  s8.addText('Algebraic derivations of projectile motion parameters without shortcuts.', {
-    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
-    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
-  });
-
-  // Box 1: Launch Velocity & Angle
-  s8.addText(`1. INITIAL LAUNCH SPEED & ANGLE\n• Components: v₀ₓ = ${cVals.vx0.toFixed(3)} m/s, v₀y = ${cVals.vy0.toFixed(3)} m/s\n• Speed Formula: v₀ = √(v₀ₓ² + v₀y²)\n• Calculated Speed: v₀ = ${cVals.v0.toFixed(3)} m/s\n• Launch Angle: θ = arctan(v₀y / v₀ₓ) = ${cVals.theta.toFixed(2)}°`, {
-    x: 0.8, y: 1.6, w: 5.6, h: 2.3,
-    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  // Box 2: Maximum Apex Height
-  s8.addText(`2. MAXIMUM APEX HEIGHT (y_max)\n• Kinematic Equation: v_fy² = v_iy² + 2ay·Δy (v_fy = 0 m/s at apex)\n• Theoretical Formula: y_max = y₀ - (v₀y² / 2ay)\n• Theoretical y_max: ${cVals.maxHCalc.toFixed(3)} m\n• Measured Apex Height: ${cVals.maxHMeas.toFixed(3)} m`, {
-    x: 6.8, y: 1.6, w: 5.6, h: 2.3,
-    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  // Box 3: Flight Hang Time
-  s8.addText(`3. FLIGHT HANG TIME (t_hang)\n• Kinematic Equation: y(t) = y₀ + v₀y·t + ½·ay·t²\n• Solved algebraically for landing time where y(t) = 0 m\n• Theoretical Hang Time: ${cVals.hangCalc.toFixed(3)} s\n• Measured Flight Duration: ${cVals.hangMeas.toFixed(3)} s`, {
-    x: 0.8, y: 4.2, w: 5.6, h: 2.4,
-    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-
-  // Box 4: Horizontal Range
-  s8.addText(`4. HORIZONTAL RANGE (Δx)\n• Kinematic Equation: Δx = v₀ₓ · t_hang (ax = 0 m/s²)\n• Theoretical Formula: (${cVals.vx0.toFixed(3)} m/s) × (${cVals.hangCalc.toFixed(3)} s)\n• Theoretical Range: ${cVals.rangeCalc.toFixed(3)} m\n• Measured Horizontal Range: ${cVals.rangeMeas.toFixed(3)} m`, {
-    x: 6.8, y: 4.2, w: 5.6, h: 2.4,
-    fontSize: 11.5, color: '123140', fontFace: 'Arial', lineSpacing: 18,
-    fill: { color: 'F8FAFC' }, line: { color: 'C8DBE3', width: 1 }
-  });
-  addVerificationFooter(s8);
-
-  // Slide 9: Model Verification & Comparison Table
-  const s9 = pptx.addSlide();
-  s9.addText('Model Verification: Measured vs. Theoretical Comparison', {
-    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
-    fontSize: 22, bold: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-  s9.addText('Rigorous comparison of video-measured values against theoretical kinematics (% Diff = (Calc - Meas)/Meas × 100%).', {
-    x: 0.8, y: 1.15, w: 11.5, h: 0.35,
-    fontSize: 12, italic: true, color: '4B6570', fontFace: 'Arial'
-  });
-
-  const tableRows = [
-    [
-      { text: 'Kinematic Parameter', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'left' } },
-      { text: 'Measured (From Video / Fits)', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
-      { text: 'Theoretical / Calculated', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
-      { text: 'Percent Difference', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } },
-      { text: 'Model Agreement', options: { fill: { color: '0F7E9B' }, color: 'FFFFFF', bold: true, fontSize: 11.5, align: 'center' } }
-    ],
-    [
-      { text: 'Vertical Acceleration (ay)', options: { bold: true, fontSize: 10.5 } },
-      { text: `${cVals.ay.toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5 } },
-      { text: '-9.800 m/s² (Ref)', options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
-      { text: Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.ayPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
-    ],
-    [
-      { text: 'Horizontal Acceleration (ax)', options: { bold: true, fontSize: 10.5 } },
-      { text: `${cVals.ax.toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5 } },
-      { text: '0.000 m/s² (Newton I)', options: { align: 'center', fontSize: 10.5 } },
-      { text: `Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²`, options: { align: 'center', fontSize: 10.5, bold: true } },
-      { text: Math.abs(cVals.ax) < 0.1 ? '✓ Verified (ax ≈ 0)' : 'Acceptable', options: { align: 'center', fontSize: 10.5 } }
-    ],
-    [
-      { text: 'Maximum Apex Height (y_max)', options: { bold: true, fontSize: 10.5 } },
-      { text: `${cVals.maxHMeas.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.maxHCalc.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
-      { text: Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.maxHPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
-    ],
-    [
-      { text: 'Flight Hang Time (t_hang)', options: { bold: true, fontSize: 10.5 } },
-      { text: `${cVals.hangMeas.toFixed(3)} s`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.hangCalc.toFixed(3)} s`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
-      { text: Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.hangPctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
-    ],
-    [
-      { text: 'Horizontal Range (Δx)', options: { bold: true, fontSize: 10.5 } },
-      { text: `${cVals.rangeMeas.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.rangeCalc.toFixed(3)} m`, options: { align: 'center', fontSize: 10.5 } },
-      { text: `${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%`, options: { align: 'center', fontSize: 10.5, bold: true } },
-      { text: Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : Math.abs(cVals.rangePctDiff) < 12 ? '⚠ Acceptable (<12%)' : 'Check Work', options: { align: 'center', fontSize: 10.5 } }
-    ]
-  ];
-
-  s9.addTable(tableRows, {
-    x: 0.8, y: 1.6, w: 11.5,
-    colW: [2.8, 2.2, 2.2, 2.1, 2.2],
-    border: { type: 'solid', pt: 1, color: 'C8DBE3' },
-    fill: { color: 'FFFFFF' },
-    lineSpacing: 14
-  });
-
-  s9.addText('Formula: % Diff = [(Calculated - Measured) / Measured] × 100% • Low error (< 6%) validates free-fall projectile mechanics and negligible aerodynamic drag at measured speeds.', {
-    x: 0.8, y: 5.6, w: 11.5, h: 0.9,
-    fontSize: 11.5, italic: true, color: '4B6570', fontFace: 'Arial', lineSpacing: 17
-  });
-  addVerificationFooter(s9);
-
-  // Slide 10: Real World Reflection
-  const s10 = pptx.addSlide();
-  s10.addText('Real World Reflection', {
-    x: 0.8, y: 0.6, w: 11.5, h: 0.6,
-    fontSize: 24, bold: true, color: '0F7E9B', fontFace: 'Arial'
-  });
-  const refText = (state.reflectionText || '').trim();
-  if (refText) {
-    s10.addText(refText, {
-      x: 0.8, y: 1.4, w: 11.5, h: 5.2,
-      fontSize: 15, color: '123140', fontFace: 'Arial', lineSpacing: 24
-    });
-  }
-  addVerificationFooter(s10);
-
-  const fileName = `Physics_of_Sports_Analytics_${sName.replace(/\s+/g, '_')}.pptx`;
-  await pptx.writeFile({ fileName });
-  updateStatus(`Downloaded complete 11-slide presentation with originality verification: ${fileName}`);
+  return `<div class="report-work-text">${escapeHtml(String(rawText).trim())}</div>`;
 }
 
 function preparePrintableReport() {
-  const container = document.getElementById('printableLabReport');
-  if (!container) return;
+  syncStudentInputsFromDOM();
+  autoFitAndDeriveAllGraphs();
 
-  const auth = getAuthenticitySignature();
-  const sName = (studentNameInput ? studentNameInput.value : '') || 'Student Name';
-  const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
-  const cVals = state.calcValues;
+  const exp = getExpectedPhysicsValues();
+  const cov = state.coverageStatus;
+  const eqs = getSixGraphEquationsText();
+  const sr = state.studentResponses;
+  const pred = state.firstAttemptPrediction;
+
+  const sName = (state.studentName || '').trim() || 'Not submitted';
+  const tName = (state.teacherName || '').trim() || 'Physics Teacher';
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const clipSourceLabel = state.isSynthetic
+    ? (SYNTHETIC_MODELS[state.syntheticType] ? SYNTHETIC_MODELS[state.syntheticType].label : 'SYNTHETIC MODEL CLIP (Practice)')
+    : `MEASURED VIDEO FILE (${state.videoFileName || 'Local Video'})`;
+
+  const videoSnap = getVideoSnapshotData();
+  const imgXPos = generateChartImageData('x-pos');
+  const imgYPos = generateChartImageData('y-pos');
+  const imgXVel = generateChartImageData('x-vel');
+  const imgYVel = generateChartImageData('y-vel');
+  const imgXAcc = generateChartImageData('x-acc');
+  const imgYAcc = generateChartImageData('y-acc');
+
   const pts = state.series[state.activeSeries] || [];
-  const refText = (state.reflectionText || '').trim();
-  const workH = (workMaxHeight ? workMaxHeight.value : '') || '';
-  const workT = (workHangTime ? workHangTime.value : '') || '';
-  const workR = (workRange ? workRange.value : '') || '';
-  const workV = (workVector ? workVector.value : '') || '';
-  const tMinP = pts.length > 0 ? pts[0].time : 0;
-  const tMaxP = pts.length > 1 ? pts[pts.length - 1].time : 1;
-  const tApexP = Math.abs(cVals.ay) > 1e-4 ? Math.max(tMinP, Math.min(tMaxP, -cVals.vy0 / cVals.ay)) : (tMinP + tMaxP) / 2;
-  const giP = state.graphInterpretation || {};
-  const saP = state.signedAreaValues || {};
-  const areaUpP = saP.areaUp !== undefined && saP.areaUp !== '' ? Number(saP.areaUp) : 0.5 * Math.max(0, cVals.vy0) * Math.max(0, tApexP - tMinP);
-  const areaDownP = saP.areaDown !== undefined && saP.areaDown !== '' ? Number(saP.areaDown) : 0.5 * Math.min(0, cVals.ay * tMaxP + cVals.vy0) * Math.max(0, tMaxP - tApexP);
-  const netDyP = saP.netDyArea !== undefined && saP.netDyArea !== '' ? Number(saP.netDyArea) : (areaUpP + areaDownP);
-  const yMaxAreaP = saP.yMaxFromArea !== undefined && saP.yMaxFromArea !== '' ? Number(saP.yMaxFromArea) : (cVals.y0 + areaUpP);
-  const yFinalAreaP = saP.yFinalFromArea !== undefined && saP.yFinalFromArea !== '' ? Number(saP.yFinalFromArea) : (cVals.y0 + netDyP);
 
-  const snap = getVideoSnapshotData();
-  const chartYPos = generateChartImageData('y-pos');
-  const chartXPos = generateChartImageData('x-pos');
-  const chartYVel = generateChartImageData('y-vel');
-  const chartXVel = generateChartImageData('x-vel');
-  const chartYAcc = generateChartImageData('y-acc');
-  const chartXAcc = generateChartImageData('x-acc');
+  const firstPredHtml = pred.isSaved
+    ? (pred.isLegacyMissing
+      ? '<em>Not recorded in legacy v1.0 session file.</em>'
+      : `
+        <div><strong>• Predicted vₓ(t):</strong> ${escapeHtml(pred.vxShape)}</div>
+        <div><strong>• Predicted vᵧ(t):</strong> ${escapeHtml(pred.vyShape)}</div>
+        <div><strong>• Predicted aₓ(t):</strong> ${escapeHtml(pred.axShape)}</div>
+        <div><strong>• Predicted aᵧ(t):</strong> ${escapeHtml(pred.ayShape)}</div>
+        <div style="margin-top:0.25rem;"><strong>• Initial Prediction Notes:</strong> ${escapeHtml(pred.initialNotes)}</div>
+      `)
+    : '<span class="not-submitted-tag">Not submitted (Prediction not saved before reveal)</span>';
 
-  const nowStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  container.innerHTML = `
-    <!-- PAGE 1: Trajectory Evidence & Tracking Data -->
-    <div class="print-page">
-      <div class="print-header">
+  const reportHtml = `
+    <div class="lab-report-document">
+      <!-- Report Header -->
+      <header class="report-doc-header">
         <div>
-          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
-          <h1 class="print-title">Physics of Sports Analytics: Video Project</h1>
-          <p class="print-subtitle">Formal Laboratory Investigation &amp; Kinematic Verification Report</p>
-        </div>
-        <div style="text-align: right; font-family: monospace; font-size: 0.8rem; color: #0f7e9b; font-weight: 700;">
-          Originality ID: ${auth.token}
-        </div>
-      </div>
-
-      <div class="print-meta-grid">
-        <div><strong>Student:</strong> ${sName}</div>
-        <div><strong>Teacher:</strong> ${tName}</div>
-        <div><strong>Course:</strong> High School Physics</div>
-        <div><strong>Date:</strong> ${nowStr}</div>
-      </div>
-
-      <h3 class="print-section-title">1. Projectile Motion Video Trajectory &amp; Calibration</h3>
-      <div style="text-align: center; margin-bottom: 0.6rem;">
-        ${snap ? `<img src="${snap}" style="max-width: 100%; max-height: 340px; object-fit: contain; border: 1px solid #c8dbe3; border-radius: 6px;">` : '<div style="padding: 2rem; border: 1px dashed #c8dbe3;">[Video Trajectory Frame]</div>'}
-      </div>
-
-      <h3 class="print-section-title">2. Video Tracking &amp; Coordinate Setup Summary</h3>
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th>Calibration Metric</th>
-            <th>Value</th>
-            <th>Kinematic Parameter</th>
-            <th>Initial Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Calibration Scale Factor</strong></td>
-            <td>${(state.pixelsPerMeter || 140).toFixed(1)} px/meter</td>
-            <td><strong>Initial Horizontal Pos (x₀)</strong></td>
-            <td>${cVals.x0.toFixed(3)} m</td>
-          </tr>
-          <tr>
-            <td><strong>Coordinate Origin (x, y)</strong></td>
-            <td>(${state.origin.x.toFixed(0)}, ${state.origin.y.toFixed(0)}) px</td>
-            <td><strong>Initial Vertical Pos (y₀)</strong></td>
-            <td>${cVals.y0.toFixed(3)} m</td>
-          </tr>
-          <tr>
-            <td><strong>Total Video Frames Tracked</strong></td>
-            <td>${pts.length} coordinates</td>
-            <td><strong>Initial Horizontal Speed (v₀ₓ)</strong></td>
-            <td>${cVals.vx0.toFixed(3)} m/s</td>
-          </tr>
-          <tr>
-            <td><strong>Tracking Center of Mass</strong></td>
-            <td>Projectile Geometric Center</td>
-            <td><strong>Initial Vertical Speed (v₀y)</strong></td>
-            <td>${cVals.vy0.toFixed(3)} m/s</td>
-          </tr>
-          <tr>
-            <td><strong>Resolved Initial Velocity</strong></td>
-            <td colspan="3"><strong style="color: #0f7e9b;">v₀ = ${cVals.v0.toFixed(3)} m/s</strong> at launch angle <strong style="color: #d67b19;">θ = ${cVals.theta.toFixed(2)}°</strong> (above horizontal)</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="print-footer">
-        <span>The Thinking Experiment • Sports Analytics Video Project</span>
-        <span>Originality Token: <strong>${auth.token}</strong></span>
-        <span>Page 1 of 4</span>
-      </div>
-    </div>
-
-    <!-- PAGE 2: The 6 Kinematics Graphs -->
-    <div class="print-page">
-      <div class="print-header">
-        <div>
-          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
-          <h2 class="print-title" style="font-size: 1.25rem;">Section 3: Kinematics Studio: 6 Required Graphs &amp; Fits</h2>
-          <p class="print-subtitle">Parabolic position fits, 10-point tangent slope velocity extraction, and acceleration models</p>
-        </div>
-        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
-          ID: ${auth.token}
-        </div>
-      </div>
-
-      <div class="print-graphs-grid">
-        <!-- 1. y(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">1. Vertical Position y(t)</div>
-          ${chartYPos ? `<img src="${chartYPos}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Particular:</strong> y(t) = (${(0.5 * cVals.ay).toFixed(3)} m/s²)t² + (${cVals.vy0.toFixed(3)} m/s)t + (${cVals.y0.toFixed(3)} m)
+          <div class="report-doc-kicker">THE THINKING EXPERIMENT &bull; PROJECTILE VIDEO PROJECT REPORT</div>
+          <h1 class="report-doc-title">2D Projectile Motion &amp; Kinematic Graph Analysis</h1>
+          <div class="report-doc-meta">
+            <span><strong>Student:</strong> ${escapeHtml(sName)}</span>
+            <span><strong>Teacher:</strong> ${escapeHtml(tName)}</span>
+            <span><strong>Date:</strong> ${escapeHtml(dateStr)}</span>
           </div>
         </div>
+        <div class="report-source-badge">
+          ${escapeHtml(clipSourceLabel)}
+        </div>
+      </header>
 
-        <!-- 2. x(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">2. Horizontal Position x(t)</div>
-          ${chartXPos ? `<img src="${chartXPos}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Particular:</strong> x(t) = (${cVals.vx0.toFixed(3)} m/s)t + (${cVals.x0.toFixed(3)} m)
+      <!-- SECTION 1: Calibration, Setup Quantities & Tracked Flight Evidence (Directions 1–2) -->
+      <section class="report-section">
+        <h2 class="report-section-title">1. Calibration, Coordinate Setup &amp; Tracked Flight Evidence (Directions 1–2)</h2>
+        ${!cov.hasValidTurnaround ? `
+          <div style="margin-bottom:0.65rem; padding:0.5rem 0.75rem; background:#fef2f2; border:1.5px solid #dc2626; border-radius:6px; color:#991b1b; font-size:0.82rem;">
+            <strong>⚠️ Coverage Notice:</strong> ${escapeHtml(cov.message)}
           </div>
-        </div>
-
-        <!-- 3. vy(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">3. Vertical Velocity vy(t) [Tangents]</div>
-          ${chartYVel ? `<img src="${chartYVel}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Fitted Line:</strong> vy(t) = (${cVals.ay.toFixed(3)} m/s²)t + (${cVals.vy0.toFixed(3)} m/s) • (Slope = ay)
-          </div>
-        </div>
-
-        <!-- 4. vx(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">4. Horizontal Velocity vx(t)</div>
-          ${chartXVel ? `<img src="${chartXVel}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Constant Velocity:</strong> vx(t) = ${cVals.vx0.toFixed(3)} m/s • (Uniform motion, Slope ax ≈ 0)
-          </div>
-        </div>
-
-        <!-- 5. ay(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">5. Vertical Acceleration ay(t)</div>
-          ${chartYAcc ? `<img src="${chartYAcc}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Measured:</strong> ay = ${cVals.ay.toFixed(3)} m/s² (Ref: -9.80 m/s², % Diff: ${cVals.ayPctDiff.toFixed(2)}%)
-          </div>
-        </div>
-
-        <!-- 6. ax(t) -->
-        <div class="print-graph-card">
-          <div style="font-weight: 700; font-size: 0.8rem; color: #0f7e9b; margin-bottom: 0.2rem;">6. Horizontal Acceleration ax(t)</div>
-          ${chartXAcc ? `<img src="${chartXAcc}" style="width: 100%; height: 165px; object-fit: contain;">` : ''}
-          <div style="font-size: 0.72rem; color: #123140; margin-top: 0.2rem;">
-            <strong>Measured:</strong> ax = ${cVals.ax.toFixed(3)} m/s² (Ref: 0.00 m/s², Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²)
-          </div>
-        </div>
-      </div>
-
-      <div class="print-footer">
-        <span>The Thinking Experiment • Sports Analytics Video Project</span>
-        <span>Originality Token: <strong>${auth.token}</strong></span>
-        <span>Page 2 of 4</span>
-      </div>
-    </div>
-
-    <!-- PAGE 3: Theoretical Calculations & Master Comparison Table -->
-    <div class="print-page">
-      <div class="print-header">
-        <div>
-          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
-          <h2 class="print-title" style="font-size: 1.25rem;">Section 4: Theoretical Calculations &amp; Model Comparison</h2>
-          <p class="print-subtitle">Kinematic derivations without shortcuts and comparison against graph-extracted values</p>
-        </div>
-        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
-          ID: ${auth.token}
-        </div>
-      </div>
-
-      <h3 class="print-section-title">Unit 2 Motion Graph Mastery: Two-Point Tangents, Intervals &amp; Signed v-t Area</h3>
-      <div class="print-calc-grid" style="margin-bottom: 0.65rem;">
-        <div class="print-calc-card">
-          <strong style="color: #0f7e9b;">A. Two-Point Tangents &amp; Stopping (Exam 4 &amp; 3e)</strong><br>
-          • <em>Two-Point Slope:</em> vᵧ = (y₂ − y₁)/(t₂ − t₁) (${state.manualTangentCount || 0}/3 manual verified, ${state.tangentPoints.length}/10 total)<br>
-          • <em>Apex Stopping (vᵧ = 0):</em> t_apex = <strong>${tApexP.toFixed(3)} s</strong> (while vₓ = ${cVals.vx0.toFixed(2)} m/s ≠ 0)<br>
-          • <em>Intervals:</em> Up (+y): [${tMinP.toFixed(2)}s, ${tApexP.toFixed(2)}s] • Down (−y): [${tApexP.toFixed(2)}s, ${tMaxP.toFixed(2)}s] • Accel aᵧ &lt; 0: [${tMinP.toFixed(2)}s, ${tMaxP.toFixed(2)}s]
-        </div>
-        <div class="print-calc-card">
-          <strong style="color: #d67b19;">B. Signed Area Under vᵧ(t) Graph (Exam 3c–d)</strong><br>
-          • <em>Ascent Triangle (+Δy_up):</em> +${areaUpP.toFixed(3)} m | <em>Descent Triangle (Δy_down):</em> ${areaDownP.toFixed(3)} m<br>
-          • <em>Net Displacement (Δy_total):</em> ${netDyP.toFixed(3)} m<br>
-          • <strong>Apex Height (y₀ + Δy_up):</strong> ${yMaxAreaP.toFixed(3)} m | <strong>Final y (y₀ + Δy_total):</strong> ${yFinalAreaP.toFixed(3)} m
-        </div>
-      </div>
-
-      <h3 class="print-section-title">Theoretical Derivations &amp; Work</h3>
-      <div class="print-calc-grid">
-        <div class="print-calc-card">
-          <strong style="color: #0f7e9b;">1. Resultant Launch Speed &amp; Angle</strong><br>
-          • <em>Formula:</em> v₀ = √(v₀ₓ² + v₀y²), θ = arctan(v₀y / v₀ₓ)<br>
-          • <strong>Calculated:</strong> v₀ = ${cVals.v0.toFixed(3)} m/s, θ = ${cVals.theta.toFixed(2)}°<br>
-          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workV || `v₀ = √(${cVals.vx0.toFixed(2)}² + ${cVals.vy0.toFixed(2)}²)`}</div>
-        </div>
-
-        <div class="print-calc-card">
-          <strong style="color: #0f7e9b;">2. Maximum Apex Height (y_max)</strong><br>
-          • <em>Equation:</em> v_fy² = v_iy² + 2ay·Δy (v_fy = 0 m/s at apex)<br>
-          • <strong>Calculated:</strong> y_max = ${cVals.maxHCalc.toFixed(3)} m (Measured: ${cVals.maxHMeas.toFixed(3)} m)<br>
-          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workH || `y_max = y₀ - (v₀y² / 2ay) = ${cVals.maxHCalc.toFixed(3)} m`}</div>
-        </div>
-
-        <div class="print-calc-card">
-          <strong style="color: #0f7e9b;">3. Flight Hang Time (t_hang)</strong><br>
-          • <em>Equation:</em> y(t) = y₀ + v₀y·t + ½·ay·t² = 0 (landing)<br>
-          • <strong>Calculated:</strong> t_hang = ${cVals.hangCalc.toFixed(3)} s (Measured: ${cVals.hangMeas.toFixed(3)} s)<br>
-          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workT || `Quadratic solution for landing t = ${cVals.hangCalc.toFixed(3)} s`}</div>
-        </div>
-
-        <div class="print-calc-card">
-          <strong style="color: #0f7e9b;">4. Horizontal Range (Δx)</strong><br>
-          • <em>Equation:</em> Δx = v₀ₓ · t_hang (uniform motion, ax = 0)<br>
-          • <strong>Calculated:</strong> Δx = ${cVals.rangeCalc.toFixed(3)} m (Measured: ${cVals.rangeMeas.toFixed(3)} m)<br>
-          <div style="font-size: 0.7rem; color: #475569; margin-top: 0.25rem; font-family: monospace;">Work: ${workR || `Δx = (${cVals.vx0.toFixed(2)} m/s) × (${cVals.hangCalc.toFixed(2)} s) = ${cVals.rangeCalc.toFixed(3)} m`}</div>
-        </div>
-      </div>
-
-      <h3 class="print-section-title">Master Kinematic Comparison: Measured vs. Theoretical Model</h3>
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th>Kinematic Parameter</th>
-            <th style="text-align: center;">Measured (Graph / Video)</th>
-            <th style="text-align: center;">Student Calculated (Theory)</th>
-            <th style="text-align: center;">Percent Difference</th>
-            <th style="text-align: center;">Model Agreement</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Vertical Acceleration (ay)</strong></td>
-            <td style="text-align: center;">${cVals.ay.toFixed(3)} m/s²</td>
-            <td style="text-align: center;">-9.800 m/s² (Ref)</td>
-            <td style="text-align: center; font-weight: 700;">${cVals.ayPctDiff >= 0 ? '+' : ''}${cVals.ayPctDiff.toFixed(2)}%</td>
-            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.ayPctDiff) < 6 ? 'success' : Math.abs(cVals.ayPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.ayPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-          </tr>
-          <tr>
-            <td><strong>Horizontal Acceleration (ax)</strong></td>
-            <td style="text-align: center;">${cVals.ax.toFixed(3)} m/s²</td>
-            <td style="text-align: center;">0.000 m/s² (Newton I)</td>
-            <td style="text-align: center; font-weight: 700;">Δ = ${Math.abs(cVals.ax).toFixed(3)} m/s²</td>
-            <td style="text-align: center;"><span class="print-badge success">✓ Verified (ax ≈ 0)</span></td>
-          </tr>
-          <tr>
-            <td><strong>Maximum Apex Height (y_max)</strong></td>
-            <td style="text-align: center;">${cVals.maxHMeas.toFixed(3)} m</td>
-            <td style="text-align: center;">${cVals.maxHCalc.toFixed(3)} m</td>
-            <td style="text-align: center; font-weight: 700;">${cVals.maxHPctDiff >= 0 ? '+' : ''}${cVals.maxHPctDiff.toFixed(2)}%</td>
-            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.maxHPctDiff) < 6 ? 'success' : Math.abs(cVals.maxHPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.maxHPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-          </tr>
-          <tr>
-            <td><strong>Flight Hang Time (t_hang)</strong></td>
-            <td style="text-align: center;">${cVals.hangMeas.toFixed(3)} s</td>
-            <td style="text-align: center;">${cVals.hangCalc.toFixed(3)} s</td>
-            <td style="text-align: center; font-weight: 700;">${cVals.hangPctDiff >= 0 ? '+' : ''}${cVals.hangPctDiff.toFixed(2)}%</td>
-            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.hangPctDiff) < 6 ? 'success' : Math.abs(cVals.hangPctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.hangPctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-          </tr>
-          <tr>
-            <td><strong>Horizontal Range (Δx)</strong></td>
-            <td style="text-align: center;">${cVals.rangeMeas.toFixed(3)} m</td>
-            <td style="text-align: center;">${cVals.rangeCalc.toFixed(3)} m</td>
-            <td style="text-align: center; font-weight: 700;">${cVals.rangePctDiff >= 0 ? '+' : ''}${cVals.rangePctDiff.toFixed(2)}%</td>
-            <td style="text-align: center;"><span class="print-badge ${Math.abs(cVals.rangePctDiff) < 6 ? 'success' : Math.abs(cVals.rangePctDiff) < 12 ? 'warn' : 'error'}">${Math.abs(cVals.rangePctDiff) < 6 ? '✓ Excellent (<6%)' : 'Acceptable'}</span></td>
-          </tr>
-        </tbody>
-      </table>
-      <p style="font-size: 0.72rem; color: #4b6570; font-style: italic; margin-top: 0.35rem;">
-        * Formula: % Diff = [(Calculated - Measured) / Measured] × 100%. Low percent differences confirm parabolic projectile trajectory and negligible aerodynamic drag at measured sports speeds.
-      </p>
-
-      <div class="print-footer">
-        <span>The Thinking Experiment • Sports Analytics Video Project</span>
-        <span>Originality Token: <strong>${auth.token}</strong></span>
-        <span>Page 3 of 4</span>
-      </div>
-    </div>
-
-    <!-- PAGE 4: Reflection & Academic Integrity Seal -->
-    <div class="print-page">
-      <div class="print-header">
-        <div>
-          <div class="print-brand">The Thinking Experiment • PhysicsKit</div>
-          <h2 class="print-title" style="font-size: 1.25rem;">Section 5: Real-World Reflection &amp; Academic Integrity</h2>
-          <p class="print-subtitle">Physics analysis of sport performance, biomechanics, and verification signatures</p>
-        </div>
-        <div style="text-align: right; font-family: monospace; font-size: 0.75rem; color: #0f7e9b;">
-          ID: ${auth.token}
-        </div>
-      </div>
-
-      <h3 class="print-section-title">Real-World Reflection</h3>
-      <div style="background: #f8fafc; border: 1px solid #c8dbe3; border-radius: 6px; padding: 1rem; font-size: 0.88rem; line-height: 1.6; color: #123140; min-height: 160px; margin-bottom: 1.2rem;">
-        ${refText ? refText : '<span style="color: #94a3b8; font-style: italic;">[No student reflection entered in Section 8.]</span>'}
-      </div>
-
-      <h3 class="print-section-title">Academic Integrity &amp; Originality Verification Seal</h3>
-      <div style="background: #f8fafc; border: 2px solid #0f7e9b; border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #c8dbe3; padding-bottom: 0.5rem; margin-bottom: 0.6rem;">
+        ` : ''}
+        <div class="report-setup-grid">
           <div>
-            <strong style="color: #0f7e9b; font-size: 0.95rem;">PhysicsKit Anti-Plagiarism Digital Certificate</strong><br>
-            <span style="font-size: 0.75rem; color: #64748b;">Cryptographically linked to tracked frame coordinates, student name, and time of analysis.</span>
-          </div>
-          <div style="font-family: monospace; font-weight: 700; font-size: 0.95rem; color: #0f7e9b; background: #eef7fa; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #0f7e9b;">
-            ${auth.token}
-          </div>
-        </div>
-        <div style="font-size: 0.78rem; color: #334155; line-height: 1.5;">
-          • <strong>Student Name:</strong> ${auth.student} • <strong>Teacher:</strong> ${auth.teacher}<br>
-          • <strong>Tracking Frames Analyzed:</strong> ${auth.pointsCount} coordinate points<br>
-          • <strong>Digital Fingerprint:</strong> ${auth.hashFingerprint}<br>
-          • <strong>Verification Timestamp:</strong> ${auth.timestamp}<br>
-          • <strong>Status:</strong> <span style="color: #1a7f37; font-weight: 700;">Verified Authentic Student Work</span>
-        </div>
-      </div>
-
-      <div style="border-top: 1.5px solid #c8dbe3; padding-top: 1rem; margin-top: 1rem;">
-        <p style="font-style: italic; font-size: 0.85rem; color: #0f7e9b; margin-bottom: 2rem;">
-          "On my honor, I have neither given nor received unauthorized aid on this assignment."
-        </p>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 1rem;">
-          <div>
-            <div style="border-bottom: 1px solid #123140; height: 35px;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #475569; margin-top: 0.25rem;">
-              <span>Student Signature: <strong>${sName}</strong></span>
-              <span>Date: ${nowStr}</span>
-            </div>
+            <img src="${videoSnap}" alt="Calibrated Video Tracking Screenshot" class="report-snapshot-img">
           </div>
           <div>
-            <div style="border-bottom: 1px solid #123140; height: 35px;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #475569; margin-top: 0.25rem;">
-              <span>Teacher Review: <strong>${tName}</strong></span>
-              <span>Grade / Signature</span>
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th colspan="2">Recorded Setup, Timing &amp; Fit Reference Summary</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Video Source Type</strong></td>
+                  <td>${escapeHtml(clipSourceLabel)}</td>
+                </tr>
+                <tr>
+                  <td><strong>Calibration Reference &amp; Scale</strong></td>
+                  <td>${state.scaleStick.lengthMeters.toFixed(2)} m (${state.pixelsPerMeter.toFixed(1)} px/m)</td>
+                </tr>
+                <tr>
+                  <td><strong>Source Frame Rate (FPS)</strong></td>
+                  <td>${state.fps} FPS (&Delta;t<sub>frame</sub> = ${(1 / state.fps).toFixed(4)} s)</td>
+                </tr>
+                <tr>
+                  <td><strong>Origin &amp; Sign Convention</strong></td>
+                  <td>+x right, +y up; y = 0 at ground reference, x = 0 below release</td>
+                </tr>
+                <tr>
+                  <td><strong>First Tracked Airborne Frame (t = 0)</strong></td>
+                  <td>Measured initial height y<sub>0</sub> = <strong>${exp ? exp.y0.toFixed(3) + ' m' : '—'}</strong> (x<sub>0</sub> = ${exp ? exp.x0Track.toFixed(3) + ' m' : '—'})</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Tracked Duration T</strong></td>
+                  <td><strong>${exp ? exp.T.toFixed(3) + ' s' : '—'}</strong> (${pts.length} tracked instants over [0.000 s, ${exp ? exp.tMax.toFixed(3) : '0.000'} s])</td>
+                </tr>
+                <tr>
+                  <td><strong>Observed Video Rise Time t<sub>up</sub></strong></td>
+                  <td>${fmtStudentVal(state.observedTUp, 's')} <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tracked Endpoint Changes at T</strong></td>
+                  <td>&Delta;x<sub>track</sub> = ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'}, &Delta;y<sub>track</sub> = ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'}, y(T) = ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: Saved Predictions, Reasoned Revisions & Two-Column Six-Graph Panel (Directions 3–4) -->
+      <section class="report-section">
+        <h2 class="report-section-title">2. Saved Predictions, Reasoned Revisions &amp; Six-Graph Panel (Directions 3–4)</h2>
+        <div class="report-two-col" style="margin-bottom: 0.75rem;">
+          <div class="report-box">
+            <div class="report-box-title">Saved First-Attempt Prediction (Before Reveal)</div>
+            <div style="font-size: 0.8rem; line-height: 1.45;">${firstPredHtml}</div>
+            <div class="report-box-title" style="margin-top: 0.55rem; color: #b06210;">Reasoned Revision After Reveal</div>
+            ${fmtStudentText(state.predictionRevision)}
+          </div>
+          <div class="report-box">
+            <div class="report-box-title">Explanation of Graph Connections &amp; Model Dependence (Direction 4)</div>
+            ${fmtStudentText(state.graphConnections)}
+            <div style="margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed #c8dbe3; font-size: 0.76rem; color: #123140;">
+              <div><strong>Fitted x(t):</strong> <code>${escapeHtml(eqs.xPos)}</code></div>
+              <div><strong>Derived v<sub>x</sub>(t) &amp; a<sub>x</sub>(t):</strong> <code>vₓ = ${exp ? exp.m.toFixed(3) : '—'} m/s</code>, <code>aₓ = 0.000 m/s²</code> (follows from linear x model)</div>
+              <div><strong>Fitted y(t):</strong> <code>${escapeHtml(eqs.yPos)}</code> (Measured y<sub>0</sub> = ${exp ? exp.y0.toFixed(3) : '—'} m vs. Fitted C = ${exp ? exp.C.toFixed(3) : '—'} m)</div>
+              <div><strong>Derived v<sub>y</sub>(t) &amp; a<sub>y</sub>(t):</strong> <code>${escapeHtml(eqs.yVel)}</code>, <code>aᵧ = ${exp ? exp.ayFit.toFixed(3) : '—'} m/s²</code></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="print-footer">
-        <span>The Thinking Experiment • Sports Analytics Video Project</span>
-        <span>Originality Token: <strong>${auth.token}</strong></span>
-        <span>Page 4 of 4</span>
-      </div>
+        <!-- Two-Column Six-Graph Panel (Horizontal Left | Vertical Right) -->
+        <div class="report-six-graph-grid">
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr">Horizontal Position: x vs. t (m, s) &bull; Tracked + Linear Fit</div>
+            ${imgXPos ? `<img src="${imgXPos}" alt="x(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.xPos)}</div>
+          </div>
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr amber">Vertical Position: y vs. t (m, s) &bull; Tracked + Quadratic Fit</div>
+            ${imgYPos ? `<img src="${imgYPos}" alt="y(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.yPos)}</div>
+          </div>
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr">Horizontal Velocity: v<sub>x</sub> vs. t (m/s, s) &bull; Derived (v<sub>x</sub> = m)</div>
+            ${imgXVel ? `<img src="${imgXVel}" alt="vx(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.xVel)}</div>
+          </div>
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr amber">Vertical Velocity: v<sub>y</sub> vs. t (m/s, s) &bull; Derived (v<sub>y</sub> = 2At + B)</div>
+            ${imgYVel ? `<img src="${imgYVel}" alt="vy(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.yVel)}</div>
+          </div>
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr">Horizontal Acceleration: a<sub>x</sub> vs. t (m/s², s) &bull; Derived (Linear Model)</div>
+            ${imgXAcc ? `<img src="${imgXAcc}" alt="ax(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.xAcc)}</div>
+          </div>
+          <div class="report-graph-cell">
+            <div class="report-graph-hdr amber">Vertical Acceleration: a<sub>y</sub> vs. t (m/s², s) &bull; Derived (a<sub>y</sub> = 2A)</div>
+            ${imgYAcc ? `<img src="${imgYAcc}" alt="ay(t) graph">` : '<div class="not-submitted-tag">Insufficient points</div>'}
+            <div class="report-graph-eq">${escapeHtml(eqs.yAcc)}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: Slopes & Projectile Model Calculations (Student Steps 5a–5f) -->
+      <section class="report-section">
+        <h2 class="report-section-title">3. Shown Slope Calculations &amp; Projectile Predictions (Steps 5a–5f; Fixed a<sub>y,ref</sub> = &minus;9.8 m/s²)</h2>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th style="width: 22%;">Calculation Step</th>
+              <th style="width: 24%;">Student Submitted Value(s)</th>
+              <th style="width: 22%;">Model / Fit Reference Check</th>
+              <th style="width: 32%;">Student Equations, Substitutions, Units &amp; Comparison Work</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>5a. Horizontal Velocity</strong><br><small>Slope v<sub>0x</sub> = &Delta;x / &Delta;t on fitted x–t line</small></td>
+              <td>
+                <div>Pt 1: ${fmtStudentVal(sr.inp5aPt1)}</div>
+                <div>Pt 2: ${fmtStudentVal(sr.inp5aPt2)}</div>
+                <div>v<sub>0x</sub>: ${fmtStudentVal(sr.inpVx0, 'm/s')}</div>
+              </td>
+              <td>Fitted slope m = <strong>${exp ? exp.m.toFixed(3) + ' m/s' : '—'}</strong></td>
+              <td>${fmtStudentText(sr.work5aVx)}</td>
+            </tr>
+            <tr>
+              <td><strong>5b. Vertical Acceleration</strong><br><small>Slope a<sub>y,fit</sub> = &Delta;v<sub>y</sub> / &Delta;t on derived v<sub>y</sub>–t line</small></td>
+              <td>
+                <div>Pt 1: ${fmtStudentVal(sr.inp5bPt1)}</div>
+                <div>Pt 2: ${fmtStudentVal(sr.inp5bPt2)}</div>
+                <div>a<sub>y,fit</sub>: ${fmtStudentVal(sr.inpAy, 'm/s²')}</div>
+              </td>
+              <td>Derived 2A = <strong>${exp ? exp.ayFit.toFixed(3) + ' m/s²' : '—'}</strong><br>Ref a<sub>y,ref</sub> = <strong>&minus;9.8 m/s²</strong></td>
+              <td>${fmtStudentText(sr.work5bAy)}</td>
+            </tr>
+            <tr>
+              <td><strong>5c. Initial Vertical Velocity</strong><br><small>v<sub>0y,pred</sub> = &minus;a<sub>y,ref</sub> t<sub>up</sub> vs. fitted B</small></td>
+              <td>
+                <div>Observed t<sub>up</sub>: ${fmtStudentVal(state.observedTUp, 's')}</div>
+                <div>v<sub>0y,pred</sub>: ${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</div>
+              </td>
+              <td>
+                Ref &minus;(&minus;9.8)t<sub>up</sub>: <strong>${exp && exp.vy0Pred !== null ? exp.vy0Pred.toFixed(3) + ' m/s' : 'Requires t_up'}</strong><br>
+                Fitted B: <strong>${exp ? exp.B.toFixed(3) + ' m/s' : '—'}</strong>
+              </td>
+              <td>${fmtStudentText(sr.work5cVy0)}</td>
+            </tr>
+            <tr>
+              <td><strong>5d. Displacements &amp; Final Height at T</strong><br><small>&Delta;x, &Delta;y over T, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
+              <td>
+                <div>Pred &Delta;x: ${fmtStudentVal(sr.inpCalcRange, 'm')}</div>
+                <div>Pred &Delta;y: ${fmtStudentVal(sr.inpPredDy, 'm')}</div>
+                <div>Pred y<sub>final</sub>: ${fmtStudentVal(sr.inpPredYFinal, 'm')}</div>
+              </td>
+              <td>
+                Pred &Delta;x = ${exp ? exp.dxPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'})<br>
+                Pred &Delta;y = ${exp && exp.dyPred !== null ? exp.dyPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'})<br>
+                Pred y<sub>final</sub> = ${exp && exp.yFinalPred !== null ? exp.yFinalPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'})
+              </td>
+              <td>${fmtStudentText(sr.work5dDisp)}</td>
+            </tr>
+            <tr>
+              <td><strong>5e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not T) and measured y<sub>0</sub></small></td>
+              <td>
+                <div>Pred &Delta;y<sub>up</sub>: ${fmtStudentVal(sr.inpPredDyUp, 'm')}</div>
+                <div>Pred y<sub>max</sub>: ${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</div>
+              </td>
+              <td>
+                Pred &Delta;y<sub>up</sub> = ${exp && exp.dyUpPred !== null ? exp.dyUpPred.toFixed(3) + ' m' : '—'}<br>
+                Pred y<sub>max</sub> = ${exp && exp.yMaxPred !== null ? exp.yMaxPred.toFixed(3) + ' m' : '—'}<br>
+                Highest tracked y = <strong>${exp && exp.yMaxTrack !== null ? exp.yMaxTrack.toFixed(3) + ' m' : '—'}</strong>
+              </td>
+              <td>${fmtStudentText(sr.workMaxHeight)}</td>
+            </tr>
+            <tr>
+              <td><strong>5f. Initial Speed &amp; Launch Angle</strong><br><small>At first tracked airborne instant (t = 0)</small></td>
+              <td>
+                <div>Speed v<sub>0</sub>: ${fmtStudentVal(sr.inpSpeedV0, 'm/s')}</div>
+                <div>Angle &theta;: ${fmtStudentVal(sr.inpAngleTheta, '°')}</div>
+              </td>
+              <td>
+                Ref v<sub>0</sub> = ${exp && exp.v0Pred !== null ? exp.v0Pred.toFixed(3) + ' m/s' : '—'}<br>
+                Ref &theta; = ${exp && exp.thetaPred !== null ? exp.thetaPred.toFixed(2) + '°' : '—'}
+              </td>
+              <td>${fmtStudentText(sr.workVector)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION 4: Signed-Area Consistency Check, Direction Intervals & Limitation -->
+      <section class="report-section">
+        <h2 class="report-section-title">4. Signed-Area Check, Motion Intervals, Apex Reasoning &amp; Measurement Limitation</h2>
+        <div class="report-box" style="margin-bottom: 0.75rem;">
+          <div class="report-box-title">Signed-Area Check on Derived v<sub>y</sub>–t Graph (Using Fitted v<sub>y</sub> = 2At + B and Fitted Initial Height C)</div>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; font-size: 0.78rem; margin-bottom: 0.45rem;">
+            <div>Zero Crossing t<sub>zero</sub>:<br>${fmtStudentVal(sr.inpZeroCrossT, 's')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.tZero !== null ? exp.tZero.toFixed(3) + ' s' : 'N/A'})</small></div>
+            <div>Ascent +Area<sub>up</sub>:<br>${fmtStudentVal(sr.inpAreaUp, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaUp !== null ? '+' + exp.areaUp.toFixed(3) + ' m' : 'N/A'})</small></div>
+            <div>Descent Area<sub>down</sub>:<br>${fmtStudentVal(sr.inpAreaDown, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaDown !== null ? exp.areaDown.toFixed(3) + ' m' : 'N/A'})</small></div>
+            <div>Sum &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpNetDyArea, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.netDyArea !== null ? exp.netDyArea.toFixed(3) + ' m' : 'N/A'})</small></div>
+            <div>Fitted C + &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpYFinalFromArea, 'm')}<br><small style="color:#4b6570;">(y<sub>fit</sub>(T) = ${exp ? exp.yFitAtT.toFixed(3) + ' m' : '—'})</small></div>
+          </div>
+          <div style="font-size: 0.78rem; font-weight: 700; color: #0f7e9b; margin-bottom: 0.2rem;">Student Area Calculations &amp; Comparison with y<sub>fit</sub>(T):</div>
+          ${fmtStudentText(sr.workSignedArea)}
+        </div>
+
+        <div class="report-two-col" style="margin-bottom: 0.75rem;">
+          <div class="report-box">
+            <div class="report-box-title">Upward &amp; Downward Intervals (Excluding Turnaround) &amp; Meaning of v<sub>y</sub> = 0 in 2D</div>
+            <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
+              <div><strong>Upward Interval (v<sub>y</sub> &gt; 0):</strong> ${fmtStudentVal(sr.inpPosDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpPosDirEnd, 's')}</div>
+              <div><strong>Downward Interval (v<sub>y</sub> &lt; 0):</strong> ${fmtStudentVal(sr.inpNegDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpNegDirEnd, 's')}</div>
+            </div>
+            ${fmtStudentText(sr.txtStopExplanation)}
+          </div>
+          <div class="report-box">
+            <div class="report-box-title">When Is Vertical Acceleration Negative? Reasoning on Both Sides of Apex</div>
+            <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
+              <strong>Submitted Interval where a<sub>y</sub> &lt; 0:</strong> ${fmtStudentVal(sr.inpNegAccStart, 's')} to ${fmtStudentVal(sr.inpNegAccEnd, 's')}
+            </div>
+            ${fmtStudentText(sr.txtAccSignExplanation)}
+          </div>
+        </div>
+
+        <div class="report-box">
+          <div class="report-box-title">Specific Measurement Limitation Tied to a Reported Result</div>
+          ${fmtStudentText(sr.reflectionText)}
+        </div>
+      </section>
     </div>
   `;
+
+  if (el('liveReportPreviewContainer')) {
+    el('liveReportPreviewContainer').innerHTML = reportHtml;
+  }
+  if (el('printableLabReport')) {
+    el('printableLabReport').innerHTML = reportHtml;
+  }
 }
 
-function copyFormData() {
-  const c = state.calcValues;
-  const sName = (studentNameInput ? studentNameInput.value : '') || 'Student';
-  const tName = teacherSelect ? teacherSelect.value : 'Mr. Lopez';
-  const auth = getAuthenticitySignature();
-
-  const summary = `
-Student: ${sName}
-Teacher: ${tName}
-Originality Verification Token: ${auth.token}
-Timestamp: ${auth.timestamp}
-Horizontal Initial Velocity (m/s): ${c.vx0.toFixed(3)}
-Horizontal Acceleration (m/s²): ${c.ax.toFixed(3)}
-Vertical Acceleration (m/s²): ${c.ay.toFixed(3)}
-Vertical Initial Velocity (m/s): ${c.vy0.toFixed(3)}
-Measured Range (m): ${c.rangeMeas.toFixed(3)}
-Measured Hang Time (s): ${c.hangMeas.toFixed(3)}
-Measured Max Height (m): ${c.maxHMeas.toFixed(3)}
-Calculated Initial Speed (m/s): ${c.v0.toFixed(3)}
-Calculated Angle (deg): ${c.theta.toFixed(2)}
-Calculated Range (m): ${c.rangeCalc.toFixed(3)}
-Calculated Hang Time (s): ${c.hangCalc.toFixed(3)}
-Calculated Max Height (m): ${c.maxHCalc.toFixed(3)}
-Percent Difference Vertical Acc: ${c.ayPctDiff.toFixed(2)}%
-Percent Difference Range: ${c.rangePctDiff.toFixed(2)}%
-Percent Difference Hang Time: ${c.hangPctDiff.toFixed(2)}%
-Percent Difference Max Height: ${c.maxHPctDiff.toFixed(2)}%
-  `.trim();
-
-  navigator.clipboard.writeText(summary).then(() => {
-    alert('Lab results copied to clipboard! You can now paste directly into your Google Form / Canvas submission.');
-    updateStatus('Copied lab form responses to clipboard.');
-  });
-}
-
-// Session Save & Load
+// ============================================================================
+// Session Save & Load (Schema v2.0 + Legacy v1.0 Loader)
+// ============================================================================
 function saveSessionJSON() {
-  const auth = getAuthenticitySignature();
-  const session = {
-    version: '1.0',
-    date: new Date().toISOString(),
-    studentName: studentNameInput ? studentNameInput.value : '',
-    teacherName: teacherSelect ? teacherSelect.value : '',
-    authenticityToken: auth.token,
-    authenticitySignature: auth,
+  syncStudentInputsFromDOM();
+  autoFitAndDeriveAllGraphs();
+
+  const sessionPayload = {
+    schemaVersion: '2.0',
+    savedAt: new Date().toISOString(),
+    studentName: state.studentName,
+    teacherName: state.teacherName,
     state: {
-      series: state.series,
+      isSynthetic: state.isSynthetic,
+      syntheticType: state.syntheticType,
+      videoFileName: state.videoFileName,
+      fps: state.fps,
+      stepFrames: state.stepFrames,
+      duration: state.duration,
+      timeOffset: state.timeOffset,
+      pixelsPerMeter: state.pixelsPerMeter,
       origin: state.origin,
       originAngle: state.originAngle,
-      pixelsPerMeter: state.pixelsPerMeter,
       scaleStick: state.scaleStick,
-      tangentPoints: state.tangentPoints,
-      manualTangentCount: state.manualTangentCount,
+      series: state.series,
+      observedTUp: state.observedTUp,
+      coverageStatus: state.coverageStatus,
+      fitResults: state.fitResults,
+      firstAttemptPrediction: state.firstAttemptPrediction,
+      predictionRevision: state.predictionRevision,
+      graphConnections: state.graphConnections,
       showSignedArea: state.showSignedArea,
-      graphInterpretation: state.graphInterpretation,
-      signedAreaValues: state.signedAreaValues,
-      calcValues: state.calcValues,
-      authenticityToken: auth.token,
-      authenticitySignature: auth,
-      studentWork: state.studentWork,
-      tableInputs: {
-        ay: tblInpAy ? tblInpAy.value : '',
-        ax: tblInpAx ? tblInpAx.value : '',
-        hang: tblInpHang ? tblInpHang.value : '',
-        range: tblInpRange ? tblInpRange.value : '',
-        maxH: tblInpMaxH ? tblInpMaxH.value : ''
-      },
-      reflectionText: state.reflectionText,
-      syntheticType: state.syntheticType
+      studentResponses: state.studentResponses,
+      feedbackState: state.feedbackState
     }
   };
 
-  const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(sessionPayload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sports_analytics_session_${(session.studentName || 'lab').replace(/\s+/g, '_')}.json`;
+  const cleanName = (state.studentName || 'student').trim().replace(/\s+/g, '_');
+  a.download = `projectile_video_lab_${cleanName}.json`;
   a.click();
 }
 
 function loadSessionJSON(file) {
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.studentName && studentNameInput) studentNameInput.value = data.studentName;
-      if (data.teacherName && teacherSelect) teacherSelect.value = data.teacherName;
-      if (data.authenticityToken || (data.state && data.state.authenticityToken)) {
-        state.authenticityToken = data.authenticityToken || data.state.authenticityToken;
-        if (authenticityBadge) {
-          authenticityBadge.textContent = state.authenticityToken;
+      const s = data.state || {};
+      const isV2 = data.schemaVersion === '2.0' || s.firstAttemptPrediction !== undefined;
+
+      state.studentName = data.studentName || '';
+      state.teacherName = data.teacherName || 'Mr. Lopez';
+
+      // Restore video / synthetic setup
+      if (s.isSynthetic === false) {
+        state.isSynthetic = false;
+        state.videoFileName = s.videoFileName || 'recorded video file';
+        const badge = el('clipSourceTypeBadge');
+        if (badge) {
+          badge.textContent = `MEASURED VIDEO FILE (${state.videoFileName})`;
+          badge.style.background = '#e6f4f8';
+          badge.style.color = '#095f76';
+          badge.style.borderColor = '#b3d9e6';
+        }
+        if (el('reopenVideoFileName')) el('reopenVideoFileName').textContent = state.videoFileName;
+        if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'block';
+      } else {
+        const synType = s.syntheticType && SYNTHETIC_MODELS[s.syntheticType] ? s.syntheticType : 'basketball';
+        initSyntheticExperiment(synType);
+      }
+
+      if (s.fps) {
+        state.fps = s.fps;
+        if (el('fpsInput')) el('fpsInput').value = state.fps;
+      }
+      if (s.timeOffset !== undefined) state.timeOffset = s.timeOffset;
+      if (s.origin) state.origin = s.origin;
+      if (s.originAngle !== undefined) {
+        state.originAngle = s.originAngle;
+        if (el('originAngleInput')) el('originAngleInput').value = state.originAngle;
+      }
+      if (s.pixelsPerMeter) state.pixelsPerMeter = s.pixelsPerMeter;
+      if (s.scaleStick) {
+        state.scaleStick = s.scaleStick;
+        if (el('scaleLengthInput') && s.scaleStick.lengthMeters) {
+          el('scaleLengthInput').value = Number(s.scaleStick.lengthMeters).toFixed(2);
         }
       }
-      if (data.state) {
-        state.series = data.state.series || state.series;
-        state.origin = data.state.origin || state.origin;
-        state.originAngle = data.state.originAngle || state.originAngle;
-        state.pixelsPerMeter = data.state.pixelsPerMeter || state.pixelsPerMeter;
-        state.scaleStick = data.state.scaleStick || state.scaleStick;
-        state.tangentPoints = data.state.tangentPoints || state.tangentPoints;
-        state.manualTangentCount = data.state.manualTangentCount !== undefined
-          ? data.state.manualTangentCount
-          : (state.tangentPoints ? state.tangentPoints.filter(p => p.manualVerified).length : 0);
-        if (data.state.showSignedArea !== undefined) {
-          state.showSignedArea = data.state.showSignedArea;
-          if (chkShowSignedArea) chkShowSignedArea.checked = state.showSignedArea;
-        }
-        if (data.state.graphInterpretation) {
-          state.graphInterpretation = data.state.graphInterpretation;
-          const gi = state.graphInterpretation;
-          if (selTransYtoVy && gi.transYtoVy !== undefined) selTransYtoVy.value = gi.transYtoVy;
-          if (selTransVytoAy && gi.transVytoAy !== undefined) selTransVytoAy.value = gi.transVytoAy;
-          if (selTransX && gi.transX !== undefined) selTransX.value = gi.transX;
-          if (selStopBehavior && gi.stopBehavior !== undefined) selStopBehavior.value = gi.stopBehavior;
-          if (inpStopTimeApex && gi.stopTimeApex !== undefined) inpStopTimeApex.value = gi.stopTimeApex;
-          if (txtStopExplanation && gi.stopExplanation !== undefined) txtStopExplanation.value = gi.stopExplanation;
-          if (inpPosDirStart && gi.posDirStart !== undefined) inpPosDirStart.value = gi.posDirStart;
-          if (inpPosDirEnd && gi.posDirEnd !== undefined) inpPosDirEnd.value = gi.posDirEnd;
-          if (inpNegDirStart && gi.negDirStart !== undefined) inpNegDirStart.value = gi.negDirStart;
-          if (inpNegDirEnd && gi.negDirEnd !== undefined) inpNegDirEnd.value = gi.negDirEnd;
-          if (inpNegAccStart && gi.negAccStart !== undefined) inpNegAccStart.value = gi.negAccStart;
-          if (inpNegAccEnd && gi.negAccEnd !== undefined) inpNegAccEnd.value = gi.negAccEnd;
-          if (txtAccSignExplanation && gi.accSignExplanation !== undefined) txtAccSignExplanation.value = gi.accSignExplanation;
-        }
-        if (data.state.signedAreaValues) {
-          state.signedAreaValues = data.state.signedAreaValues;
-          const sa = state.signedAreaValues;
-          if (inpSlopeAyFromVt && sa.slopeAyFromVt !== undefined) inpSlopeAyFromVt.value = sa.slopeAyFromVt;
-          if (inpAreaUp && sa.areaUp !== undefined) inpAreaUp.value = sa.areaUp;
-          if (inpAreaDown && sa.areaDown !== undefined) inpAreaDown.value = sa.areaDown;
-          if (inpNetDyArea && sa.netDyArea !== undefined) inpNetDyArea.value = sa.netDyArea;
-          if (inpYMaxFromArea && sa.yMaxFromArea !== undefined) inpYMaxFromArea.value = sa.yMaxFromArea;
-          if (inpYFinalFromArea && sa.yFinalFromArea !== undefined) inpYFinalFromArea.value = sa.yFinalFromArea;
-          if (workSignedArea && sa.workSignedArea !== undefined) workSignedArea.value = sa.workSignedArea;
-        }
-        state.calcValues = data.state.calcValues || state.calcValues;
-        state.studentWork = data.state.studentWork || {};
-        if (data.state.studentWork) {
-          if (workMaxHeight && data.state.studentWork.workMaxH) workMaxHeight.value = data.state.studentWork.workMaxH;
-          if (workHangTime && data.state.studentWork.workHang) workHangTime.value = data.state.studentWork.workHang;
-          if (workRange && data.state.studentWork.workRange) workRange.value = data.state.studentWork.workRange;
-          if (workVector && data.state.studentWork.workVector) workVector.value = data.state.studentWork.workVector;
-        }
-        if (data.state.tableInputs) {
-          const ti = data.state.tableInputs;
-          if (tblInpAy && ti.ay !== undefined) tblInpAy.value = ti.ay;
-          if (tblInpAx && ti.ax !== undefined) tblInpAx.value = ti.ax;
-          if (tblInpHang && ti.hang !== undefined) tblInpHang.value = ti.hang;
-          if (tblInpRange && ti.range !== undefined) tblInpRange.value = ti.range;
-          if (tblInpMaxH && ti.maxH !== undefined) tblInpMaxH.value = ti.maxH;
-        }
-        state.reflectionText = data.state.reflectionText || '';
-        if (reflectionText) reflectionText.value = state.reflectionText;
-        if (data.state.syntheticType) initSyntheticExperiment(data.state.syntheticType);
+      if (s.series) {
+        state.series = {
+          A: Array.isArray(s.series.A) ? s.series.A : (Array.isArray(s.series.default) ? s.series.default : []),
+          B: Array.isArray(s.series.B) ? s.series.B : []
+        };
       }
+
+      if (isV2) {
+        // Version 2.0 session
+        state.observedTUp = s.observedTUp !== undefined ? String(s.observedTUp) : '';
+        state.firstAttemptPrediction = s.firstAttemptPrediction || {
+          isSaved: false,
+          isLegacyMissing: false,
+          savedAt: null,
+          vxShape: '',
+          vyShape: '',
+          axShape: '',
+          ayShape: '',
+          initialNotes: ''
+        };
+        state.predictionRevision = s.predictionRevision || '';
+        state.graphConnections = s.graphConnections || '';
+        if (s.showSignedArea !== undefined) {
+          state.showSignedArea = Boolean(s.showSignedArea);
+          if (el('chkShowSignedArea')) el('chkShowSignedArea').checked = state.showSignedArea;
+        }
+        if (s.studentResponses) {
+          Object.keys(state.studentResponses).forEach(k => {
+            state.studentResponses[k] = s.studentResponses[k] !== undefined ? String(s.studentResponses[k]) : '';
+          });
+        }
+        if (s.feedbackState) {
+          state.feedbackState = { ...state.feedbackState, ...s.feedbackState };
+        }
+      } else {
+        // Legacy Version 1.0 session migration (Do NOT invent a missing firstAttemptPrediction!)
+        state.firstAttemptPrediction = {
+          isSaved: true,
+          isLegacyMissing: true,
+          savedAt: null,
+          vxShape: '',
+          vyShape: '',
+          axShape: '',
+          ayShape: '',
+          initialNotes: ''
+        };
+        const gi = s.graphInterpretation || {};
+        const sa = s.signedAreaValues || {};
+        const cv = s.calcValues || {};
+        const sw = s.studentWork || {};
+
+        state.observedTUp = gi.stopTimeApex !== undefined ? String(gi.stopTimeApex) : '';
+        state.predictionRevision = '';
+        state.graphConnections = [gi.transYtoVy, gi.transVytoAy, gi.transX].filter(Boolean).join(' | ');
+
+        const strOrBlank = (v) => (v !== undefined && v !== null && v !== 0 ? String(v) : '');
+        state.studentResponses = {
+          ...state.studentResponses,
+          inpVx0: strOrBlank(cv.vx0),
+          work5aVx: sw.workRange || '',
+          inpAy: strOrBlank(sa.slopeAyFromVt || cv.ay),
+          work5bAy: '',
+          inpVy0Pred: strOrBlank(cv.vy0),
+          work5cVy0: sw.workHang || '',
+          inpCalcRange: strOrBlank(cv.rangeCalc),
+          inpPredDy: '',
+          inpPredYFinal: '',
+          work5dDisp: sw.workRange || '',
+          inpPredDyUp: '',
+          inpCalcMaxHeight: strOrBlank(cv.maxHCalc),
+          workMaxHeight: sw.workMaxH || '',
+          inpSpeedV0: strOrBlank(cv.v0),
+          inpAngleTheta: strOrBlank(cv.theta),
+          workVector: sw.workVector || '',
+          inpZeroCrossT: strOrBlank(gi.stopTimeApex),
+          inpAreaUp: strOrBlank(sa.areaUp),
+          inpAreaDown: strOrBlank(sa.areaDown),
+          inpNetDyArea: strOrBlank(sa.netDyArea),
+          inpYFinalFromArea: strOrBlank(sa.yFinalFromArea),
+          workSignedArea: sa.workSignedArea || '',
+          inpPosDirStart: gi.posDirStart !== undefined ? String(gi.posDirStart) : '',
+          inpPosDirEnd: gi.posDirEnd !== undefined ? String(gi.posDirEnd) : '',
+          inpNegDirStart: gi.negDirStart !== undefined ? String(gi.negDirStart) : '',
+          inpNegDirEnd: gi.negDirEnd !== undefined ? String(gi.negDirEnd) : '',
+          txtStopExplanation: gi.stopExplanation || '',
+          inpNegAccStart: gi.negAccStart !== undefined ? String(gi.negAccStart) : '',
+          inpNegAccEnd: gi.negAccEnd !== undefined ? String(gi.negAccEnd) : '',
+          txtAccSignExplanation: gi.accSignExplanation || '',
+          reflectionText: s.reflectionText || ''
+        };
+      }
+
+      updateScaleReadout();
       recalculateKinematics();
+      autoFitAndDeriveAllGraphs();
       updateTable();
-      updateCharts();
-      autoFitAllGraphs();
-      updateTangentProgressBadges();
-      verifyGraphInterpretation();
-      if (data.state && data.state.calcValues) {
-        const c = data.state.calcValues;
-        if (inpX0 && c.x0 !== undefined) inpX0.value = c.x0;
-        if (inpVx0 && c.vx0 !== undefined) inpVx0.value = c.vx0;
-        if (inpAx && c.ax !== undefined) inpAx.value = c.ax;
-        if (inpY0 && c.y0 !== undefined) inpY0.value = c.y0;
-        if (inpVy0 && c.vy0 !== undefined) inpVy0.value = c.vy0;
-        if (inpAy && c.ay !== undefined) inpAy.value = c.ay;
-        if (inpCalcRange && c.rangeCalc !== undefined) inpCalcRange.value = c.rangeCalc;
-        if (inpMeasRange && c.rangeMeas !== undefined) inpMeasRange.value = c.rangeMeas;
-        if (inpCalcHangTime && c.hangCalc !== undefined) inpCalcHangTime.value = c.hangCalc;
-        if (inpMeasHangTime && c.hangMeas !== undefined) inpMeasHangTime.value = c.hangMeas;
-        if (inpCalcMaxHeight && c.maxHCalc !== undefined) inpCalcMaxHeight.value = c.maxHCalc;
-        if (inpMeasMaxHeight && c.maxHMeas !== undefined) inpMeasMaxHeight.value = c.maxHMeas;
-        if (inpSpeedV0 && c.v0 !== undefined) inpSpeedV0.value = c.v0;
-        if (inpAngleTheta && c.theta !== undefined) inpAngleTheta.value = c.theta;
+      updateSetupAndCoverageReadouts();
+      populateDOMFromStudentState();
+      updatePredictionGateUI();
+      updatePosChart();
+      if (state.firstAttemptPrediction.isSaved) {
+        renderSixGraphPanel();
       }
-      checkAndVerifyCalculations();
-      if (!state.authenticityToken) {
-        updateAuthenticityBadge();
-      }
-      updateReflectionCounter();
-      alert('Lab session loaded successfully!');
-      updateStatus('Loaded lab session from file.');
+      updateReferenceQuantitiesBar();
+      updateRubricChecklistUI();
+      preparePrintableReport();
+      drawOverlay();
     } catch (err) {
-      alert('Failed to parse lab file: ' + err.message);
+      alert('Could not parse session JSON file: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+function exportCSV() {
+  const pts = state.series[state.activeSeries] || [];
+  if (pts.length === 0) {
+    alert('No tracked points to export yet.');
+    return;
+  }
+  let csv = 'Point,Frame,Time (s),x (m),y (m),vx_diag (m/s),vy_diag (m/s)\n';
+  pts.forEach((p, idx) => {
+    csv += `${idx + 1},${p.frame},${p.time.toFixed(4)},${p.x.toFixed(4)},${p.y.toFixed(4)},${p.vx.toFixed(4)},${p.vy.toFixed(4)}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `projectile_tracked_points_${state.activeSeries}.csv`;
+  a.click();
 }
 
 // ============================================================================
 // Event Listeners Binding
 // ============================================================================
 function initEventListeners() {
-  // Stepper Buttons
+  // 3-Step Navigation Buttons
   stepBtns.forEach((btn, idx) => {
     if (btn) btn.addEventListener('click', () => updateStepView(idx + 1));
   });
-
-  // Tools
-  if (toolTrack) toolTrack.addEventListener('click', () => setActiveTool('track'));
-  if (toolScale) toolScale.addEventListener('click', () => setActiveTool('scale'));
-  if (toolOrigin) toolOrigin.addEventListener('click', () => setActiveTool('origin'));
-
-  // Visibility toggles
-  if (chkShowPoints) {
-    chkShowPoints.addEventListener('change', () => {
-      state.showPoints = chkShowPoints.checked;
-      drawOverlay();
-    });
+  if (el('btnProceedToStep2')) {
+    el('btnProceedToStep2').addEventListener('click', () => updateStepView(2));
   }
-  if (chkShowVectors) {
-    chkShowVectors.addEventListener('change', () => {
-      state.showVectors = chkShowVectors.checked;
-      drawOverlay();
-    });
-  }
-  if (chkShowScale) {
-    chkShowScale.addEventListener('change', () => {
-      state.showScale = chkShowScale.checked;
-      drawOverlay();
-    });
-  }
-  if (chkShowOrigin) {
-    chkShowOrigin.addEventListener('change', () => {
-      state.showOrigin = chkShowOrigin.checked;
-      drawOverlay();
-    });
-  }
-  if (markerTypeSelect) {
-    markerTypeSelect.addEventListener('change', () => {
-      state.markerType = markerTypeSelect.value;
-      drawOverlay();
-    });
-  }
-  if (markerSizeSelect) {
-    markerSizeSelect.addEventListener('change', () => {
-      state.markerRadius = parseInt(markerSizeSelect.value, 10);
-      drawOverlay();
-    });
-  }
-  if (motionComponentSelect) {
-    motionComponentSelect.addEventListener('change', () => {
-      state.motionFilter = motionComponentSelect.value;
-      updateCharts();
-    });
+  if (el('btnProceedToStep3')) {
+    el('btnProceedToStep3').addEventListener('click', () => updateStepView(3));
   }
 
-  // Lab Guide & Rubric Modal
-  const helpModal = document.getElementById('helpModal');
-  const btnLabHelp = document.getElementById('btnLabHelp');
-  const btnCloseHelpModal = document.getElementById('btnCloseHelpModal');
-  const btnModalCloseDone = document.getElementById('btnModalCloseDone');
-  const helpTriggers = document.querySelectorAll('.btn-help-trigger');
+  // Primary Tracking Tools
+  if (el('toolTrack')) el('toolTrack').addEventListener('click', () => setActiveTool('track'));
+  if (el('toolScale')) el('toolScale').addEventListener('click', () => setActiveTool('scale'));
+  if (el('toolOrigin')) el('toolOrigin').addEventListener('click', () => setActiveTool('origin'));
 
-  function openHelpModal(tabId) {
-    if (!helpModal) return;
-    helpModal.style.display = 'flex';
-    helpModal.setAttribute('aria-hidden', 'false');
-    if (tabId) {
-      switchHelpTab(tabId);
-    }
-    if (window.renderMathInElement) {
-      renderMathInElement(helpModal, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '\\[', right: '\\]', display: true },
-          { left: '\\(', right: '\\)', display: false },
-          { left: '$', right: '$', display: false }
-        ]
-      });
-    }
-  }
-
-  function closeHelpModal() {
-    if (!helpModal) return;
-    helpModal.style.display = 'none';
-    helpModal.setAttribute('aria-hidden', 'true');
-  }
-
-  function switchHelpTab(tabId) {
-    const tabBtns = document.querySelectorAll('.help-tab-btn');
-    const panels = document.querySelectorAll('.help-tab-panel');
-    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.helpTab === tabId));
-    panels.forEach(p => p.classList.toggle('active', p.id === tabId));
-  }
-
-  if (btnLabHelp) btnLabHelp.addEventListener('click', () => openHelpModal('help-overview'));
-  helpTriggers.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stepTabMap = {
-        1: 'help-step1',
-        2: 'help-step2',
-        3: 'help-step3',
-        4: 'help-step4',
-        5: 'help-step5'
-      };
-      openHelpModal(stepTabMap[state.currentStep] || 'help-overview');
-    });
-  });
-
-  if (btnCloseHelpModal) btnCloseHelpModal.addEventListener('click', closeHelpModal);
-  if (btnModalCloseDone) btnModalCloseDone.addEventListener('click', closeHelpModal);
-  if (helpModal) {
-    helpModal.addEventListener('click', e => {
-      if (e.target === helpModal) closeHelpModal();
-    });
-  }
-
-  document.querySelectorAll('.help-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      switchHelpTab(btn.dataset.helpTab);
-    });
-  });
-
-  // Helper to load video file
-  const loadUserVideoFile = (file) => {
-    if (!file) return;
-    state.isSynthetic = false;
-    const url = URL.createObjectURL(file);
-    video.src = url;
-    video.style.display = 'block';
-    video.load();
-    video.onloadedmetadata = () => {
-      const dur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 10;
-      state.duration = dur;
-      state.currentTime = 0;
-      state.timeOffset = 0;
-      if (timeScrubber) {
-        timeScrubber.min = 0;
-        timeScrubber.max = dur;
-        timeScrubber.step = 1 / state.fps;
-        timeScrubber.value = 0;
+  if (el('btnSetTZero')) el('btnSetTZero').addEventListener('click', setInitialTimeAtFirstPoint);
+  if (el('btnDeleteLastPt')) {
+    el('btnDeleteLastPt').addEventListener('click', () => {
+      const pts = state.series[state.activeSeries];
+      if (pts && pts.length > 0) {
+        window.deleteTrackedPoint(pts.length - 1);
       }
-      resizeCanvas();
-      updateTimeAndFrame(0);
-      if (dropzoneOverlay) {
-        dropzoneOverlay.classList.add('hidden');
-        dropzoneOverlay.style.display = 'none';
-      }
-      updateStatus(`Loaded video: ${file.name} (${dur.toFixed(2)}s, ${state.fps} FPS)`);
-    };
-  };
-
-  // Video File Input
-  if (videoFileInput) {
-    videoFileInput.addEventListener('change', e => {
-      if (e.target.files && e.target.files[0]) {
-        loadUserVideoFile(e.target.files[0]);
+    });
+  }
+  if (el('btnClearSeries')) {
+    el('btnClearSeries').addEventListener('click', () => {
+      if (confirm(`Clear all tracked points in Series ${state.activeSeries}?`)) {
+        state.series[state.activeSeries] = [];
+        recalculateKinematics();
+        autoFitAndDeriveAllGraphs();
+        updateTable();
+        updateSetupAndCoverageReadouts();
+        updatePosChart();
+        drawOverlay();
       }
     });
   }
 
-  // Drag and Drop on viewport & dropzone
-  [viewportContainer, dropzoneOverlay].forEach(el => {
-    if (!el) return;
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.stopPropagation();
+  // Visibility & Optional Tools
+  if (el('chkShowPoints')) {
+    el('chkShowPoints').addEventListener('change', (e) => {
+      state.showPoints = e.target.checked;
+      drawOverlay();
     });
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-        loadUserVideoFile(e.dataTransfer.files[0]);
-      }
+  }
+  if (el('chkShowScale')) {
+    el('chkShowScale').addEventListener('change', (e) => {
+      state.showScale = e.target.checked;
+      drawOverlay();
     });
-  });
+  }
+  if (el('chkShowOrigin')) {
+    el('chkShowOrigin').addEventListener('change', (e) => {
+      state.showOrigin = e.target.checked;
+      drawOverlay();
+    });
+  }
+  if (el('chkShowVectors')) {
+    el('chkShowVectors').addEventListener('change', (e) => {
+      state.showVectors = e.target.checked;
+      drawOverlay();
+    });
+  }
+  if (el('markerTypeSelect')) {
+    el('markerTypeSelect').addEventListener('change', (e) => {
+      state.markerType = e.target.value;
+      drawOverlay();
+    });
+  }
+  if (el('markerSizeSelect')) {
+    el('markerSizeSelect').addEventListener('change', (e) => {
+      state.markerRadius = parseInt(e.target.value, 10) || 14;
+      drawOverlay();
+    });
+  }
+  if (el('seriesSelect')) {
+    el('seriesSelect').addEventListener('change', (e) => {
+      state.activeSeries = e.target.value;
+      autoFitAndDeriveAllGraphs();
+      updateTable();
+      updateSetupAndCoverageReadouts();
+      updatePosChart();
+      drawOverlay();
+    });
+  }
+  if (el('originAngleInput')) {
+    el('originAngleInput').addEventListener('change', (e) => {
+      const deg = parseFloat(e.target.value) || 0;
+      state.originAngle = deg * (Math.PI / 180);
+      recalculateKinematics();
+      autoFitAndDeriveAllGraphs();
+      updateTable();
+      updateSetupAndCoverageReadouts();
+      updatePosChart();
+      drawOverlay();
+    });
+  }
+  if (el('btnResetOrigin')) {
+    el('btnResetOrigin').addEventListener('click', () => {
+      const h = (overlayCanvas && overlayCanvas.height) ? overlayCanvas.height : 520;
+      state.origin = { x: 110, y: Math.round(h * 0.82) };
+      state.originAngle = 0;
+      if (el('originAngleInput')) el('originAngleInput').value = '0.0';
+      recalculateKinematics();
+      autoFitAndDeriveAllGraphs();
+      updateTable();
+      updateSetupAndCoverageReadouts();
+      updatePosChart();
+      drawOverlay();
+    });
+  }
+  if (el('btnExportCSV')) el('btnExportCSV').addEventListener('click', exportCSV);
 
-  // Video Synchronization Listeners
-  if (video) {
-    video.addEventListener('timeupdate', () => {
-      if (!state.isSynthetic && state.isPlaying) {
-        updateTimeAndFrame(video.currentTime);
-      }
+  // Synthetic Model Selector & Sample Points Loader
+  if (el('presetModelSelect')) {
+    el('presetModelSelect').addEventListener('change', (e) => {
+      initSyntheticExperiment(e.target.value);
+      loadSamplePointsForActivePreset();
     });
-    video.addEventListener('seeked', () => {
+  }
+  if (el('btnAutoDemoTrack')) {
+    el('btnAutoDemoTrack').addEventListener('click', () => {
       if (!state.isSynthetic) {
-        updateTimeAndFrame(video.currentTime);
+        initSyntheticExperiment(el('presetModelSelect') ? el('presetModelSelect').value : 'basketball');
       }
-    });
-    video.addEventListener('ended', () => {
-      if (!state.isSynthetic && state.isPlaying) {
-        togglePlay();
-      }
+      loadSamplePointsForActivePreset();
     });
   }
-
-  // Preset Buttons
   document.querySelectorAll('.preset-pills button').forEach(btn => {
     btn.addEventListener('click', () => {
-      const preset = btn.dataset.preset;
-      initSyntheticExperiment(preset);
-      if (dropzoneOverlay) {
-        dropzoneOverlay.classList.add('hidden');
-        dropzoneOverlay.style.display = 'none';
-      }
+      initSyntheticExperiment(btn.dataset.preset);
+      loadSamplePointsForActivePreset();
+      if (dropzoneOverlay) dropzoneOverlay.style.display = 'none';
     });
   });
 
-  if (btnSampleSelect) {
-    btnSampleSelect.addEventListener('click', () => {
-      if (dropzoneOverlay) {
-        dropzoneOverlay.classList.remove('hidden');
-        dropzoneOverlay.style.display = 'flex';
+  // Scale & Observed Rise Time t_up Controls
+  if (el('btnApplyScale')) {
+    el('btnApplyScale').addEventListener('click', () => {
+      const len = parseFloat(el('scaleLengthInput') ? el('scaleLengthInput').value : 1.0);
+      if (len > 0) {
+        state.scaleStick.lengthMeters = len;
+        updateScaleReadout();
+        recalculateKinematics();
+        autoFitAndDeriveAllGraphs();
+        updateTable();
+        updateSetupAndCoverageReadouts();
+        updatePosChart();
+        drawOverlay();
       }
     });
   }
 
-  // Transport Bar
-  if (btnPlayPause) btnPlayPause.addEventListener('click', togglePlay);
-  if (btnPrevFrame) btnPrevFrame.addEventListener('click', () => stepFrame(-1));
-  if (btnNextFrame) btnNextFrame.addEventListener('click', () => stepFrame(1));
-  if (timeScrubber) {
-    timeScrubber.addEventListener('input', e => {
-      const t = parseFloat(e.target.value);
+  const syncObservedTUp = (valStr) => {
+    state.observedTUp = valStr;
+    if (el('inpObservedTUp') && document.activeElement !== el('inpObservedTUp')) {
+      el('inpObservedTUp').value = valStr;
+    }
+    if (el('inpCalcTUp') && document.activeElement !== el('inpCalcTUp')) {
+      el('inpCalcTUp').value = valStr;
+    }
+    updateReferenceQuantitiesBar();
+  };
+
+  if (el('inpObservedTUp')) {
+    el('inpObservedTUp').addEventListener('input', (e) => syncObservedTUp(e.target.value));
+  }
+  if (el('inpCalcTUp')) {
+    el('inpCalcTUp').addEventListener('input', (e) => syncObservedTUp(e.target.value));
+  }
+  if (el('btnUsePeakFrameTUp')) {
+    el('btnUsePeakFrameTUp').addEventListener('click', () => {
+      const cov = state.coverageStatus;
+      if (cov && cov.peakPoint) {
+        syncObservedTUp(cov.peakPoint.time.toFixed(3));
+      } else {
+        alert('Track points across the apex first.');
+      }
+    });
+  }
+
+  // Video Transport Controls
+  if (el('btnPlayPause')) el('btnPlayPause').addEventListener('click', togglePlay);
+  if (el('btnPrevFrame')) el('btnPrevFrame').addEventListener('click', () => stepFrame(-1));
+  if (el('btnNextFrame')) el('btnNextFrame').addEventListener('click', () => stepFrame(1));
+  if (el('timeScrubber')) {
+    el('timeScrubber').addEventListener('input', (e) => {
+      const t = parseFloat(e.target.value) || 0;
       updateTimeAndFrame(t);
-      if (!state.isSynthetic && video) {
-        video.currentTime = t;
-      }
+      if (!state.isSynthetic && video) video.currentTime = t;
     });
   }
-
-  if (playbackRateSelect) {
-    playbackRateSelect.addEventListener('change', e => {
+  if (el('playbackRateSelect')) {
+    el('playbackRateSelect').addEventListener('change', (e) => {
       const rate = parseFloat(e.target.value) || 0.5;
       if (video) video.playbackRate = rate;
     });
   }
-
-  if (fpsInput) {
-    fpsInput.addEventListener('change', e => {
+  if (el('fpsInput')) {
+    el('fpsInput').addEventListener('change', (e) => {
       const val = parseInt(e.target.value, 10);
       if (val > 0) {
         state.fps = val;
-        if (timeScrubber) timeScrubber.step = 1 / state.fps;
+        if (el('timeScrubber')) el('timeScrubber').step = 1 / state.fps;
+        recalculateKinematics();
+        autoFitAndDeriveAllGraphs();
+        updateTable();
+        updateSetupAndCoverageReadouts();
         updateTimeAndFrame(state.currentTime);
       }
     });
   }
 
-  // Keyboard Navigation: ArrowLeft (prev frame), ArrowRight (next frame), Spacebar (play/pause)
-  window.addEventListener('keydown', e => {
+  // Keyboard Frame Stepping (ArrowLeft, ArrowRight, Spacebar)
+  window.addEventListener('keydown', (e) => {
     const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || state.currentStep !== 1) return;
     if (e.key === 'ArrowRight') {
       e.preventDefault();
       stepFrame(1);
@@ -4708,12 +3164,12 @@ function initEventListeners() {
     }
   });
 
-  // Canvas Interactions
+  // Canvas Mouse & Touch Interactions
   if (overlayCanvas) {
     let isDragging = false;
     let dragTarget = null;
 
-    overlayCanvas.addEventListener('mousedown', e => {
+    overlayCanvas.addEventListener('mousedown', (e) => {
       const rect = overlayCanvas.getBoundingClientRect();
       const scaleX = overlayCanvas.width / rect.width;
       const scaleY = overlayCanvas.height / rect.height;
@@ -4732,7 +3188,6 @@ function initEventListeners() {
           isDragging = true;
           dragTarget = 'scaleEnd';
         } else {
-          // Drag out a brand new scale line from clicked point!
           isDragging = true;
           dragTarget = 'scaleEnd';
           state.scaleStick.start = { x, y };
@@ -4740,27 +3195,25 @@ function initEventListeners() {
           drawOverlay();
         }
       } else if (state.activeTool === 'origin') {
-        // Click anywhere to immediately place and drag coordinate origin
         isDragging = true;
         dragTarget = 'origin';
         state.origin = { x, y };
         recalculateKinematics();
+        autoFitAndDeriveAllGraphs();
         updateTable();
-        updateCharts();
+        updateSetupAndCoverageReadouts();
+        updatePosChart();
         drawOverlay();
-        updateStatus(`Coordinate origin placed at (${Math.round(x)}, ${Math.round(y)} px).`);
       }
     });
 
-    window.addEventListener('mousemove', e => {
-      // Reticle preview hover when tracking
+    window.addEventListener('mousemove', (e) => {
       if (state.activeTool === 'track' && reticlePreview && !isDragging) {
         const rect = overlayCanvas.getBoundingClientRect();
         if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          const r = parseInt(markerSizeSelect ? markerSizeSelect.value : 14, 10);
           reticlePreview.style.display = 'block';
-          reticlePreview.style.width = (r * 2) + 'px';
-          reticlePreview.style.height = (r * 2) + 'px';
+          reticlePreview.style.width = (state.markerRadius * 2) + 'px';
+          reticlePreview.style.height = (state.markerRadius * 2) + 'px';
           reticlePreview.style.left = (e.clientX - rect.left) + 'px';
           reticlePreview.style.top = (e.clientY - rect.top) + 'px';
         } else {
@@ -4780,366 +3233,235 @@ function initEventListeners() {
       if (dragTarget === 'scaleStart') {
         state.scaleStick.start = { x, y };
         updateScaleReadout();
-        recalculateKinematics();
-        updateTable();
-        updateCharts();
       } else if (dragTarget === 'scaleEnd') {
         state.scaleStick.end = { x, y };
         updateScaleReadout();
-        recalculateKinematics();
-        updateTable();
-        updateCharts();
       } else if (dragTarget === 'origin') {
         state.origin = { x, y };
-        recalculateKinematics();
-        updateTable();
-        updateCharts();
       }
+      recalculateKinematics();
+      autoFitAndDeriveAllGraphs();
+      updateTable();
+      updateSetupAndCoverageReadouts();
+      updatePosChart();
       drawOverlay();
     });
 
     window.addEventListener('mouseup', () => {
-      if (isDragging && dragTarget === 'scaleEnd') {
-        const pxLen = Math.hypot(state.scaleStick.end.x - state.scaleStick.start.x, state.scaleStick.end.y - state.scaleStick.start.y);
-        if (pxLen > 5) {
-          updateScaleReadout();
-          recalculateKinematics();
-          updateTable();
-          updateCharts();
-          updateStatus(`Calibrated scale: ${pxLen.toFixed(1)} px = ${state.scaleStick.lengthMeters.toFixed(2)} m (${state.pixelsPerMeter.toFixed(1)} px/m).`);
-        }
-      } else if (isDragging && dragTarget === 'origin') {
-        updateStatus(`Origin calibrated at (${Math.round(state.origin.x)}, ${Math.round(state.origin.y)} px).`);
-      }
       isDragging = false;
       dragTarget = null;
     });
-
-    overlayCanvas.addEventListener('mouseleave', () => {
-      if (reticlePreview) reticlePreview.style.display = 'none';
-    });
   }
 
-  // Sidebar Tabs (Graphs, Linearization, Table, Calibration)
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabButtons.forEach(b => b.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      const target = document.getElementById(btn.dataset.tab);
-      if (target) target.classList.add('active');
-    });
-  });
+  // Local Video File Loading
+  const loadUserVideoFile = (file) => {
+    if (!file) return;
+    state.isSynthetic = false;
+    state.videoFileName = file.name;
+    state.series.A = [];
+    state.series.B = [];
+    state.observedTUp = '';
+    if (el('inpObservedTUp')) el('inpObservedTUp').value = '';
+    if (el('inpCalcTUp')) el('inpCalcTUp').value = '';
+    if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'none';
 
-  // Scale calibration inputs
-  if (btnApplyScale) {
-    btnApplyScale.addEventListener('click', () => {
-      const len = parseFloat(scaleLengthInput ? scaleLengthInput.value : 1.0);
-      if (len > 0) {
-        state.scaleStick.lengthMeters = len;
-        updateScaleReadout();
-        recalculateKinematics();
-        updateTable();
-        updateCharts();
-        updateStatus(`Scale stick calibrated to ${len.toFixed(2)} meters.`);
-      }
-    });
-  }
-
-  if (btnResetOrigin) {
-    btnResetOrigin.addEventListener('click', () => {
-      state.origin = { x: overlayCanvas.width / 2, y: overlayCanvas.height / 2 };
-      state.originAngle = 0;
-      if (originAngleInput) originAngleInput.value = '0.0';
-      drawOverlay();
-    });
-  }
-
-  // Series & Point helpers
-  if (btnClearSeries) {
-    btnClearSeries.addEventListener('click', () => {
-      if (confirm(`Clear all points in Series ${state.activeSeries}?`)) {
-        state.series[state.activeSeries] = [];
-        state.tangentPoints = [];
-        updateTable();
-        updateCharts();
-        drawOverlay();
-      }
-    });
-  }
-  if (btnSetTZero) btnSetTZero.addEventListener('click', setInitialTimeAtFirstPoint);
-  if (btnExportCSV) btnExportCSV.addEventListener('click', exportCSV);
-
-  // 6-Graph Studio Nav & Signed Area Toggle
-  graphNavBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      renderStudioGraph(btn.dataset.graph);
-    });
-  });
-
-  if (chkShowSignedArea) {
-    chkShowSignedArea.addEventListener('change', () => {
-      state.showSignedArea = chkShowSignedArea.checked;
-      renderStudioGraph(state.activeGraphTab);
-      if (state.activeGraphTab === 'grid-all') renderAllGridGraphs();
-    });
-  }
-
-  if (tangentSlider) {
-    tangentSlider.addEventListener('input', e => {
-      updateTangentTool(parseFloat(e.target.value));
-    });
-  }
-  if (btnVerifyAndRecordTangent) btnVerifyAndRecordTangent.addEventListener('click', verifyAndRecordTwoPointTangent);
-  if (btnRecordTangent) btnRecordTangent.addEventListener('click', recordTangentPoint);
-  if (btnClearTangents) btnClearTangents.addEventListener('click', clearTangentPoints);
-  if (btnAutoFitAll) btnAutoFitAll.addEventListener('click', autoFitAllGraphs);
-
-  // Step 3 Graph Translation & Interval Analysis Verification
-  if (btnVerifyGraphInterpretation) {
-    btnVerifyGraphInterpretation.addEventListener('click', verifyGraphInterpretation);
-  }
-  [
-    selTransYtoVy, selTransVytoAy, selTransX,
-    selStopBehavior, inpStopTimeApex, txtStopExplanation,
-    inpPosDirStart, inpPosDirEnd, inpNegDirStart, inpNegDirEnd,
-    inpNegAccStart, inpNegAccEnd, txtAccSignExplanation
-  ].forEach(el => {
-    if (el) {
-      el.addEventListener('change', verifyGraphInterpretation);
-      el.addEventListener('input', verifyGraphInterpretation);
+    const badge = el('clipSourceTypeBadge');
+    if (badge) {
+      badge.textContent = `MEASURED VIDEO FILE (${file.name})`;
+      badge.style.background = '#e6f4f8';
+      badge.style.color = '#095f76';
+      badge.style.borderColor = '#b3d9e6';
     }
-  });
 
-  // Calculations Workspace
-  if (btnCheckWorksheet) btnCheckWorksheet.addEventListener('click', checkAndVerifyCalculations);
-  [
-    inpX0, inpVx0, inpAx, inpY0, inpVy0, inpAy,
-    inpSlopeAyFromVt, inpAreaUp, inpAreaDown, inpNetDyArea, inpYMaxFromArea, inpYFinalFromArea,
-    inpCalcRange, inpMeasRange, inpCalcHangTime, inpMeasHangTime,
-    inpCalcMaxHeight, inpMeasMaxHeight, inpSpeedV0, inpAngleTheta,
-    tblInpAy, tblInpAx, tblInpHang, tblInpRange, tblInpMaxH
-  ].forEach(inp => {
-    if (inp) inp.addEventListener('input', () => checkAndVerifyCalculations());
-  });
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.style.display = 'block';
+    video.load();
+    video.onloadedmetadata = () => {
+      const dur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 10;
+      state.duration = dur;
+      state.currentTime = 0;
+      state.timeOffset = 0;
+      const scrubber = el('timeScrubber');
+      if (scrubber) {
+        scrubber.min = 0;
+        scrubber.max = dur;
+        scrubber.step = 1 / state.fps;
+        scrubber.value = 0;
+      }
+      resizeCanvas();
+      updateTimeAndFrame(0);
+      updateTable();
+      updateSetupAndCoverageReadouts();
+      updateStepView(1);
+    };
+  };
 
-  if (workSignedArea) {
-    workSignedArea.addEventListener('input', () => {
-      state.signedAreaValues.workSignedArea = workSignedArea.value;
+  if (el('videoFileInput')) {
+    el('videoFileInput').addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        loadUserVideoFile(e.target.files[0]);
+      }
     });
   }
 
-  [workMaxHeight, workHangTime, workRange, workVector].forEach(txt => {
-    if (txt) {
-      txt.addEventListener('input', () => {
-        state.studentWork = {
-          workMaxH: workMaxHeight ? workMaxHeight.value : '',
-          workHang: workHangTime ? workHangTime.value : '',
-          workRange: workRange ? workRange.value : '',
-          workVector: workVector ? workVector.value : ''
-        };
+  if (video) {
+    video.addEventListener('timeupdate', () => {
+      if (!state.isSynthetic && state.isPlaying) updateTimeAndFrame(video.currentTime);
+    });
+    video.addEventListener('seeked', () => {
+      if (!state.isSynthetic) updateTimeAndFrame(video.currentTime);
+    });
+    video.addEventListener('ended', () => {
+      if (!state.isSynthetic && state.isPlaying) togglePlay();
+    });
+  }
+
+  // Step 2 Controls: Position Filter, Save Prediction & Reveal, Signed Area Toggle, Optional Tangent Explorer
+  if (el('motionComponentSelect')) {
+    el('motionComponentSelect').addEventListener('change', (e) => {
+      state.motionFilter = e.target.value;
+      updatePosChart();
+    });
+  }
+  if (el('btnSavePredictionAndReveal')) {
+    el('btnSavePredictionAndReveal').addEventListener('click', saveInitialPredictionAndReveal);
+  }
+  if (el('chkShowSignedArea')) {
+    el('chkShowSignedArea').addEventListener('change', (e) => {
+      state.showSignedArea = e.target.checked;
+      renderSixGraphPanel();
+    });
+  }
+  if (el('btnAutoFitAll')) {
+    el('btnAutoFitAll').addEventListener('click', () => {
+      renderSixGraphPanel();
+      updateReferenceQuantitiesBar();
+    });
+  }
+  if (el('tangentSlider')) {
+    el('tangentSlider').addEventListener('input', (e) => {
+      const pct = parseFloat(e.target.value) || 0;
+      const cov = state.coverageStatus;
+      const t = cov.tMin + (cov.tMax - cov.tMin) * (pct / 100);
+      state.activeTangentTime = t;
+      const yFit = state.fitResults.yPos;
+      if (el('tangentReadoutCoordsHint') && yFit) {
+        const slope = 2 * yFit.A * t + yFit.B;
+        el('tangentReadoutCoordsHint').textContent = `t = ${t.toFixed(3)} s • Instantaneous Slope Δy/Δt = ${slope.toFixed(3)} m/s`;
+      }
+      renderSixGraphPanel();
+    });
+  }
+
+  // Student Inputs & Check Numbers Button
+  if (el('btnCheckWorksheet')) {
+    el('btnCheckWorksheet').addEventListener('click', checkNumbersForPracticeFeedback);
+  }
+  Object.keys(state.studentResponses).forEach(k => {
+    const node = el(k);
+    if (node) {
+      node.addEventListener('input', () => {
+        state.studentResponses[k] = node.value;
+        updateWrittenStatusBadges();
       });
     }
   });
+  if (el('txtPredictionRevision')) {
+    el('txtPredictionRevision').addEventListener('input', (e) => {
+      state.predictionRevision = e.target.value;
+      updateWrittenStatusBadges();
+    });
+  }
+  if (el('txtGraphConnections')) {
+    el('txtGraphConnections').addEventListener('input', (e) => {
+      state.graphConnections = e.target.value;
+      updateWrittenStatusBadges();
+    });
+  }
 
-  if (reflectionText) reflectionText.addEventListener('input', updateReflectionCounter);
-
-  // Presentation & Exports
-  if (btnDownloadPptx) btnDownloadPptx.addEventListener('click', exportPresentationPPTX);
-  if (btnPrintReport) btnPrintReport.addEventListener('click', () => {
+  // Step 3: Identification, Report Preview, Print & Save/Load Session
+  if (el('studentNameInput')) {
+    el('studentNameInput').addEventListener('input', (e) => {
+      state.studentName = e.target.value;
+    });
+  }
+  if (el('teacherSelect')) {
+    el('teacherSelect').addEventListener('change', (e) => {
+      state.teacherName = e.target.value;
+    });
+  }
+  if (el('btnRefreshReportPreview')) {
+    el('btnRefreshReportPreview').addEventListener('click', () => {
+      updateRubricChecklistUI();
+      preparePrintableReport();
+    });
+  }
+  if (el('btnPrintReport')) {
+    el('btnPrintReport').addEventListener('click', () => {
+      updateRubricChecklistUI();
+      preparePrintableReport();
+      window.print();
+    });
+  }
+  window.addEventListener('beforeprint', () => {
+    updateRubricChecklistUI();
     preparePrintableReport();
-    window.print();
-  });
-  if (btnCopyFormData) btnCopyFormData.addEventListener('click', copyFormData);
-  window.addEventListener('beforeprint', preparePrintableReport);
-
-  if (btnPrevSlide) {
-    btnPrevSlide.addEventListener('click', () => {
-      const prev = Math.max(1, state.currentSlideIdx - 1);
-      renderSlideDeckPreview(prev);
-    });
-  }
-  if (btnNextSlide) {
-    btnNextSlide.addEventListener('click', () => {
-      const next = Math.min(11, state.currentSlideIdx + 1);
-      renderSlideDeckPreview(next);
-    });
-  }
-  const allThumbs = document.querySelectorAll('.slide-thumb');
-  allThumbs.forEach(thumb => {
-    thumb.addEventListener('click', () => {
-      const idx = parseInt(thumb.dataset.slideIdx, 10);
-      renderSlideDeckPreview(idx);
-    });
   });
 
-  // Student & Teacher Inputs update preview in real-time
-  if (studentNameInput) {
-    studentNameInput.addEventListener('input', () => {
-      updateAuthenticityBadge();
-      if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
-    });
-  }
-  if (teacherSelect) {
-    teacherSelect.addEventListener('change', () => {
-      updateAuthenticityBadge();
-      if (state.currentSlideIdx === 1) renderSlideDeckPreview(1);
-    });
-  }
-
-  // Session Save/Load
-  if (btnSaveSession) btnSaveSession.addEventListener('click', saveSessionJSON);
-  if (btnLoadSession && loadSessionInput) {
-    btnLoadSession.addEventListener('click', () => loadSessionInput.click());
-    loadSessionInput.addEventListener('change', e => {
-      if (e.target.files[0]) loadSessionJSON(e.target.files[0]);
-    });
-  }
-
-  initTokenVerifier();
-}
-
-// Token Verification Logic
-function verifyTokenChecksum(tokenStr) {
-  if (!tokenStr || typeof tokenStr !== 'string') {
-    return { valid: false, reason: 'Please enter a token string.' };
-  }
-  const clean = tokenStr.trim().toUpperCase();
-  const match = clean.match(/^PK-SPORTS-([0-9A-F]{4})-([0-9A-F]{4})-([0-9A-F]{4})$/);
-  if (!match) {
-    return {
-      valid: false,
-      reason: 'Invalid format! Valid tokens must follow PK-SPORTS-XXXX-XXXX-XXXX with 4-character hexadecimal values.'
-    };
-  }
-  const hex1 = parseInt(match[1], 16);
-  const hex2 = parseInt(match[2], 16);
-  const hex3 = parseInt(match[3], 16);
-  const expectedChecksum = hex1 ^ hex2;
-
-  if (expectedChecksum !== hex3) {
-    const expectedHex = expectedChecksum.toString(16).toUpperCase().padStart(4, '0');
-    return {
-      valid: false,
-      reason: `Checksum Failed! Block 3 is ${match[3]}, but mathematical parity (Block 1 ⊕ Block 2) equals ${expectedHex}. This token was artificially made up or edited.`
-    };
-  }
-
-  return {
-    valid: true,
-    reason: `✓ Mathematical Checksum Verified! Block 1 (${match[1]}) ⊕ Block 2 (${match[2]}) = Block 3 (${match[3]}). This token was generated by the PhysicsKit algorithm.`
-  };
-}
-
-function initTokenVerifier() {
-  const btnOpen = document.getElementById('btnOpenVerifierModal');
-  const modal = document.getElementById('verifierModal');
-  const btnClose = document.getElementById('btnVerifierClose');
-  const btnDone = document.getElementById('btnVerifierCloseDone');
-  const inpToken = document.getElementById('inputVerifyToken');
-  const btnCheck = document.getElementById('btnRunTokenCheck');
-  const resBox = document.getElementById('verifyResultBox');
-  const btnTriggerFile = document.getElementById('btnTriggerVerifySessionFile');
-  const fileInput = document.getElementById('verifySessionFileInput');
-  const fileResBox = document.getElementById('verifySessionResultBox');
-
-  const openModal = () => {
-    if (modal) {
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden', 'false');
-      if (inpToken && state.authenticityToken) {
-        inpToken.value = state.authenticityToken;
-      }
+  // Save / Load JSON Progress Buttons (Top bar & Step 3)
+  [el('btnSaveSessionTop'), el('btnSaveSession')].forEach(btn => {
+    if (btn) btn.addEventListener('click', saveSessionJSON);
+  });
+  [el('btnLoadSessionTop'), el('btnLoadSession')].forEach(btn => {
+    if (btn && el('loadSessionInput')) {
+      btn.addEventListener('click', () => el('loadSessionInput').click());
     }
-  };
-
-  const closeModal = () => {
-    if (modal) {
-      modal.style.display = 'none';
-      modal.setAttribute('aria-hidden', 'true');
-    }
-  };
-
-  if (btnOpen) btnOpen.addEventListener('click', openModal);
-  if (btnClose) btnClose.addEventListener('click', closeModal);
-  if (btnDone) btnDone.addEventListener('click', closeModal);
-
-  if (btnCheck && inpToken && resBox) {
-    btnCheck.addEventListener('click', () => {
-      const res = verifyTokenChecksum(inpToken.value);
-      resBox.style.display = 'block';
-      if (res.valid) {
-        resBox.style.background = '#e6f8ea';
-        resBox.style.border = '1px solid #1a7f37';
-        resBox.style.color = '#1a7f37';
-        resBox.innerHTML = `<strong>${res.reason}</strong><br><span style="font-size:0.8rem; color:#4b6570;">Status: Genuine PhysicsKit algorithmic signature.</span>`;
-      } else {
-        resBox.style.background = '#fef2f2';
-        resBox.style.border = '1px solid #dc2626';
-        resBox.style.color = '#b91c1c';
-        resBox.innerHTML = `<strong>${res.reason}</strong><br><span style="font-size:0.8rem; color:#b91c1c;">Status: FORGERY / FABRICATION DETECTED.</span>`;
+  });
+  if (el('loadSessionInput')) {
+    el('loadSessionInput').addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        loadSessionJSON(e.target.files[0]);
       }
     });
   }
 
-  if (btnTriggerFile && fileInput) {
-    btnTriggerFile.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file || !fileResBox) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        try {
-          const data = JSON.parse(ev.target.result);
-          const pts = (data.state && data.state.series && data.state.series.default) ? data.state.series.default : [];
-          const sName = (data.studentName || 'Student').trim();
-          const tName = (data.teacherName || 'Physics Teacher').trim();
-          const ppm = (data.state && data.state.pixelsPerMeter) ? data.state.pixelsPerMeter : 100;
-
-          const ptsSummary = pts.map(p => `${p.time.toFixed(2)}:${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(';');
-          const seed = `${sName.toUpperCase()}|${tName}|${ptsSummary}|${ppm.toFixed(1)}`;
-
-          let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-          for (let i = 0; i < seed.length; i++) {
-            const ch = seed.charCodeAt(i);
-            h1 = Math.imul(h1 ^ ch, 2654435761);
-            h2 = Math.imul(h2 ^ ch, 1597334677);
-          }
-          h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-          h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-
-          const val1 = (h1 >>> 0) % 0xffff;
-          const val2 = (h2 >>> 0) % 0xffff;
-          const val3 = (val1 ^ val2);
-          const hex1 = val1.toString(16).toUpperCase().padStart(4, '0');
-          const hex2 = val2.toString(16).toUpperCase().padStart(4, '0');
-          const hex3 = val3.toString(16).toUpperCase().padStart(4, '0');
-          const recomputedToken = `PK-SPORTS-${hex1}-${hex2}-${hex3}`;
-
-          fileResBox.style.display = 'block';
-          fileResBox.innerHTML = `
-            <div style="font-weight: 700; color: #0f7e9b; margin-bottom: 0.3rem;">✓ Session File Inspected Successfully:</div>
-            <div><strong>Student:</strong> ${sName}</div>
-            <div><strong>Teacher:</strong> ${tName}</div>
-            <div><strong>Tracked Frames:</strong> ${pts.length} points</div>
-            <div><strong>Recomputed Authentic Token:</strong> <code style="font-weight:700; background:#e6f4f8; padding:2px 6px; border-radius:3px; color:#0f7e9b;">${recomputedToken}</code></div>
-            <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #64748b;">Compare this code with the token on their submitted PowerPoint deck or Google Form to confirm 100% data integrity.</div>
-          `;
-        } catch (err) {
-          fileResBox.style.display = 'block';
-          fileResBox.innerHTML = `<span style="color:#dc2626;">Failed to parse JSON session: ${err.message}</span>`;
-        }
-      };
-      reader.readAsText(file);
+  // Directions & Rubric Modal
+  const helpModal = el('helpModal');
+  const openHelpModal = (tabId) => {
+    if (!helpModal) return;
+    helpModal.style.display = 'flex';
+    helpModal.setAttribute('aria-hidden', 'false');
+    if (tabId) {
+      document.querySelectorAll('.help-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.helpTab === tabId));
+      document.querySelectorAll('.help-tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+    }
+    triggerKaTeXRender(helpModal);
+  };
+  const closeHelpModal = () => {
+    if (!helpModal) return;
+    helpModal.style.display = 'none';
+    helpModal.setAttribute('aria-hidden', 'true');
+  };
+  if (el('btnLabHelp')) el('btnLabHelp').addEventListener('click', () => openHelpModal('help-overview'));
+  document.querySelectorAll('.btn-help-trigger').forEach(btn => {
+    btn.addEventListener('click', () => openHelpModal('help-overview'));
+  });
+  if (el('btnCloseHelpModal')) el('btnCloseHelpModal').addEventListener('click', closeHelpModal);
+  if (el('btnModalCloseDone')) el('btnModalCloseDone').addEventListener('click', closeHelpModal);
+  if (helpModal) {
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) closeHelpModal();
     });
   }
+  document.querySelectorAll('.help-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => openHelpModal(btn.dataset.helpTab));
+  });
 }
 
-// Window load
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('resize', () => {
   resizeCanvas();
+  if (state.isSynthetic) renderSyntheticFrame(state.currentTime);
   drawOverlay();
 });
