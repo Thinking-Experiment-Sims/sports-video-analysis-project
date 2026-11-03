@@ -285,7 +285,7 @@
                 <strong id="setupReadoutY0" style="font-size: 0.88rem; color: var(--ink);">Not tracked yet</strong>
               </div>
               <div style="background: #ffffff; padding: 0.4rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
-                <span style="color: var(--muted);">Tracked Duration \(T\):</span><br>
+                <span style="color: var(--muted);">Tracked Duration \(t_{\text{hang}}\):</span><br>
                 <strong id="setupReadoutT" style="font-size: 0.88rem; color: var(--ink);">0.000 s</strong>
               </div>
               <div style="background: #ffffff; padding: 0.4rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
@@ -384,7 +384,7 @@
           <!-- Right: Initial Prediction Form (Locked once saved; never overwritten by revisions) -->
           <div style="background: #fff7ed; border: 1.5px solid var(--accent-amber); border-radius: var(--radius-sm); padding: 0.95rem;">
             <strong style="font-size: 0.9rem; color: var(--accent-amber-dark); display: block; margin-bottom: 0.45rem;">
-              ✏️ Predict Velocity &amp; Acceleration Shapes Over \([0, T]\) (Direction 3)
+              ✏️ Predict Velocity &amp; Acceleration Shapes Over \([0, t_{\text{hang}}]\) (Direction 3)
             </strong>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; font-size: 0.78rem; margin-bottom: 0.55rem;">
               <div>
@@ -445,7 +445,7 @@
           <div>
             <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--primary-teal); margin: 0;">Step 2B: One Panel with Six Graphs (Horizontal vs. Vertical Motion)</h2>
             <p style="font-size: 0.83rem; color: var(--muted); margin: 0.2rem 0 0 0;">
-              All six graphs share the same time interval \([0, T]\). Tracked positions are fitted once per axis (\(x = mt + c\) and \(y = At^2 + Bt + C\)); velocity and acceleration plots are <strong>derived directly from the position fits</strong>.
+              All six graphs share the same time interval \([0, t_{\text{hang}}]\). Tracked positions are fitted once per axis (\(x = mt + c\) and \(y = At^2 + Bt + C\)); velocity and acceleration plots are <strong>derived directly from the position fits</strong>.
             </p>
           </div>
           <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
@@ -675,7 +675,7 @@
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.55rem; font-size: 0.78rem;">
             <div style="background: #ffffff; padding: 0.45rem 0.65rem; border-radius: 4px; border: 1px solid var(--border-light);">
-              <span style="color: var(--muted);">Tracked Duration \(T\):</span><br>
+              <span style="color: var(--muted);">Tracked Duration \(t_{\text{hang}}\):</span><br>
               <strong id="refReadoutT" style="font-size: 0.9rem; color: var(--primary-teal);">—</strong>
             </div>
             <div style="background: #fff7ed; padding: 0.45rem 0.65rem; border-radius: 4px; border: 1px solid var(--accent-amber-border);">
@@ -771,18 +771,18 @@
 
               <!-- 5d -->
               <div style="background: var(--surface-alt); padding: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-                <h4 style="font-size: 0.88rem; color: var(--primary-teal); margin: 0 0 0.3rem 0;">5d. Displacements (\(\Delta x, \Delta y\)) &amp; Final Position at \(T\)</h4>
+                <h4 style="font-size: 0.88rem; color: var(--primary-teal); margin: 0 0 0.3rem 0;">5d. Displacements (\(\Delta x, \Delta y\)) &amp; Final Position at \(t_{\text{hang}}\)</h4>
                 <p style="font-size: 0.75rem; color: var(--muted); margin: 0 0 0.4rem 0;">
-                  Predict \(\Delta x = v_{0x}T\) and \(\Delta y = v_{0y,\text{pred}}T + \frac{1}{2}a_{y,\text{ref}}T^2\). Compare with tracked endpoint changes, then predict final height \(y_{\text{final}} = y_0 + \Delta y\).
+                  Predict \(\Delta x = v_{0x}t_{\text{hang}}\) and \(\Delta y = v_{0y,\text{pred}}t_{\text{hang}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{hang}}^2\). Compare with tracked endpoint changes, then predict final height \(y_{\text{final}} = y_0 + \Delta y\).
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem; font-size: 0.74rem;">
                   <div>
                     <label for="inpCalcRange" style="font-weight: 600;">Pred \(\Delta x\) (m):</label>
-                    <input type="number" id="inpCalcRange" class="input-control" step="0.001" style="width: 100%;" placeholder="v₀ₓ·T">
+                    <input type="number" id="inpCalcRange" class="input-control" step="0.001" style="width: 100%;" placeholder="v₀ₓ·t_hang">
                   </div>
                   <div>
                     <label for="inpPredDy" style="font-weight: 600;">Pred \(\Delta y\) (m):</label>
-                    <input type="number" id="inpPredDy" class="input-control" step="0.001" style="width: 100%;" placeholder="Δy at T">
+                    <input type="number" id="inpPredDy" class="input-control" step="0.001" style="width: 100%;" placeholder="Δy at t_hang">
                   </div>
                   <div>
                     <label for="inpPredYFinal" style="font-weight: 600;">Pred \(y_{\text{final}}\) (m):</label>
@@ -791,12 +791,12 @@
                 </div>
                 <div id="fb5d" class="practice-feedback-msg"></div>
                 <label for="work5dDisp" style="font-size: 0.75rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.35rem;">Equations, Substitutions &amp; Endpoint Comparisons:</label>
-                <textarea id="work5dDisp" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Δx, Δy, and y_final = y₀ + Δy substitutions with units and compare against tracked endpoint changes..."></textarea>
+                <textarea id="work5dDisp" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Δx, Δy, and y_final = y₀ + Δy substitutions using t_hang with units and compare against tracked endpoint changes..."></textarea>
               </div>
 
               <!-- 5e -->
               <div style="background: var(--surface-alt); padding: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-                <h4 style="font-size: 0.88rem; color: var(--accent-amber-dark); margin: 0 0 0.3rem 0;">5e. Maximum Height Using \(t_{\text{up}}\) (Not \(T\)) &amp; Measured \(y_0\)</h4>
+                <h4 style="font-size: 0.88rem; color: var(--accent-amber-dark); margin: 0 0 0.3rem 0;">5e. Maximum Height Using \(t_{\text{up}}\) (Not \(t_{\text{hang}}\)) &amp; Measured \(y_0\)</h4>
                 <p style="font-size: 0.75rem; color: var(--muted); margin: 0 0 0.4rem 0;">
                   Predict upward displacement \(\Delta y_{\text{up}} = v_{0y,\text{pred}}t_{\text{up}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{up}}^2\). Add first tracked height \(y_0\) to get \(y_{\max} = y_0 + \Delta y_{\text{up}}\) and compare with highest tracked position.
                 </p>
@@ -847,7 +847,7 @@
           </div>
           <div class="worksheet-card-body">
             <p style="font-size: 0.79rem; color: var(--ink); margin: 0 0 0.55rem 0;">
-              On the derived \(v_y\)–\(t\) graph (\(v_y = 2At + B\)), split \([0, T]\) at its zero crossing \(t_{\text{zero}}\). Show the <strong>positive area during ascent</strong> and the <strong>negative area during descent</strong> using triangles or trapezoids, add them to get vertical displacement \(\Delta y_{\text{area}}\), and add the <strong>fitted initial height \(C\)</strong> to compare with the fitted position at \(T\), \(y_{\text{fit}}(T) = AT^2 + BT + C\).
+              On the derived \(v_y\)–\(t\) graph (\(v_y = 2At + B\)), split \([0, t_{\text{hang}}]\) at its zero crossing \(t_{\text{zero}}\). Show the <strong>positive area during ascent</strong> and the <strong>negative area during descent</strong> using triangles or trapezoids, add them to get vertical displacement \(\Delta y_{\text{area}}\), and add the <strong>fitted initial height \(C\)</strong> to compare with the fitted position at \(t_{\text{hang}}\), \(y_{\text{fit}}(t_{\text{hang}}) = At_{\text{hang}}^2 + Bt_{\text{hang}} + C\).
             </p>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.55rem; font-size: 0.76rem; margin-bottom: 0.45rem;">
               <div>
@@ -868,12 +868,12 @@
               </div>
               <div>
                 <label for="inpYFinalFromArea" style="font-weight: 700; color: var(--primary-teal);">Fitted \(C + \Delta y_{\text{area}}\) (m):</label>
-                <input type="number" id="inpYFinalFromArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="Compare w/ y_fit(T)">
+                <input type="number" id="inpYFinalFromArea" class="input-control" step="0.001" style="width: 100%; margin-top: 0.15rem;" placeholder="Compare w/ y_fit(t_hang)">
               </div>
             </div>
             <div id="fbSignedArea" class="practice-feedback-msg"></div>
-            <label for="workSignedArea" style="font-weight: 600; font-size: 0.76rem; color: var(--primary-teal); display: block; margin-top: 0.35rem;">Show Triangle/Trapezoid Area Calculations &amp; Comparison with Fitted \(y_{\text{fit}}(T)\):</label>
-            <textarea id="workSignedArea" class="input-control" rows="2" style="width: 100%; font-family: monospace; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Area_up, Area_down (with negative sign), Δy_area = Area_up + Area_down, and C + Δy_area compared with y_fit(T)..."></textarea>
+            <label for="workSignedArea" style="font-weight: 600; font-size: 0.76rem; color: var(--primary-teal); display: block; margin-top: 0.35rem;">Show Triangle/Trapezoid Area Calculations &amp; Comparison with Fitted \(y_{\text{fit}}(t_{\text{hang}})\):</label>
+            <textarea id="workSignedArea" class="input-control" rows="2" style="width: 100%; font-family: monospace; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show Area_up, Area_down (with negative sign), Δy_area = Area_up + Area_down, and C + Δy_area compared with y_fit(t_hang)..."></textarea>
           </div>
         </div>
 
@@ -904,7 +904,7 @@
                     <div style="display: flex; align-items: center; gap: 0.25rem; margin-top: 0.2rem;">
                       <input type="number" id="inpNegDirStart" class="input-control" step="0.001" style="width: 68px;" placeholder="t_zero">
                       <span>s &lt; \(t\) &lt;</span>
-                      <input type="number" id="inpNegDirEnd" class="input-control" step="0.001" style="width: 68px;" placeholder="T">
+                      <input type="number" id="inpNegDirEnd" class="input-control" step="0.001" style="width: 68px;" placeholder="t_hang">
                       <span>s</span>
                     </div>
                   </div>
@@ -924,7 +924,7 @@
                   <span>Interval where \(a_y < 0\):</span>
                   <input type="number" id="inpNegAccStart" class="input-control" step="0.001" style="width: 68px;" placeholder="0.000">
                   <span>s to</span>
-                  <input type="number" id="inpNegAccEnd" class="input-control" step="0.001" style="width: 68px;" placeholder="T">
+                  <input type="number" id="inpNegAccEnd" class="input-control" step="0.001" style="width: 68px;" placeholder="t_hang">
                   <span>s</span>
                 </div>
                 <textarea id="txtAccSignExplanation" class="input-control" rows="4" style="width: 100%; font-size: 0.78rem;" placeholder="Identify when vertical acceleration is negative and explain its negative sign on both sides of the apex (during upward motion vs. downward motion)..."></textarea>
@@ -1007,7 +1007,7 @@
               <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding: 0.5rem 0.75rem; font-weight: 700;">Usable calibration and tracking evidence</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
-                <td style="padding: 0.5rem 0.75rem;">Calibration &amp; tracking screenshot (\(y=0\) ground, \(x=0\) below release), recorded \(y_0\), FPS, calibration length, \(T\), and observed \(t_{\text{up}}\).</td>
+                <td style="padding: 0.5rem 0.75rem;">Calibration &amp; tracking screenshot (\(y=0\) ground, \(x=0\) below release), recorded \(y_0\), FPS, calibration length, \(t_{\text{hang}}\), and observed \(t_{\text{up}}\).</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center;" id="chkStatus1">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);">
@@ -1019,13 +1019,13 @@
               <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding: 0.5rem 0.75rem; font-weight: 700;">Shown slope and projectile calculation methods with signs &amp; units</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
-                <td style="padding: 0.5rem 0.75rem;">Shown slopes \(v_{0x} = \Delta x/\Delta t\) and \(a_{y,\text{fit}} = \Delta v_y/\Delta t\); predictions 5c–5f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), observed \(t_{\text{up}}\), duration \(T\), and measured \(y_0\).</td>
+                <td style="padding: 0.5rem 0.75rem;">Shown slopes \(v_{0x} = \Delta x/\Delta t\) and \(a_{y,\text{fit}} = \Delta v_y/\Delta t\); predictions 5c–5f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), observed \(t_{\text{up}}\), duration \(t_{\text{hang}}\), and measured \(y_0\).</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center;" id="chkStatus3">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);">
                 <td style="padding: 0.5rem 0.75rem; font-weight: 700;">Signed area, initial height, direction intervals &amp; apex reasoning</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td>
-                <td style="padding: 0.5rem 0.75rem;">Positive ascent &amp; negative descent areas on fitted \(v_y\)–\(t\), sum \(\Delta y_{\text{area}}\), \(C + \Delta y_{\text{area}}\) vs. \(y_{\text{fit}}(T)\), upward/downward intervals, \(v_y=0\) vs. 2D rest, and negative \(a_y\) reasoning.</td>
+                <td style="padding: 0.5rem 0.75rem;">Positive ascent &amp; negative descent areas on fitted \(v_y\)–\(t\), sum \(\Delta y_{\text{area}}\), \(C + \Delta y_{\text{area}}\) vs. \(y_{\text{fit}}(t_{\text{hang}})\), upward/downward intervals, \(v_y=0\) vs. 2D rest, and negative \(a_y\) reasoning.</td>
                 <td style="padding: 0.5rem 0.75rem; text-align: center;" id="chkStatus4">—</td>
               </tr>
               <tr>
@@ -1102,18 +1102,18 @@
             </ul>
           </div>
           <div class="help-callout">
-            <strong>5. Calculate and compare (using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\)):</strong> Define \(T\) (first to last tracked frame) and \(t_{\text{up}}\) (observed time from first tracked frame to apex, read from video).
+            <strong>5. Calculate and compare (using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\)):</strong> Define \(t_{\text{hang}}\) (first to last tracked frame) and \(t_{\text{up}}\) (observed time from first tracked frame to apex, read from video).
             <ul style="margin: 0.35rem 0 0 1.2rem; line-height: 1.55;">
               <li><strong>5a. Horizontal velocity:</strong> Show one slope calculation on the fitted \(x\)–\(t\) line: \(v_{0x} = \Delta x/\Delta t\). Explain why it is constant in your model.</li>
               <li><strong>5b. Vertical acceleration:</strong> Show one slope calculation on the derived \(v_y\)–\(t\) line: \(a_{y,\text{fit}} = \Delta v_y/\Delta t\). Compare with \(-9.8\text{ m/s}^2\).</li>
               <li><strong>5c. Initial vertical velocity:</strong> Estimate \(v_{0y,\text{pred}} = -a_{y,\text{ref}} t_{\text{up}}\). Compare with \(B\) from your position fit and explain a possible source of disagreement.</li>
-              <li><strong>5d. Displacements and final position:</strong> Predict \(\Delta x = v_{0x}T\) and \(\Delta y = v_{0y,\text{pred}}T + \frac{1}{2}a_{y,\text{ref}}T^2\). Compare with tracked endpoint changes, then predict final height \(y_0 + \Delta y\).</li>
-              <li><strong>5e. Maximum height:</strong> Predict upward displacement using \(t_{\text{up}}\) (not \(T\)): \(\Delta y_{\text{up}} = v_{0y,\text{pred}}t_{\text{up}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{up}}^2\). Add \(y_0\) and compare with highest tracked position.</li>
+              <li><strong>5d. Displacements and final position:</strong> Predict \(\Delta x = v_{0x}t_{\text{hang}}\) and \(\Delta y = v_{0y,\text{pred}}t_{\text{hang}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{hang}}^2\). Compare with tracked endpoint changes, then predict final height \(y_0 + \Delta y\).</li>
+              <li><strong>5e. Maximum height:</strong> Predict upward displacement using \(t_{\text{up}}\) (not \(t_{\text{hang}}\)): \(\Delta y_{\text{up}} = v_{0y,\text{pred}}t_{\text{up}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{up}}^2\). Add \(y_0\) and compare with highest tracked position.</li>
               <li><strong>5f. Initial speed and angle:</strong> Calculate \(v_0 = \sqrt{v_{0x}^2 + v_{0y,\text{pred}}^2}\) and \(\theta = \tan^{-1}(v_{0y,\text{pred}}/v_{0x})\).</li>
             </ul>
           </div>
           <div class="help-callout">
-            <strong>Connect the graphs using signed area &amp; Explain the motion:</strong> Split the fitted \(v_y\)–\(t\) graph at its zero crossing, sum the positive ascent area and negative descent area, add fitted initial height \(C\), and compare with fitted \(y(T)\). Identify upward/downward intervals and \(v_y = 0\), explain whether the ball is at rest then, explain the negative sign of \(a_y\) on both sides of the apex, and state one specific measurement limitation tied to a result.
+            <strong>Connect the graphs using signed area &amp; Explain the motion:</strong> Split the fitted \(v_y\)–\(t\) graph at its zero crossing, sum the positive ascent area and negative descent area, add fitted initial height \(C\), and compare with fitted \(y(t_{\text{hang}})\). Identify upward/downward intervals and \(v_y = 0\), explain whether the ball is at rest then, explain the negative sign of \(a_y\) on both sides of the apex, and state one specific measurement limitation tied to a result.
           </div>
         </div>
 

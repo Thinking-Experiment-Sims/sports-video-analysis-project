@@ -226,7 +226,7 @@
       <span class="step-banner">Step 2B &bull; Graph</span>
       <h3>4. Build one panel with six graphs</h3>
       <p>
-        Include horizontal and vertical position, velocity, and acceleration over the same time interval \([0, T]\). Arrange <strong>horizontal graphs in the left column</strong> and <strong>vertical graphs in the right column</strong>, with rows for position, velocity, and acceleration. Label axes with quantities and SI units, include numerical scales, and mark zero. Show tracked points and fitted curves clearly.
+        Include horizontal and vertical position, velocity, and acceleration over the same time interval \([0, t_{\text{hang}}]\). Arrange <strong>horizontal graphs in the left column</strong> and <strong>vertical graphs in the right column</strong>, with rows for position, velocity, and acceleration. Label axes with quantities and SI units, include numerical scales, and mark zero. Show tracked points and fitted curves clearly.
       </p>
       <p>
         Fit \(x = mt + c\) and \(y = At^2 + Bt + C\) once, then derive \(v_x = m\), \(a_x = 0\), \(v_y = 2At + B\), and \(a_y = 2A\) from those fits. Record the fitted equations with units. Note that \(C\) is the fitted initial height while \(y_0\) is the measured first height, and \(B\) is the fitted initial vertical velocity. Explain how the velocity and acceleration graphs follow from the position graphs, and why \(a_x = 0\) is a consequence of the linear horizontal model rather than a separate measurement.
@@ -237,18 +237,18 @@
       <span class="step-banner">Step 2C &bull; Calculate &amp; Connect</span>
       <h3>5. Complete the projectile calculations and graph checks</h3>
       <p>
-        Define \(T\) as the time from the first to last tracked frame and \(t_{\text{up}}\) as the observed time from the first tracked frame to the apex, read from the video allowing for frame spacing. Do not obtain \(t_{\text{up}}\) from the velocity equation you are checking, and do not assume \(T = 2t_{\text{up}}\) when endpoint heights differ. Show equations, substitutions, signs, and units. Keep measured values, estimates from fits, and model predictions using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) clearly labeled:
+        Define \(t_{\text{hang}}\) as the time from the first to last tracked frame and \(t_{\text{up}}\) as the observed time from the first tracked frame to the apex, read from the video allowing for frame spacing. Do not obtain \(t_{\text{up}}\) from the velocity equation you are checking, and do not assume \(t_{\text{hang}} = 2t_{\text{up}}\) when endpoint heights differ. Show equations, substitutions, signs, and units. Keep measured values, estimates from fits, and model predictions using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) clearly labeled:
       </p>
       <ul>
         <li><strong>a. Horizontal velocity:</strong> Show one slope calculation \(v_{0x} = \Delta x / \Delta t\) on the fitted \(x\)–\(t\) line and identify why it is constant in your model.</li>
         <li><strong>b. Vertical acceleration:</strong> Show one slope calculation \(a_{y,\text{fit}} = \Delta v_y / \Delta t\) using two points on the derived \(v_y\)–\(t\) line and compare it with \(-9.8\text{ m/s}^2\). This checks your interpretation of the fit, not a new measurement.</li>
         <li><strong>c. Initial vertical velocity:</strong> Use \(v_y = 0\) at the apex, \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), and observed \(t_{\text{up}}\) to estimate \(v_{0y,\text{pred}} = -a_{y,\text{ref}}t_{\text{up}}\). Compare it with \(B\) from your position fit and explain a possible source of disagreement.</li>
-        <li><strong>d. Displacements and final position:</strong> Use \(v_{0x}\) and \(v_{0y,\text{pred}}\) with \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) to predict \(\Delta x = v_{0x}T\) and \(\Delta y = v_{0y,\text{pred}}T + \frac{1}{2}a_{y,\text{ref}}T^2\). Compare with tracked endpoint changes, then add \(y_0\) to predict final height \(y_{\text{final}} = y_0 + \Delta y\).</li>
-        <li><strong>e. Maximum height:</strong> Use \(v_{0y,\text{pred}}\), \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), and \(t_{\text{up}}\) (not \(T\)) to predict upward displacement \(\Delta y_{\text{up}}\). Add \(y_0\) to get \(y_{\max}\) and compare with the highest tracked position, allowing for frame spacing.</li>
+        <li><strong>d. Displacements and final position:</strong> Use \(v_{0x}\) and \(v_{0y,\text{pred}}\) with \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) to predict \(\Delta x = v_{0x}t_{\text{hang}}\) and \(\Delta y = v_{0y,\text{pred}}t_{\text{hang}} + \frac{1}{2}a_{y,\text{ref}}t_{\text{hang}}^2\). Compare with tracked endpoint changes, then add \(y_0\) to predict final height \(y_{\text{final}} = y_0 + \Delta y\).</li>
+        <li><strong>e. Maximum height:</strong> Use \(v_{0y,\text{pred}}\), \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), and \(t_{\text{up}}\) (not \(t_{\text{hang}}\)) to predict upward displacement \(\Delta y_{\text{up}}\). Add \(y_0\) to get \(y_{\max}\) and compare with the highest tracked position, allowing for frame spacing.</li>
         <li><strong>f. Initial speed and angle:</strong> Use \(v_{0x}\) and \(v_{0y,\text{pred}}\) to calculate \(v_0 = \sqrt{v_{0x}^2 + v_{0y,\text{pred}}^2}\) and \(\theta = \tan^{-1}(v_{0y,\text{pred}} / v_{0x})\) above \(+x\) at the first tracked instant.</li>
       </ul>
       <p style="margin-top: 0.55rem;">
-        <strong>Connect the graphs using signed area:</strong> On the fitted \(v_y\)–\(t\) graph, split \([0, T]\) at its zero crossing \(t_{\text{zero}}\). Show the positive area during ascent and the negative area during descent using triangles or trapezoids, add them to get vertical displacement \(\Delta y_{\text{area}}\), and add the fitted initial height \(C\) to compare with the fitted position at \(T\), \(y_{\text{fit}}(T) = AT^2 + BT + C\).
+        <strong>Connect the graphs using signed area:</strong> On the fitted \(v_y\)–\(t\) graph, split \([0, t_{\text{hang}}]\) at its zero crossing \(t_{\text{zero}}\). Show the positive area during ascent and the negative area during descent using triangles or trapezoids, add them to get vertical displacement \(\Delta y_{\text{area}}\), and add the fitted initial height \(C\) to compare with the fitted position at \(t_{\text{hang}}\), \(y_{\text{fit}}(t_{\text{hang}}) = At_{\text{hang}}^2 + Bt_{\text{hang}} + C\).
       </p>
       <p style="margin-top: 0.45rem;">
         <strong>Explain the motion briefly:</strong> Identify when the ball moves upward, when it moves downward (excluding the zero crossing), and the instant \(v_y = 0\). Explain whether the ball is completely at rest then in two dimensions. Identify when vertical acceleration is negative and explain its negative sign on both sides of the apex. State one specific measurement limitation tied to a reported result.
@@ -292,12 +292,12 @@
         <tr>
           <td><strong>Shown slope and projectile calculation methods with signs &amp; units</strong></td>
           <td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
-          <td>Shown slope calculations for \(v_{0x}\) and \(a_{y,\text{fit}}\), plus projectile predictions 5c–5f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), observed \(t_{\text{up}}\), duration \(T\), and initial height \(y_0\), with equations, substitutions, signs, units, and comparisons.</td>
+          <td>Shown slope calculations for \(v_{0x}\) and \(a_{y,\text{fit}}\), plus projectile predictions 5c–5f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), observed \(t_{\text{up}}\), duration \(t_{\text{hang}}\), and initial height \(y_0\), with equations, substitutions, signs, units, and comparisons.</td>
         </tr>
         <tr>
           <td><strong>Signed area, initial height, direction intervals &amp; apex reasoning</strong></td>
           <td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td>
-          <td>Positive ascent and negative descent areas on the fitted \(v_y\)–\(t\) graph, net displacement \(\Delta y_{\text{area}}\), addition of fitted initial height \(C\) compared with \(y_{\text{fit}}(T)\), upward and downward intervals (excluding zero crossing), explanation of why \(v_y = 0\) is not complete 2D rest, and negative \(a_y\) reasoning on both sides of the apex.</td>
+          <td>Positive ascent and negative descent areas on the fitted \(v_y\)–\(t\) graph, net displacement \(\Delta y_{\text{area}}\), addition of fitted initial height \(C\) compared with \(y_{\text{fit}}(t_{\text{hang}})\), upward and downward intervals (excluding zero crossing), explanation of why \(v_y = 0\) is not complete 2D rest, and negative \(a_y\) reasoning on both sides of the apex.</td>
         </tr>
         <tr>
           <td><strong>Specific measurement limitation tied to a result</strong></td>

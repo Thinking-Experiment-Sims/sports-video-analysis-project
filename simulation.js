@@ -1726,7 +1726,7 @@ function renderSixGraphPanel() {
   const cov = state.coverageStatus;
 
   if (el('panelTimeIntervalBadge')) {
-    el('panelTimeIntervalBadge').textContent = `Aligned Interval: [${cov.tMin.toFixed(3)} s, ${cov.tMax.toFixed(3)} s] (T = ${cov.T.toFixed(3)} s)`;
+    el('panelTimeIntervalBadge').textContent = `Aligned Interval: [${cov.tMin.toFixed(3)} s, ${cov.tMax.toFixed(3)} s] (t_hang = ${cov.T.toFixed(3)} s)`;
   }
 
   // Update Equation Table & Card Footers
@@ -1860,7 +1860,7 @@ function updateReferenceQuantitiesBar() {
     el('refReadoutEndpoints').textContent = `Δx = ${exp.dxTrack.toFixed(3)} m, Δy = ${exp.dyTrack.toFixed(3)} m`;
   }
   if (el('refReadoutYFinal')) {
-    el('refReadoutYFinal').textContent = `y(T) = ${exp.yFinalTrack.toFixed(3)} m`;
+    el('refReadoutYFinal').textContent = `y(t_hang) = ${exp.yFinalTrack.toFixed(3)} m`;
   }
   if (el('refReadoutYMaxTrack')) {
     el('refReadoutYMaxTrack').textContent = `y_max = ${exp.yMaxTrack.toFixed(3)} m`;
@@ -2017,13 +2017,13 @@ function checkNumbersForPracticeFeedback() {
     setFeedbackBox('fb5c', 'warn', `Check your multiplication: v₀ᵧ,pred = −(−9.8 m/s²)(${exp.tUp.toFixed(3)} s) ≈ ${exp.vy0Pred.toFixed(3)} m/s.`);
   }
 
-  // --- 5d: Displacements dx, dy at T and final height y_final = y0 + dy ---
+  // --- 5d: Displacements dx, dy at t_hang and final height y_final = y0 + dy ---
   const dxVal = parseNum(sr.inpCalcRange);
   const dyVal = parseNum(sr.inpPredDy);
   const yfVal = parseNum(sr.inpPredYFinal);
   let ok5d = false;
   if (dxVal === null || dyVal === null || yfVal === null) {
-    setFeedbackBox('fb5d', 'hint', 'Enter all three values for 5d: predicted Δx, predicted Δy over duration T, and predicted final height y_final = y₀ + Δy.');
+    setFeedbackBox('fb5d', 'hint', 'Enter all three values for 5d: predicted Δx, predicted Δy over duration t_hang, and predicted final height y_final = y₀ + Δy.');
   } else {
     // Allow student to use either their entered v0x/vy0Pred or the exact expected ones
     const usedVx = v0xVal !== null ? v0xVal : exp.m;
@@ -2042,11 +2042,11 @@ function checkNumbersForPracticeFeedback() {
       ok5d = true;
       setFeedbackBox('fb5d', 'good', `✓ Numbers checked: Δx = ${dxVal.toFixed(3)} m, Δy = ${dyVal.toFixed(3)} m, and y_final = ${yfVal.toFixed(3)} m. Make sure your written work compares these with the tracked endpoint changes.`);
     } else {
-      setFeedbackBox('fb5d', 'warn', `Check your substitutions over total tracked duration T = ${exp.T.toFixed(3)} s: Δx = v₀ₓT, Δy = v₀ᵧ,pred·T + ½(−9.8)T², and y_final = y₀ + Δy.`);
+      setFeedbackBox('fb5d', 'warn', `Check your substitutions over total tracked duration t_hang = ${exp.T.toFixed(3)} s: Δx = v₀ₓ·t_hang, Δy = v₀ᵧ,pred·t_hang + ½(−9.8)t_hang², and y_final = y₀ + Δy.`);
     }
   }
 
-  // --- 5e: Maximum height using t_up (not T) and measured y0 ---
+  // --- 5e: Maximum height using t_up (not t_hang) and measured y0 ---
   const dyUpVal = parseNum(sr.inpPredDyUp);
   const yMaxVal = parseNum(sr.inpCalcMaxHeight);
   let ok5e = false;
@@ -2061,7 +2061,7 @@ function checkNumbersForPracticeFeedback() {
     const wrongT_Dy = usedVy0 * exp.T + 0.5 * FIXED_AY_REF * exp.T * exp.T;
 
     if (withinTol(dyUpVal, wrongT_Dy) && Math.abs(exp.T - exp.tUp) > 0.08) {
-      setFeedbackBox('fb5e', 'warn', `Use observed rise time t_up (${exp.tUp.toFixed(3)} s) — NOT total tracked duration T (${exp.T.toFixed(3)} s) — when calculating upward displacement to the apex!`);
+      setFeedbackBox('fb5e', 'warn', `Use observed rise time t_up (${exp.tUp.toFixed(3)} s) — NOT total tracked duration t_hang (${exp.T.toFixed(3)} s) — when calculating upward displacement to the apex!`);
     } else if (withinTol(dyUpVal, targetDyUp) && withinTol(yMaxVal, dyUpVal, 0.02, 0.02)) {
       setFeedbackBox('fb5e', 'warn', `Remember to add your first tracked height y₀ (${exp.y0.toFixed(3)} m) to Δy_up to get y_max = y₀ + Δy_up.`);
     } else if ((withinTol(dyUpVal, targetDyUp) || withinTol(dyUpVal, exp.dyUpPred)) &&
@@ -2110,7 +2110,7 @@ function checkNumbersForPracticeFeedback() {
   let okArea = false;
 
   if (!exp.hasTurnaround) {
-    setFeedbackBox('fbSignedArea', 'warn', 'Signed-area split requires a valid turnaround inside [0, T]. Track both ascent and descent in Step 1.');
+    setFeedbackBox('fbSignedArea', 'warn', 'Signed-area split requires a valid turnaround inside [0, t_hang]. Track both ascent and descent in Step 1.');
   } else if (tzVal === null || aUpVal === null || aDownVal === null || netAreaVal === null || yfAreaVal === null) {
     setFeedbackBox('fbSignedArea', 'hint', 'Complete all five signed-area fields: t_zero, +Area_up, Area_down, Δy_area, and C + Δy_area.');
   } else if (aDownVal > 0 && withinTol(-aDownVal, exp.areaDown)) {
@@ -2121,9 +2121,9 @@ function checkNumbersForPracticeFeedback() {
              withinTol(netAreaVal, exp.netDyArea, 0.08, 0.05) &&
              withinTol(yfAreaVal, exp.yFinalFromArea, 0.08, 0.05)) {
     okArea = true;
-    setFeedbackBox('fbSignedArea', 'good', `✓ Numbers checked: C + Δy_area = ${yfAreaVal.toFixed(3)} m matches the fitted vertical position y_fit(T) = ${exp.yFitAtT.toFixed(3)} m.`);
+    setFeedbackBox('fbSignedArea', 'good', `✓ Numbers checked: C + Δy_area = ${yfAreaVal.toFixed(3)} m matches the fitted vertical position y_fit(t_hang) = ${exp.yFitAtT.toFixed(3)} m.`);
   } else {
-    setFeedbackBox('fbSignedArea', 'warn', `Check your triangle areas on the fitted vᵧ–t line: t_zero = −B/(2A) ≈ ${exp.tZero.toFixed(3)} s, +Area_up = ½·B·t_zero, Area_down = ½·vᵧ(T)·(T − t_zero) (negative!), and add fitted C = ${exp.C.toFixed(3)} m.`);
+    setFeedbackBox('fbSignedArea', 'warn', `Check your triangle areas on the fitted vᵧ–t line: t_zero = −B/(2A) ≈ ${exp.tZero.toFixed(3)} s, +Area_up = ½·B·t_zero, Area_down = ½·vᵧ(t_hang)·(t_hang − t_zero) (negative!), and add fitted C = ${exp.C.toFixed(3)} m.`);
   }
 
   const badgeArea = el('badgeSignedAreaVerify');
@@ -2156,7 +2156,7 @@ function checkNumbersForPracticeFeedback() {
       setFeedbackBox('fbIntervals', 'warn', `Upward and downward intervals match! Check the interval where aᵧ < 0 (gravity acts downward throughout the entire airborne flight [0, ${exp.T.toFixed(3)} s]).`);
     }
   } else {
-    setFeedbackBox('fbIntervals', 'warn', `Check your direction intervals: upward motion (vᵧ > 0) is from 0 to t_zero (${exp.tZero.toFixed(3)} s), and downward motion (vᵧ < 0) is from t_zero (${exp.tZero.toFixed(3)} s) to T (${exp.T.toFixed(3)} s), excluding the turnaround instant.`);
+    setFeedbackBox('fbIntervals', 'warn', `Check your direction intervals: upward motion (vᵧ > 0) is from 0 to t_zero (${exp.tZero.toFixed(3)} s), and downward motion (vᵧ < 0) is from t_zero (${exp.tZero.toFixed(3)} s) to t_hang (${exp.T.toFixed(3)} s), excluding the turnaround instant.`);
   }
 
   state.feedbackState.checkedAt = new Date().toISOString();
@@ -2493,7 +2493,7 @@ function preparePrintableReport() {
                   <td>Measured initial height y<sub>0</sub> = <strong>${exp ? exp.y0.toFixed(3) + ' m' : '—'}</strong> (x<sub>0</sub> = ${exp ? exp.x0Track.toFixed(3) + ' m' : '—'})</td>
                 </tr>
                 <tr>
-                  <td><strong>Total Tracked Duration T</strong></td>
+                  <td><strong>Total Tracked Duration t<sub>hang</sub></strong></td>
                   <td><strong>${exp ? exp.T.toFixed(3) + ' s' : '—'}</strong> (${pts.length} tracked instants over [0.000 s, ${exp ? exp.tMax.toFixed(3) : '0.000'} s])</td>
                 </tr>
                 <tr>
@@ -2501,8 +2501,8 @@ function preparePrintableReport() {
                   <td>${fmtStudentVal(state.observedTUp, 's')} <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
                 </tr>
                 <tr>
-                  <td><strong>Tracked Endpoint Changes at T</strong></td>
-                  <td>&Delta;x<sub>track</sub> = ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'}, &Delta;y<sub>track</sub> = ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'}, y(T) = ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'}</td>
+                  <td><strong>Tracked Endpoint Changes at t<sub>hang</sub></strong></td>
+                  <td>&Delta;x<sub>track</sub> = ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'}, &Delta;y<sub>track</sub> = ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'}, y(t<sub>hang</sub>) = ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'}</td>
                 </tr>
               </tbody>
             </table>
@@ -2613,7 +2613,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5cVy0)}</td>
             </tr>
             <tr>
-              <td><strong>5d. Displacements &amp; Final Height at T</strong><br><small>&Delta;x, &Delta;y over T, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
+              <td><strong>5d. Displacements &amp; Final Height at t<sub>hang</sub></strong><br><small>&Delta;x, &Delta;y over t<sub>hang</sub>, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
               <td>
                 <div>Pred &Delta;x: ${fmtStudentVal(sr.inpCalcRange, 'm')}</div>
                 <div>Pred &Delta;y: ${fmtStudentVal(sr.inpPredDy, 'm')}</div>
@@ -2627,7 +2627,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5dDisp)}</td>
             </tr>
             <tr>
-              <td><strong>5e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not T) and measured y<sub>0</sub></small></td>
+              <td><strong>5e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and measured y<sub>0</sub></small></td>
               <td>
                 <div>Pred &Delta;y<sub>up</sub>: ${fmtStudentVal(sr.inpPredDyUp, 'm')}</div>
                 <div>Pred y<sub>max</sub>: ${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</div>
@@ -2665,9 +2665,9 @@ function preparePrintableReport() {
             <div>Ascent +Area<sub>up</sub>:<br>${fmtStudentVal(sr.inpAreaUp, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaUp !== null ? '+' + exp.areaUp.toFixed(3) + ' m' : 'N/A'})</small></div>
             <div>Descent Area<sub>down</sub>:<br>${fmtStudentVal(sr.inpAreaDown, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaDown !== null ? exp.areaDown.toFixed(3) + ' m' : 'N/A'})</small></div>
             <div>Sum &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpNetDyArea, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.netDyArea !== null ? exp.netDyArea.toFixed(3) + ' m' : 'N/A'})</small></div>
-            <div>Fitted C + &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpYFinalFromArea, 'm')}<br><small style="color:#4b6570;">(y<sub>fit</sub>(T) = ${exp ? exp.yFitAtT.toFixed(3) + ' m' : '—'})</small></div>
+            <div>Fitted C + &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpYFinalFromArea, 'm')}<br><small style="color:#4b6570;">(y<sub>fit</sub>(t<sub>hang</sub>) = ${exp ? exp.yFitAtT.toFixed(3) + ' m' : '—'})</small></div>
           </div>
-          <div style="font-size: 0.78rem; font-weight: 700; color: #0f7e9b; margin-bottom: 0.2rem;">Student Area Calculations &amp; Comparison with y<sub>fit</sub>(T):</div>
+          <div style="font-size: 0.78rem; font-weight: 700; color: #0f7e9b; margin-bottom: 0.2rem;">Student Area Calculations &amp; Comparison with y<sub>fit</sub>(t<sub>hang</sub>):</div>
           ${fmtStudentText(sr.workSignedArea)}
         </div>
 
