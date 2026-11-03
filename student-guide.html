@@ -192,50 +192,45 @@
       <strong>Goal:</strong> Use a video of a ball launched upward and forward to connect position, velocity, acceleration, and projectile calculations. Submit <strong>one report</strong> containing your setup evidence, <strong>one six-graph panel</strong>, your calculations, and brief explanations.
     </div>
 
-    <!-- APP STEP 1 -->
-    <h2>App Step 1: Track the Flight (Student Directions 1–3)</h2>
+    <!-- APP STEPS 1 & 2 -->
+    <h2>Tabs 1 &amp; 2: Track Video &amp; Predict Shapes (Directions 1–3)</h2>
 
     <div class="dir-card">
-      <span class="step-banner">Step 1 &bull; Record</span>
-      <h3>1. Record the ball in flight</h3>
+      <span class="step-banner">Tab 1 &bull; Record &amp; Calibrate</span>
+      <h3>1–2. Record the ball, set scale, and place origin</h3>
       <p>
-        Use a stationary camera perpendicular to the motion plane. Place a known length in the same plane as the ball. Capture ascent and descent after release and before contact. Keep the ball visible; avoid camera movement and zoom. Save the original video and confirm its actual frame rate, especially for slow motion. (If using a built-in practice clip, note that synthetic clips are labeled as <em>models</em>.)
+        Use a stationary camera perpendicular to the motion plane with a known reference length in the same plane. Use meters and seconds with right (\(+x\)) and up (\(+y\)) positive. Put \(y = 0\) at a visible ground reference, \(x = 0\) below the release point, and \(t = 0\) at the first tracked airborne frame. Record initial height \(y_0\), frame rate, and calibration length.
       </p>
     </div>
 
     <div class="dir-card">
-      <span class="step-banner">Step 1 &bull; Calibrate</span>
-      <h3>2. Set the scale and origin</h3>
+      <span class="step-banner">Tab 1 &rarr; Tab 2 &bull; Track &amp; Predict</span>
+      <h3>3. Track 10–15 points and lock your shape prediction</h3>
       <p>
-        Use meters and seconds. Choose right (\(+x\)) and up (\(+y\)) as positive. Put \(y = 0\) at a visible ground reference and place \(x = 0\) below the release point. Set \(t = 0\) at the first tracked airborne frame; “initial” quantities refer to that frame. Record the initial height \(y_0\), frame rate, and calibration length. The clip need not end on the ground.
+        Track the ball’s center at <strong>10–15 instants</strong> across ascent, apex, and descent, and record the observed video rise time \(t_{\text{up}}\) from \(t = 0\) to the highest frame. Then in <strong>Tab 2 (Predict)</strong>, inspect your tracked \(x(t)\) and \(y(t)\) scatter plots and lock your first-attempt predictions for the shapes of \(v_x(t)\), \(v_y(t)\), \(a_x(t)\), and \(a_y(t)\) before building the graphs.
       </p>
     </div>
 
+    <!-- APP STEP 3 -->
+    <h2>Tab 3: Build Graphs via Curve Fits &amp; Tangent Slopes (Direction 4)</h2>
+
     <div class="dir-card">
-      <span class="step-banner">Step 1 &rarr; Step 2A &bull; Track &amp; Predict</span>
-      <h3>3. Track and make a prediction</h3>
-      <p>
-        Track the ball’s center at about <strong>10–15 instants</strong> across ascent and descent. Include points near the highest point. Record the observed rise time \(t_{\text{up}}\) from the first tracked frame to the apex as read from the video, allowing for frame spacing. Save one screenshot showing calibration and tracking. <strong>Before revealing generated velocity and acceleration plots</strong> in Step 2A, select and describe your predicted shapes; save your first attempt for comparison.
-      </p>
+      <span class="step-banner">Tab 3 (Sub-Tabs 3A–3D) &bull; Fit, Measure Tangents &amp; Derive</span>
+      <h3>4. Select curve fits, plot tangent slopes on \(y(t)\) to build \(v_y(t)\), and assemble the 6-graph panel</h3>
+      <ul>
+        <li><strong>3A. Fit Position (\(x\) &amp; \(y\)):</strong> Select the appropriate curve fit type for horizontal position \(x(t)\) (<strong>Linear</strong>: \(x = mt + c\)) and vertical position \(y(t)\) (<strong>Quadratic</strong>: \(y = At^2 + Bt + C\)).</li>
+        <li><strong>3B. Tangent Slopes &rarr; Fit Velocity:</strong> Slide the tangent line across your fitted \(y(t)\) parabola during <em>ascent</em>, near the <em>apex</em>, and during <em>descent</em> to plot instantaneous slope points \((t, \Delta y/\Delta t)\) onto the \(v_y(t)\) graph. Then select a <strong>Linear Fit</strong> (\(v_y = a_y t + v_{0y}\)) for your plotted tangent slopes and a <strong>Constant Fit</strong> (\(v_x = m\)) for horizontal velocity.</li>
+        <li><strong>3C. Fit Acceleration (\(a_x\) &amp; \(a_y\)):</strong> Select the fit type for \(a_x(t)\) (<strong>Zero Constant</strong>: \(a_x = 0\)) and \(a_y(t)\) (<strong>Constant Negative</strong>: \(a_y = 2A\), compared against \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\)).</li>
+        <li><strong>3D. All 6 Graphs &amp; Notes:</strong> Review the complete 2-column 6-graph panel over \([0, t_{\text{hang}}]\) and write brief notes comparing your initial prediction and explaining how velocity and acceleration follow from position slopes.</li>
+      </ul>
     </div>
 
-    <!-- APP STEP 2 -->
-    <h2>App Step 2: Explain the Motion (Student Directions 4–5)</h2>
+    <!-- APP STEPS 4 & 5 -->
+    <h2>Tabs 4 &amp; 5: Calculations, Signed Area &amp; Motion Intervals (Direction 5)</h2>
 
     <div class="dir-card">
-      <span class="step-banner">Step 2B &bull; Graph</span>
-      <h3>4. Build one panel with six graphs</h3>
-      <p>
-        Include horizontal and vertical position, velocity, and acceleration over the same time interval \([0, t_{\text{hang}}]\). Arrange <strong>horizontal graphs in the left column</strong> and <strong>vertical graphs in the right column</strong>, with rows for position, velocity, and acceleration. Label axes with quantities and SI units, include numerical scales, and mark zero. Show tracked points and fitted curves clearly.
-      </p>
-      <p>
-        Fit \(x = mt + c\) and \(y = At^2 + Bt + C\) once, then derive \(v_x = m\), \(a_x = 0\), \(v_y = 2At + B\), and \(a_y = 2A\) from those fits. Record the fitted equations with units. Note that \(C\) is the fitted initial height while \(y_0\) is the measured first height, and \(B\) is the fitted initial vertical velocity. Explain how the velocity and acceleration graphs follow from the position graphs, and why \(a_x = 0\) is a consequence of the linear horizontal model rather than a separate measurement.
-      </p>
-    </div>
-
-    <div class="dir-card">
-      <span class="step-banner">Step 2C &bull; Calculate &amp; Connect</span>
-      <h3>5. Complete the projectile calculations and graph checks</h3>
+      <span class="step-banner">Tab 4 (4A–4C) &amp; Tab 5 (5A–5B) &bull; Calculate &amp; Connect</span>
+      <h3>5. Complete the projectile calculations and signed-area checks</h3>
       <p>
         Define \(t_{\text{hang}}\) as the time from the first to last tracked frame and \(t_{\text{up}}\) as the observed time from the first tracked frame to the apex, read from the video allowing for frame spacing. Do not obtain \(t_{\text{up}}\) from the velocity equation you are checking, and do not assume \(t_{\text{hang}} = 2t_{\text{up}}\) when endpoint heights differ. Show equations, substitutions, signs, and units. Keep measured values, estimates from fits, and model predictions using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) clearly labeled:
       </p>
@@ -255,11 +250,11 @@
       </p>
     </div>
 
-    <!-- APP STEP 3 -->
-    <h2>App Step 3: Submit Report &amp; Grading (Student Direction 6)</h2>
+    <!-- APP STEP 6 -->
+    <h2>Tab 6: Submit Report &amp; Grading (Direction 6)</h2>
 
     <div class="dir-card">
-      <span class="step-banner">Step 3 &bull; Submit &amp; Assess</span>
+      <span class="step-banner">Tab 6 &bull; Submit &amp; Assess</span>
       <h3>6. Submit one report and prepare for the individual assessment</h3>
       <p>
         Submit <strong>one report</strong> containing your setup evidence, the six-graph panel, your saved predictions and revisions, your calculations, and your explanations. Keep the original video and saved <code>.json</code> progress available; submit them only if requested.

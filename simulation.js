@@ -106,13 +106,22 @@ const state = {
     initialNotes: ''
   },
 
-  // Step 2B: Separate Reasoned Revision & Graph Connections Explanation
+  // Step 2B/3: Separate Reasoned Revision & Graph Connections Explanation
   predictionRevision: '',
   graphConnections: '',
 
-  // Optional Tangent Explorer State (Never blocks completion)
+  // Step 3: Interactive Fit-Type Selection & Tangent-Slope Construction of vy(t)
+  selectedFits: {
+    xPos: 'none', // 'none' | 'constant' | 'linear' | 'quadratic' (target: 'linear')
+    yPos: 'none', // 'none' | 'constant' | 'linear' | 'quadratic' (target: 'quadratic')
+    yVel: 'none', // 'none' | 'constant' | 'linear' | 'quadratic' (target: 'linear' on tangentPoints)
+    xVel: 'none', // 'none' | 'constant' | 'linear_sloped' | 'quadratic' (target: 'constant')
+    xAcc: 'none', // 'none' | 'zero' | 'nonzero' | 'linear' (target: 'zero')
+    yAcc: 'none'  // 'none' | 'zero' | 'constant' | 'linear' (target: 'constant')
+  },
+  tangentPoints: [], // Array of { t, vy } sampled by the student from tangent lines on y(t)
   showSignedArea: true,
-  activeTangentTime: null,
+  activeTangentTime: 0.15,
 
   // Step 2C: Student Submitted Responses (Raw strings; NEVER auto-filled with model answers)
   studentResponses: {
@@ -230,9 +239,23 @@ const reticlePreview = el('reticlePreview');
 const viewportContainer = el('viewportContainer');
 const dropzoneOverlay = el('dropzoneOverlay');
 
-// Stepper & Step Views
-const stepBtns = [el('stepBtn1'), el('stepBtn2'), el('stepBtn3')];
-const stepViews = [el('stepView1'), el('stepView2'), el('stepView3')];
+// Stepper & Step Views (6 Main Tabs)
+const stepBtns = [
+  el('stepBtn1'),
+  el('stepBtn2'),
+  el('stepBtn3'),
+  el('stepBtn4'),
+  el('stepBtn5'),
+  el('stepBtn6')
+];
+const stepViews = [
+  el('stepView1'),
+  el('stepView2'),
+  el('stepView3'),
+  el('stepView4'),
+  el('stepView5'),
+  el('stepView6')
+];
 
 // ============================================================================
 // Initialization
@@ -282,7 +305,7 @@ function escapeHtml(str) {
 }
 
 // ============================================================================
-// Step Navigation (3 Steps: Track the Flight, Explain the Motion, Submit Report)
+// Step Navigation (6 Focused Tabs + Sub-Tabs)
 // ============================================================================
 function updateStepView(stepNum) {
   state.currentStep = stepNum;
@@ -298,9 +321,15 @@ function updateStepView(stepNum) {
     }
   });
 
-  if (stepViews[0]) stepViews[0].style.display = (stepNum === 1) ? 'grid' : 'none';
-  if (stepViews[1]) stepViews[1].style.display = (stepNum === 2) ? 'block' : 'none';
-  if (stepViews[2]) stepViews[2].style.display = (stepNum === 3) ? 'block' : 'none';
+  stepViews.forEach((view, idx) => {
+    if (!view) return;
+    const num = idx + 1;
+    if (num === 1) {
+      view.style.display = (stepNum === 1) ? 'grid' : 'none';
+    } else {
+      view.style.display = (stepNum === num) ? 'block' : 'none';
+    }
+  });
 
   if (stepNum === 1) {
     resizeCanvas();
@@ -311,12 +340,20 @@ function updateStepView(stepNum) {
     autoFitAndDeriveAllGraphs();
     updatePosChart();
     updatePredictionGateUI();
-    updateReferenceQuantitiesBar();
-    updateWrittenStatusBadges();
-    if (state.firstAttemptPrediction.isSaved) {
-      renderSixGraphPanel();
-    }
   } else if (stepNum === 3) {
+    autoFitAndDeriveAllGraphs();
+    updatePredictionGateUI();
+    renderBuildGraphStep();
+    renderSixGraphPanel();
+    updateWrittenStatusBadges();
+  } else if (stepNum === 4) {
+    autoFitAndDeriveAllGraphs();
+    updateReferenceQuantitiesBar();
+  } else if (stepNum === 5) {
+    autoFitAndDeriveAllGraphs();
+    renderSignedAreaTab5Chart();
+    updateWrittenStatusBadges();
+  } else if (stepNum === 6) {
     autoFitAndDeriveAllGraphs();
     updateRubricChecklistUI();
     preparePrintableReport();
@@ -324,6 +361,27 @@ function updateStepView(stepNum) {
 
   triggerKaTeXRender(stepViews[stepNum - 1] || document.body);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function switchSubtab(groupAttr, targetPanelId) {
+  document.querySelectorAll(`[${groupAttr}]`).forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute(groupAttr) === targetPanelId);
+  });
+  const parentSection = el(targetPanelId) ? el(targetPanelId).parentElement : null;
+  if (parentSection) {
+    parentSection.querySelectorAll(':scope > .subtab-panel').forEach(panel => {
+      panel.classList.toggle('active', panel.id === targetPanelId);
+    });
+    triggerKaTeXRender(el(targetPanelId));
+  }
+  if (state.currentStep === 3) {
+    renderBuildGraphStep();
+    if (targetPanelId === 'subtab-3d') {
+      renderSixGraphPanel();
+    }
+  } else if (state.currentStep === 5 && targetPanelId === 'subtab-5a') {
+    renderSignedAreaTab5Chart();
+  }
 }
 
 // ============================================================================
@@ -1327,9 +1385,9 @@ function updatePosChart() {
 
 function saveInitialPredictionAndReveal() {
   if (state.firstAttemptPrediction.isSaved) {
-    // Already locked; just ensure the 6-graph section is visible
     if (el('sixGraphRevealSection')) el('sixGraphRevealSection').style.display = 'block';
-    renderSixGraphPanel();
+    if (el('tab3PredictionLockNotice')) el('tab3PredictionLockNotice').style.display = 'none';
+    updateStepView(3);
     return;
   }
 
@@ -1340,11 +1398,11 @@ function saveInitialPredictionAndReveal() {
   const initialNotes = el('predInitialNotes') ? el('predInitialNotes').value.trim() : '';
 
   if (!vxShape || !vyShape || !axShape || !ayShape) {
-    alert('Please select your predicted shape for all four graphs (vx, vy, ax, and ay) before revealing the six-graph panel.');
+    alert('Please select your predicted shape for all four graphs (vx, vy, ax, and ay) before proceeding to Step 3.');
     return;
   }
   if (initialNotes.length < 10) {
-    alert('Please write a brief note describing your predicted velocity and acceleration graphs (at least one sentence) before revealing the generated plots.');
+    alert('Please write at least one sentence explaining your predicted velocity and acceleration shapes before proceeding to Step 3.');
     return;
   }
 
@@ -1360,10 +1418,7 @@ function saveInitialPredictionAndReveal() {
   };
 
   updatePredictionGateUI();
-  renderSixGraphPanel();
-  if (el('sixGraphRevealSection')) {
-    el('sixGraphRevealSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  updateStepView(3);
 }
 
 function updatePredictionGateUI() {
@@ -1371,6 +1426,7 @@ function updatePredictionGateUI() {
   const badge = el('badgePredictionGate');
   const btn = el('btnSavePredictionAndReveal');
   const revealSec = el('sixGraphRevealSection');
+  const lockNotice = el('tab3PredictionLockNotice');
   const summaryBox = el('savedPredictionSummaryBox');
 
   const controls = ['predShapeVx', 'predShapeVy', 'predShapeAx', 'predShapeAy', 'predInitialNotes'];
@@ -1391,15 +1447,18 @@ function updatePredictionGateUI() {
     });
 
     if (badge) {
-      badge.textContent = pred.isLegacyMissing ? 'Legacy v1.0 Session (Revealed)' : '✓ First Prediction Saved & Locked';
+      badge.textContent = pred.isLegacyMissing ? 'Legacy v1.0 Session (Unlocked)' : '✓ Prediction Locked';
       badge.className = 'pct-diff-badge good';
     }
     if (btn) {
-      btn.textContent = '✓ Initial Prediction Locked (Six-Graph Panel Revealed Below)';
-      btn.disabled = true;
+      btn.textContent = '✓ Prediction Locked — Continue to Step 3: Build Graphs →';
+      btn.disabled = false;
     }
     if (revealSec) {
       revealSec.style.display = 'block';
+    }
+    if (lockNotice) {
+      lockNotice.style.display = 'none';
     }
     if (summaryBox) {
       if (pred.isLegacyMissing) {
@@ -1420,20 +1479,754 @@ function updatePredictionGateUI() {
       if (node) node.disabled = false;
     });
     if (badge) {
-      badge.textContent = 'Prediction Required Before Reveal';
+      badge.textContent = 'Required Before Step 3';
       badge.className = 'pct-diff-badge';
     }
     if (btn) {
-      btn.textContent = '💾 Save Initial Prediction & Reveal Six-Graph Panel';
+      btn.textContent = '💾 Lock Prediction & Continue to Step 3 →';
       btn.disabled = false;
     }
     if (revealSec) {
       revealSec.style.display = 'none';
     }
+    if (lockNotice) {
+      lockNotice.style.display = 'block';
+    }
     if (summaryBox) {
       summaryBox.innerHTML = '<em>First prediction not saved yet.</em>';
     }
   }
+}
+
+// ============================================================================
+// Step 3: Interactive Fit Selection (3A, 3C) & Tangent-Slope v_y Builder (3B)
+// ============================================================================
+function syncFitRadioButtonsFromState() {
+  const sf = state.selectedFits || {};
+  const map = {
+    fitXPos: sf.xPos || 'none',
+    fitYPos: sf.yPos || 'none',
+    fitYVel: sf.yVel || 'none',
+    fitXVel: sf.xVel || 'none',
+    fitXAcc: sf.xAcc || 'none',
+    fitYAcc: sf.yAcc || 'none'
+  };
+  Object.keys(map).forEach(groupName => {
+    const val = map[groupName];
+    document.querySelectorAll(`input[name="${groupName}"]`).forEach(radio => {
+      radio.checked = (radio.value === val);
+    });
+  });
+}
+
+function addTangentPointAtCurrentSlider() {
+  autoFitAndDeriveAllGraphs();
+  const cov = state.coverageStatus;
+  const yFit = state.fitResults.yPos;
+  if (!yFit || !cov || cov.pointCount < 3) {
+    alert('Track at least 5 points in Step 1 first so the y(t) curve is available.');
+    return;
+  }
+  const tMin = cov.tMin || 0;
+  const tMax = cov.tMax > tMin ? cov.tMax : 1.0;
+  if (state.activeTangentTime === null || !Number.isFinite(state.activeTangentTime)) {
+    const pct = parseFloat(el('tangentSlider') ? el('tangentSlider').value : 15) || 15;
+    state.activeTangentTime = tMin + (tMax - tMin) * (pct / 100);
+  }
+  const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime));
+  const vy = 2 * yFit.A * t0 + yFit.B;
+
+  if (!Array.isArray(state.tangentPoints)) state.tangentPoints = [];
+  const existingIdx = state.tangentPoints.findIndex(p => Math.abs(p.t - t0) < 0.015);
+  const ptObj = { t: Number(t0.toFixed(4)), vy: Number(vy.toFixed(4)) };
+  if (existingIdx !== -1) {
+    state.tangentPoints[existingIdx] = ptObj;
+  } else {
+    state.tangentPoints.push(ptObj);
+  }
+  state.tangentPoints.sort((a, b) => a.t - b.t);
+  renderBuildGraphStep();
+}
+
+function sampleFiveTangentPoints() {
+  autoFitAndDeriveAllGraphs();
+  const cov = state.coverageStatus;
+  const yFit = state.fitResults.yPos;
+  if (!yFit || !cov || cov.pointCount < 3) {
+    alert('Track at least 5 points in Step 1 first.');
+    return;
+  }
+  const tMin = cov.tMin || 0;
+  const tMax = cov.tMax > tMin ? cov.tMax : 1.0;
+  const pcts = [0.10, 0.28, 0.48, 0.68, 0.88];
+  if (cov.hasValidTurnaround && cov.tZero !== null && cov.tZero > tMin && cov.tZero < tMax) {
+    pcts[2] = (cov.tZero - tMin) / (tMax - tMin);
+  }
+  state.tangentPoints = pcts.map(f => {
+    const t0 = tMin + (tMax - tMin) * f;
+    const vy = 2 * yFit.A * t0 + yFit.B;
+    return { t: Number(t0.toFixed(4)), vy: Number(vy.toFixed(4)) };
+  });
+  state.tangentPoints.sort((a, b) => a.t - b.t);
+  renderBuildGraphStep();
+}
+
+function clearTangentPoints() {
+  state.tangentPoints = [];
+  renderBuildGraphStep();
+}
+
+window.removeTangentPoint = function(idx) {
+  if (!Array.isArray(state.tangentPoints)) return;
+  state.tangentPoints.splice(idx, 1);
+  renderBuildGraphStep();
+};
+
+function updateTangentPointsUI() {
+  const pts = Array.isArray(state.tangentPoints) ? state.tangentPoints : [];
+  const hasAscent = pts.some(p => p.vy > 0.35);
+  const hasApex = pts.some(p => Math.abs(p.vy) <= 0.85);
+  const hasDescent = pts.some(p => p.vy < -0.35);
+
+  const bAsc = el('tanBadgeAscent');
+  if (bAsc) {
+    bAsc.textContent = hasAscent ? '✓ Ascent (+vᵧ)' : 'Ascent: Needed';
+    bAsc.className = `region-badge ${hasAscent ? 'done' : ''}`;
+  }
+  const bApex = el('tanBadgeApex');
+  if (bApex) {
+    bApex.textContent = hasApex ? '✓ Near Apex (≈0)' : 'Near Apex: Needed';
+    bApex.className = `region-badge ${hasApex ? 'done' : ''}`;
+  }
+  const bDesc = el('tanBadgeDescent');
+  if (bDesc) {
+    bDesc.textContent = hasDescent ? '✓ Descent (−vᵧ)' : 'Descent: Needed';
+    bDesc.className = `region-badge ${hasDescent ? 'done' : ''}`;
+  }
+  const bCnt = el('tanBadgeCount');
+  if (bCnt) {
+    bCnt.textContent = `${pts.length} / 3+ pts plotted`;
+    bCnt.className = `pct-diff-badge ${pts.length >= 3 ? 'good' : ''}`;
+  }
+
+  const container = el('tangentChipsContainer');
+  if (container) {
+    if (pts.length === 0) {
+      container.innerHTML = '<span style="font-size:0.78rem; color:#4b6570;"><em>No tangent slopes plotted yet. Move the slider above and click "➕ Plot This Tangent Slope".</em></span>';
+    } else {
+      container.innerHTML = pts.map((p, i) => `
+        <span class="tangent-chip">
+          #${i + 1}: (${p.t.toFixed(2)} s, ${p.vy >= 0 ? '+' : ''}${p.vy.toFixed(2)} m/s)
+          <button type="button" onclick="window.removeTangentPoint(${i})" title="Remove point" aria-label="Remove point">×</button>
+        </span>
+      `).join('');
+    }
+  }
+}
+
+function renderBuildChartInstance(canvasId, datasets, tMin, tMax, yTitle, sugMin, sugMax) {
+  const canvas = el(canvasId);
+  if (!canvas) return;
+  if (gridCharts[canvasId]) {
+    gridCharts[canvasId].destroy();
+  }
+  gridCharts[canvasId] = new Chart(canvas.getContext('2d'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: tMin,
+          max: tMax,
+          title: { display: true, text: 'Time t (s)', font: { size: 10, weight: 'bold' } },
+          ticks: { font: { size: 9 } },
+          grid: {
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2 : 1
+          }
+        },
+        y: {
+          title: { display: true, text: yTitle, font: { size: 10, weight: 'bold' } },
+          suggestedMin: sugMin,
+          suggestedMax: sugMax,
+          ticks: { font: { size: 9 } },
+          grid: {
+            color: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? '#0f7e9b' : '#eef3f6',
+            lineWidth: (c) => (c.tick && Math.abs(c.tick.value) < 1e-6) ? 2.5 : 1
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderBuildGraphStep() {
+  autoFitAndDeriveAllGraphs();
+  syncFitRadioButtonsFromState();
+  const pts = state.series[state.activeSeries] || [];
+  const cov = state.coverageStatus;
+  const xFit = state.fitResults.xPos;
+  const yFit = state.fitResults.yPos;
+  const sf = state.selectedFits;
+
+  const tMin = cov.tMin || 0;
+  const tMax = cov.tMax > tMin ? cov.tMax : 1.0;
+  const m = xFit ? xFit.slope : 0;
+  const c = xFit ? xFit.intercept : 0;
+  const A = yFit ? yFit.A : -4.9;
+  const B = yFit ? yFit.B : 0;
+  const C = yFit ? yFit.C : 0;
+  const ay = 2 * A;
+  const signStr = (val) => (val >= 0 ? `+ ${val.toFixed(3)}` : `− ${Math.abs(val).toFixed(3)}`);
+
+  // --- 3A: Horizontal Position x(t) ---
+  const xDatasets = [
+    {
+      label: 'Tracked x(t) (m)',
+      data: pts.map(p => ({ x: p.time, y: p.x })),
+      backgroundColor: '#0f7e9b',
+      borderColor: '#0f7e9b',
+      pointRadius: 4.5
+    }
+  ];
+  const coachX = el('coachFitXPos');
+  const badgeX = el('badgeFitXPos');
+  if (sf.xPos === 'linear' && xFit) {
+    xDatasets.push({
+      label: `Linear Fit: x(t) = (${m.toFixed(3)})t ${signStr(c)}`,
+      data: [{ x: tMin, y: m * tMin + c }, { x: tMax, y: m * tMax + c }],
+      type: 'line',
+      borderColor: '#095f76',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachX) {
+      coachX.className = 'per-coach-box good';
+      coachX.innerHTML = `<strong>✓ Linear Fit Selected:</strong> <code>x(t) = (${m.toFixed(3)} m/s)t ${signStr(c)} m</code> [R² = ${xFit.r2.toFixed(4)}]. Because horizontal position increases at a steady rate, the horizontal velocity slope <code>vₓ = ${m.toFixed(3)} m/s</code> is constant!`;
+    }
+    if (badgeX) {
+      badgeX.textContent = '✓ Linear Fit Selected';
+      badgeX.className = 'pct-diff-badge good';
+    }
+  } else if (sf.xPos === 'constant' && pts.length > 0) {
+    const meanX = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    xDatasets.push({
+      label: `Constant Trial: x = ${meanX.toFixed(2)} m`,
+      data: [{ x: tMin, y: meanX }, { x: tMax, y: meanX }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachX) {
+      coachX.className = 'per-coach-box warn';
+      coachX.innerHTML = '<strong>Try Again:</strong> A horizontal flat line means the ball is not moving forward at all! Look at how x increases steadily each frame.';
+    }
+    if (badgeX) {
+      badgeX.textContent = 'Try Linear Fit';
+      badgeX.className = 'pct-diff-badge warn';
+    }
+  } else if (sf.xPos === 'quadratic' && pts.length >= 3) {
+    const qx = quadraticRegression(pts.map(p => ({ x: p.time, y: p.x })));
+    if (qx) {
+      const curve = [];
+      for (let i = 0; i <= 30; i++) {
+        const t = tMin + (tMax - tMin) * (i / 30);
+        curve.push({ x: t, y: qx.A * t * t + qx.B * t + qx.C });
+      }
+      xDatasets.push({
+        label: 'Quadratic Trial',
+        data: curve,
+        type: 'line',
+        borderColor: '#b35900',
+        borderDash: [5, 4],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false
+      });
+    }
+    if (coachX) {
+      coachX.className = 'per-coach-box warn';
+      coachX.innerHTML = '<strong>Check Your Model:</strong> With negligible air drag, horizontal motion does not speed up or slow down. A <strong>Linear (mt + c)</strong> fit is the simplest physical model for x(t).';
+    }
+    if (badgeX) {
+      badgeX.textContent = 'Use Linear Model';
+      badgeX.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachX) {
+      coachX.className = 'per-coach-box';
+      coachX.textContent = 'Select a curve fit above to model your tracked horizontal position data x(t).';
+    }
+    if (badgeX) {
+      badgeX.textContent = 'Select Fit';
+      badgeX.className = 'pct-diff-badge';
+    }
+  }
+  const allX = pts.map(p => p.x);
+  renderBuildChartInstance('canvasBuildXPos', xDatasets, tMin, tMax, 'Horizontal Position x (m)', Math.min(0, ...allX), Math.max(1.0, ...allX) * 1.18);
+
+  // --- 3A: Vertical Position y(t) ---
+  const yDatasets = [
+    {
+      label: 'Tracked y(t) (m)',
+      data: pts.map(p => ({ x: p.time, y: p.y })),
+      backgroundColor: '#d67b19',
+      borderColor: '#d67b19',
+      pointRadius: 4.5
+    }
+  ];
+  const coachY = el('coachFitYPos');
+  const badgeY = el('badgeFitYPos');
+  if (sf.yPos === 'quadratic' && yFit) {
+    const qCurve = [];
+    for (let i = 0; i <= 40; i++) {
+      const t = tMin + (tMax - tMin) * (i / 40);
+      qCurve.push({ x: t, y: A * t * t + B * t + C });
+    }
+    yDatasets.push({
+      label: `Quadratic Fit: y(t) = (${A.toFixed(3)})t² ${signStr(B)}t ${signStr(C)}`,
+      data: qCurve,
+      type: 'line',
+      borderColor: '#b06210',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachY) {
+      coachY.className = 'per-coach-box good';
+      coachY.innerHTML = `<strong>✓ Quadratic Fit Selected:</strong> <code>y(t) = (${A.toFixed(3)} m/s²)t² ${signStr(B)} m/s·t ${signStr(C)} m</code> [R² = ${yFit.r2.toFixed(4)}]. Now go to <strong>3B</strong> to measure tangent slopes along this parabola!`;
+    }
+    if (badgeY) {
+      badgeY.textContent = '✓ Quadratic Fit Selected';
+      badgeY.className = 'pct-diff-badge good';
+    }
+  } else if (sf.yPos === 'linear' && pts.length >= 2) {
+    const ly = linearRegression(pts.map(p => ({ x: p.time, y: p.y })));
+    if (ly) {
+      yDatasets.push({
+        label: 'Linear Trial (Misses Turnaround)',
+        data: [{ x: tMin, y: ly.slope * tMin + ly.intercept }, { x: tMax, y: ly.slope * tMax + ly.intercept }],
+        type: 'line',
+        borderColor: '#b35900',
+        borderDash: [5, 4],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false
+      });
+    }
+    if (coachY) {
+      coachY.className = 'per-coach-box warn';
+      coachY.innerHTML = '<strong>Look Closely:</strong> A straight line cannot bend over the apex! Because gravity continuously changes vertical velocity, y(t) curves in a <strong>Quadratic Parabola (At² + Bt + C)</strong>.';
+    }
+    if (badgeY) {
+      badgeY.textContent = 'Try Quadratic Fit';
+      badgeY.className = 'pct-diff-badge warn';
+    }
+  } else if (sf.yPos === 'constant' && pts.length > 0) {
+    const meanY = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    yDatasets.push({
+      label: `Constant Trial: y = ${meanY.toFixed(2)} m`,
+      data: [{ x: tMin, y: meanY }, { x: tMax, y: meanY }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachY) {
+      coachY.className = 'per-coach-box warn';
+      coachY.innerHTML = '<strong>Try Again:</strong> The ball rises to a peak and falls back down—its vertical position y(t) follows a curved <strong>Quadratic Parabola</strong>.';
+    }
+    if (badgeY) {
+      badgeY.textContent = 'Try Quadratic Fit';
+      badgeY.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachY) {
+      coachY.className = 'per-coach-box';
+      coachY.textContent = 'Select a curve fit above to model your tracked vertical position data y(t).';
+    }
+    if (badgeY) {
+      badgeY.textContent = 'Select Fit';
+      badgeY.className = 'pct-diff-badge';
+    }
+  }
+  const allY = pts.map(p => p.y);
+  renderBuildChartInstance('canvasBuildYPos', yDatasets, tMin, tMax, 'Vertical Position y (m)', Math.min(0, ...allY), Math.max(1.0, ...allY) * 1.22);
+
+  // --- 3B Left: Tangent-Line Explorer on y(t) ---
+  if (state.activeTangentTime === null || state.activeTangentTime < tMin || state.activeTangentTime > tMax) {
+    const pct = parseFloat(el('tangentSlider') ? el('tangentSlider').value : 15) || 15;
+    state.activeTangentTime = tMin + (tMax - tMin) * (pct / 100);
+  }
+  const t0 = Math.max(tMin, Math.min(tMax, state.activeTangentTime));
+  const y0Tan = A * t0 * t0 + B * t0 + C;
+  const slopeTan = 2 * A * t0 + B;
+  if (el('tangentReadoutCoordsHint')) {
+    el('tangentReadoutCoordsHint').textContent = `t = ${t0.toFixed(3)} s | Slope Δy/Δt = ${slopeTan >= 0 ? '+' : ''}${slopeTan.toFixed(3)} m/s`;
+  }
+
+  const tanCurve = [];
+  for (let i = 0; i <= 40; i++) {
+    const t = tMin + (tMax - tMin) * (i / 40);
+    tanCurve.push({ x: t, y: A * t * t + B * t + C });
+  }
+  const span = Math.max(0.09, (tMax - tMin) * 0.22);
+  const t1 = Math.max(tMin, t0 - span);
+  const t2 = Math.min(tMax, t0 + span);
+
+  const tanYDatasets = [
+    {
+      label: 'Tracked y(t)',
+      data: pts.map(p => ({ x: p.time, y: p.y })),
+      backgroundColor: 'rgba(214, 123, 25, 0.45)',
+      borderColor: 'rgba(214, 123, 25, 0.45)',
+      pointRadius: 3.5
+    },
+    {
+      label: 'Fitted y(t) Parabola',
+      data: tanCurve,
+      type: 'line',
+      borderColor: '#b06210',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    },
+    {
+      label: `Tangent Line (Slope vᵧ = ${slopeTan >= 0 ? '+' : ''}${slopeTan.toFixed(2)} m/s)`,
+      data: [
+        { x: t1, y: y0Tan + slopeTan * (t1 - t0) },
+        { x: t2, y: y0Tan + slopeTan * (t2 - t0) }
+      ],
+      type: 'line',
+      borderColor: '#0f7e9b',
+      borderWidth: 3,
+      pointRadius: 0,
+      fill: false
+    },
+    {
+      label: `Tangent Point (${t0.toFixed(2)} s, ${y0Tan.toFixed(2)} m)`,
+      data: [{ x: t0, y: y0Tan }],
+      backgroundColor: '#0f7e9b',
+      borderColor: '#ffffff',
+      borderWidth: 2,
+      pointRadius: 7
+    }
+  ];
+  renderBuildChartInstance('canvasTangentYPos', tanYDatasets, tMin, tMax, 'Vertical Position y (m)', Math.min(0, ...allY), Math.max(1.0, ...allY) * 1.22);
+  updateTangentPointsUI();
+
+  // --- 3B Right: Plotted Tangent Slopes on v_y(t) & Linear Fit ---
+  const tanPts = Array.isArray(state.tangentPoints) ? state.tangentPoints : [];
+  const vyDatasets = [
+    {
+      label: 'Plotted Tangent Slopes (t, vᵧ)',
+      data: tanPts.map(p => ({ x: p.t, y: p.vy })),
+      backgroundColor: '#0f7e9b',
+      borderColor: '#ffffff',
+      borderWidth: 1.5,
+      pointRadius: 6
+    }
+  ];
+  const coachVY = el('coachFitYVel');
+  const badgeVY = el('badgeFitYVel');
+  const vStart = ay * tMin + B;
+  const vEnd = ay * tMax + B;
+
+  if (sf.yVel === 'linear') {
+    if (tanPts.length >= 2) {
+      const vyFit = linearRegression(tanPts.map(p => ({ x: p.t, y: p.vy })));
+      const slopeVy = vyFit ? vyFit.slope : ay;
+      const intVy = vyFit ? vyFit.intercept : B;
+      vyDatasets.push({
+        label: `Linear Fit: vᵧ(t) = (${slopeVy.toFixed(3)})t ${signStr(intVy)}`,
+        data: [{ x: tMin, y: slopeVy * tMin + intVy }, { x: tMax, y: slopeVy * tMax + intVy }],
+        type: 'line',
+        borderColor: '#d67b19',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        fill: false
+      });
+      if (coachVY) {
+        coachVY.className = tanPts.length >= 3 ? 'per-coach-box good' : 'per-coach-box warn';
+        coachVY.innerHTML = tanPts.length >= 3
+          ? `<strong>✓ Linear Velocity Fit Complete:</strong> Your plotted tangent slopes lie on the straight line <code>vᵧ(t) = (${slopeVy.toFixed(3)} m/s²)t ${signStr(intVy)} m/s</code>! Its constant negative slope is your vertical acceleration <code>aᵧ = ${slopeVy.toFixed(3)} m/s²</code>.`
+          : `<strong>Almost There:</strong> Plot at least <strong>3 tangent points</strong> (ascent, near apex, and descent) so your linear fit spans the flight.`;
+      }
+      if (badgeVY) {
+        badgeVY.textContent = tanPts.length >= 3 ? '✓ Linear Fit Applied' : 'Plot ≥3 Tangent Pts';
+        badgeVY.className = `pct-diff-badge ${tanPts.length >= 3 ? 'good' : 'warn'}`;
+      }
+    } else {
+      if (coachVY) {
+        coachVY.className = 'per-coach-box warn';
+        coachVY.innerHTML = '<strong>Step 1 First:</strong> Plot at least <strong>3 tangent slope points</strong> from the left graph (or click <code>⚡ Sample 5 Points</code>) before fitting the line!';
+      }
+      if (badgeVY) {
+        badgeVY.textContent = 'Plot Tangent Points First';
+        badgeVY.className = 'pct-diff-badge warn';
+      }
+    }
+  } else if (sf.yVel === 'constant') {
+    const meanVy = tanPts.length > 0 ? tanPts.reduce((s, p) => s + p.vy, 0) / tanPts.length : 0;
+    vyDatasets.push({
+      label: 'Constant Trial (Horizontal)',
+      data: [{ x: tMin, y: meanVy }, { x: tMax, y: meanVy }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachVY) {
+      coachVY.className = 'per-coach-box warn';
+      coachVY.innerHTML = '<strong>Look at Your Tangent Slopes:</strong> Vertical velocity starts positive (rising), crosses zero at the peak, and becomes negative (falling). Select <strong>Linear (aᵧt + v₀ᵧ)</strong>!';
+    }
+    if (badgeVY) {
+      badgeVY.textContent = 'Try Linear Fit';
+      badgeVY.className = 'pct-diff-badge warn';
+    }
+  } else if (sf.yVel === 'quadratic') {
+    if (coachVY) {
+      coachVY.className = 'per-coach-box warn';
+      coachVY.innerHTML = '<strong>Check Your Derivative:</strong> The slope of a quadratic parabola y(t) changes at a steady rate, so the tangent slopes form a <strong>straight line (Linear Fit)</strong>!';
+    }
+    if (badgeVY) {
+      badgeVY.textContent = 'Use Linear Fit';
+      badgeVY.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachVY) {
+      coachVY.className = 'per-coach-box';
+      coachVY.textContent = tanPts.length >= 3
+        ? 'Great! Now select the "Linear (aᵧt + v₀ᵧ)" radio button above to fit a straight line through your plotted tangent slopes.'
+        : 'Plot at least 3 tangent slopes from the y(t) graph on the left, then select a fit type above.';
+    }
+    if (badgeVY) {
+      badgeVY.textContent = tanPts.length >= 3 ? 'Now Select Linear Fit' : 'Plot ≥3 Points & Fit';
+      badgeVY.className = 'pct-diff-badge';
+    }
+  }
+  const maxAbsV = Math.max(4, Math.abs(vStart), Math.abs(vEnd)) * 1.25;
+  renderBuildChartInstance('canvasBuildYVel', vyDatasets, tMin, tMax, 'Vertical Velocity vᵧ (m/s)', -maxAbsV, maxAbsV);
+
+  // --- 3B Bottom: Horizontal Velocity v_x(t) ---
+  const vxDatasets = [];
+  const coachVX = el('coachFitXVel');
+  const badgeVX = el('badgeFitXVel');
+  if (sf.xVel === 'constant') {
+    vxDatasets.push({
+      label: `Constant Horizontal Velocity: vₓ(t) = ${m.toFixed(3)} m/s`,
+      data: [{ x: tMin, y: m }, { x: tMax, y: m }],
+      type: 'line',
+      borderColor: '#0f7e9b',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachVX) {
+      coachVX.className = 'per-coach-box good';
+      coachVX.innerHTML = `<strong>✓ Constant Fit Selected:</strong> Because x(t) is a straight line with slope <code>${m.toFixed(3)} m/s</code>, horizontal velocity is a horizontal line <code>vₓ(t) = ${m.toFixed(3)} m/s</code>.`;
+    }
+    if (badgeVX) {
+      badgeVX.textContent = '✓ Constant Fit Selected';
+      badgeVX.className = 'pct-diff-badge good';
+    }
+  } else if (sf.xVel === 'linear_sloped' || sf.xVel === 'quadratic') {
+    vxDatasets.push({
+      label: 'Sloped Trial (Implies Horizontal Acceleration)',
+      data: [{ x: tMin, y: m * 1.2 }, { x: tMax, y: m * 0.8 }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachVX) {
+      coachVX.className = 'per-coach-box warn';
+      coachVX.innerHTML = '<strong>Think About Slope:</strong> In 3A you found that x(t) has a constant slope. A constant slope means <code>vₓ(t)</code> stays at one constant value!';
+    }
+    if (badgeVX) {
+      badgeVX.textContent = 'Try Constant Fit';
+      badgeVX.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachVX) {
+      coachVX.className = 'per-coach-box';
+      coachVX.textContent = 'Select a model for horizontal velocity vₓ(t) based on the constant slope of your x(t) line.';
+    }
+    if (badgeVX) {
+      badgeVX.textContent = 'Select Fit';
+      badgeVX.className = 'pct-diff-badge';
+    }
+  }
+  renderBuildChartInstance('canvasBuildXVel', vxDatasets, tMin, tMax, 'Horizontal Velocity vₓ (m/s)', Math.min(0, m * 1.2), Math.max(2.0, m * 1.35));
+
+  // --- 3C Left: Horizontal Acceleration a_x(t) ---
+  const axDatasets = [];
+  const coachAX = el('coachFitXAcc');
+  const badgeAX = el('badgeFitXAcc');
+  if (sf.xAcc === 'zero') {
+    axDatasets.push({
+      label: 'Zero Horizontal Acceleration: aₓ(t) = 0.000 m/s²',
+      data: [{ x: tMin, y: 0 }, { x: tMax, y: 0 }],
+      type: 'line',
+      borderColor: '#0f7e9b',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachAX) {
+      coachAX.className = 'per-coach-box good';
+      coachAX.innerHTML = '<strong>✓ Zero Constant Selected:</strong> The slope of a flat horizontal line <code>vₓ(t) = constant</code> is zero everywhere (<code>aₓ = 0 m/s²</code>).';
+    }
+    if (badgeAX) {
+      badgeAX.textContent = '✓ Zero Fit Selected';
+      badgeAX.className = 'pct-diff-badge good';
+    }
+  } else if (sf.xAcc === 'nonzero' || sf.xAcc === 'linear') {
+    axDatasets.push({
+      label: 'Non-Zero Trial',
+      data: [{ x: tMin, y: -2 }, { x: tMax, y: -2 }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachAX) {
+      coachAX.className = 'per-coach-box warn';
+      coachAX.innerHTML = '<strong>Check Your Velocity Slope:</strong> Since horizontal velocity vₓ(t) is constant, its rate of change Δvₓ/Δt is <strong>0 m/s²</strong>.';
+    }
+    if (badgeAX) {
+      badgeAX.textContent = 'Try Zero (aₓ = 0)';
+      badgeAX.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachAX) {
+      coachAX.className = 'per-coach-box';
+      coachAX.textContent = 'Select a fit for horizontal acceleration aₓ(t) = Δvₓ/Δt.';
+    }
+    if (badgeAX) {
+      badgeAX.textContent = 'Select Fit';
+      badgeAX.className = 'pct-diff-badge';
+    }
+  }
+  renderBuildChartInstance('canvasBuildXAcc', axDatasets, tMin, tMax, 'Horizontal Acc. aₓ (m/s²)', -2, 2);
+
+  // --- 3C Right: Vertical Acceleration a_y(t) ---
+  const ayDatasets = [
+    {
+      label: 'Reference Gravity aᵧ,ref = −9.8 m/s²',
+      data: [{ x: tMin, y: FIXED_AY_REF }, { x: tMax, y: FIXED_AY_REF }],
+      type: 'line',
+      borderColor: '#4b6570',
+      borderDash: [6, 4],
+      borderWidth: 1.8,
+      pointRadius: 0,
+      fill: false
+    }
+  ];
+  const coachAY = el('coachFitYAcc');
+  const badgeAY = el('badgeFitYAcc');
+  if (sf.yAcc === 'constant') {
+    ayDatasets.unshift({
+      label: `Constant Vertical Acc.: aᵧ = ${ay.toFixed(3)} m/s²`,
+      data: [{ x: tMin, y: ay }, { x: tMax, y: ay }],
+      type: 'line',
+      borderColor: '#d67b19',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachAY) {
+      coachAY.className = 'per-coach-box good';
+      coachAY.innerHTML = `<strong>✓ Constant Negative Fit Selected:</strong> Because <code>vᵧ(t)</code> is a straight line with slope <code>${ay.toFixed(3)} m/s²</code>, vertical acceleration is constant at <code>aᵧ = ${ay.toFixed(3)} m/s²</code> (compare with reference <code>−9.8 m/s²</code>).`;
+    }
+    if (badgeAY) {
+      badgeAY.textContent = '✓ Constant Fit Selected';
+      badgeAY.className = 'pct-diff-badge good';
+    }
+  } else if (sf.yAcc === 'zero' || sf.yAcc === 'linear') {
+    ayDatasets.unshift({
+      label: sf.yAcc === 'zero' ? 'Zero Trial (aᵧ = 0)' : 'Sloped Trial',
+      data: sf.yAcc === 'zero' ? [{ x: tMin, y: 0 }, { x: tMax, y: 0 }] : [{ x: tMin, y: 0 }, { x: tMax, y: ay }],
+      type: 'line',
+      borderColor: '#b35900',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+    if (coachAY) {
+      coachAY.className = 'per-coach-box warn';
+      coachAY.innerHTML = '<strong>Look at Your vᵧ(t) Line in 3B:</strong> The vᵧ(t) line has a constant negative slope the entire time—even as it crosses zero at the peak! So aᵧ(t) is a <strong>Constant Negative</strong> line.';
+    }
+    if (badgeAY) {
+      badgeAY.textContent = 'Try Constant Negative';
+      badgeAY.className = 'pct-diff-badge warn';
+    }
+  } else {
+    if (coachAY) {
+      coachAY.className = 'per-coach-box';
+      coachAY.textContent = 'Select a fit for vertical acceleration aᵧ(t) = Δvᵧ/Δt based on the slope of your vᵧ(t) line.';
+    }
+    if (badgeAY) {
+      badgeAY.textContent = 'Select Fit';
+      badgeAY.className = 'pct-diff-badge';
+    }
+  }
+  renderBuildChartInstance('canvasBuildYAcc', ayDatasets, tMin, tMax, 'Vertical Acc. aᵧ (m/s²)', Math.min(-13, ay * 1.25), 2);
+
+  // Update Sub-Tab completion checkmarks in Step 3
+  const sub3ADone = sf.xPos === 'linear' && sf.yPos === 'quadratic';
+  const sub3BDone = tanPts.length >= 3 && sf.yVel === 'linear' && sf.xVel === 'constant';
+  const sub3CDone = sf.xAcc === 'zero' && sf.yAcc === 'constant';
+  const sub3DDone = (state.predictionRevision || '').trim().length >= 10 && (state.graphConnections || '').trim().length >= 15;
+
+  if (el('chkSub3A')) el('chkSub3A').textContent = sub3ADone ? '✓' : '';
+  if (el('chkSub3B')) el('chkSub3B').textContent = sub3BDone ? '✓' : '';
+  if (el('chkSub3C')) el('chkSub3C').textContent = sub3CDone ? '✓' : '';
+  if (el('chkSub3D')) el('chkSub3D').textContent = sub3DDone ? '✓' : '';
+}
+
+function renderSignedAreaTab5Chart() {
+  autoFitAndDeriveAllGraphs();
+  const cov = state.coverageStatus;
+  const exp = getExpectedPhysicsValues();
+  const readout = el('areaGraphReadoutBar');
+  if (readout && exp) {
+    readout.innerHTML = `<strong>Fitted Parameters from Step 3:</strong> Initial velocity <code>B = ${exp.B.toFixed(3)} m/s</code> | Slope <code>aᵧ = 2A = ${exp.ayFit.toFixed(3)} m/s²</code> | Initial height <code>C = ${exp.C.toFixed(3)} m</code> | Duration <code>t_hang = ${exp.T.toFixed(3)} s</code> | Fitted final height <code>y_fit(t_hang) = ${exp.yFitAtT.toFixed(3)} m</code>`;
+  }
+  const canvas = el('canvasAreaYVel');
+  if (!canvas) return;
+  if (gridCharts['canvasAreaYVel']) {
+    gridCharts['canvasAreaYVel'].destroy();
+  }
+  const prevAreaFlag = state.showSignedArea;
+  state.showSignedArea = true;
+  const cfg = buildChartConfigForGraph('y-vel', false);
+  state.showSignedArea = prevAreaFlag;
+  gridCharts['canvasAreaYVel'] = new Chart(canvas.getContext('2d'), cfg);
 }
 
 // ============================================================================
@@ -1591,17 +2384,26 @@ function buildChartConfigForGraph(type, isExportImage = false) {
     yAxisTitle = 'Vertical Velocity vᵧ (m/s)';
     const vStart = ay * tMin + B;
     const vEnd = ay * tMax + B;
-    datasets = [
-      {
-        label: 'Derived vᵧ = 2At + B',
-        data: [{ x: tMin, y: vStart }, { x: tMax, y: vEnd }],
-        type: 'line',
-        borderColor: '#d67b19',
-        borderWidth: isExportImage ? 3 : 2.5,
-        pointRadius: 0,
-        fill: false
-      }
-    ];
+    datasets = [];
+    if (Array.isArray(state.tangentPoints) && state.tangentPoints.length > 0) {
+      datasets.push({
+        label: `Plotted Tangent Slopes (${state.tangentPoints.length} pts)`,
+        data: state.tangentPoints.map(p => ({ x: p.t, y: p.vy })),
+        backgroundColor: '#0f7e9b',
+        borderColor: '#ffffff',
+        borderWidth: 1.5,
+        pointRadius: isExportImage ? 5.5 : 5
+      });
+    }
+    datasets.push({
+      label: 'Linear Fit vᵧ = 2At + B',
+      data: [{ x: tMin, y: vStart }, { x: tMax, y: vEnd }],
+      type: 'line',
+      borderColor: '#d67b19',
+      borderWidth: isExportImage ? 3 : 2.5,
+      pointRadius: 0,
+      fill: false
+    });
 
     // Shade signed ascent and descent areas ONLY if a valid turnaround exists inside (tMin, tMax)
     if (state.showSignedArea && cov.hasValidTurnaround && cov.tZero !== null) {
@@ -2181,14 +2983,17 @@ function updateRubricChecklistUI() {
       : '<span class="pct-diff-badge warn">Needs ≥8 pts + apex + t_up</span>';
   }
 
-  // Criterion 2 (2 pts): Saved predictions, reasoned revision & graph connections
+  // Criterion 2 (2 pts): Saved predictions, tangent-slope v_y(t) construction, reasoned revision & graph connections
+  const sf = state.selectedFits || {};
+  const fitsReady = sf.xPos === 'linear' && sf.yPos === 'quadratic' && sf.yVel === 'linear' && (state.tangentPoints || []).length >= 3;
   const c2Ok = state.firstAttemptPrediction.isSaved &&
+    fitsReady &&
     hasVal(state.predictionRevision) &&
     hasVal(state.graphConnections);
   if (el('chkStatus2')) {
     el('chkStatus2').innerHTML = c2Ok
       ? '<span class="pct-diff-badge good">Included in Report</span>'
-      : '<span class="pct-diff-badge warn">Save prediction + revision + connections</span>';
+      : '<span class="pct-diff-badge warn">Complete Step 2 &amp; Step 3 (Fits + ≥3 Tangents + Notes)</span>';
   }
 
   // Criterion 3 (2 pts): Shown slopes & 5c–5f calculations
@@ -2733,6 +3538,8 @@ function saveSessionJSON() {
       observedTUp: state.observedTUp,
       coverageStatus: state.coverageStatus,
       fitResults: state.fitResults,
+      selectedFits: state.selectedFits,
+      tangentPoints: state.tangentPoints,
       firstAttemptPrediction: state.firstAttemptPrediction,
       predictionRevision: state.predictionRevision,
       graphConnections: state.graphConnections,
@@ -2818,6 +3625,19 @@ function loadSessionJSON(file) {
           ayShape: '',
           initialNotes: ''
         };
+        if (s.selectedFits) {
+          state.selectedFits = { ...state.selectedFits, ...s.selectedFits };
+        } else if (state.firstAttemptPrediction.isSaved) {
+          state.selectedFits = {
+            xPos: 'linear',
+            yPos: 'quadratic',
+            yVel: 'linear',
+            xVel: 'constant',
+            xAcc: 'zero',
+            yAcc: 'constant'
+          };
+        }
+        state.tangentPoints = Array.isArray(s.tangentPoints) ? s.tangentPoints : [];
         state.predictionRevision = s.predictionRevision || '';
         state.graphConnections = s.graphConnections || '';
         if (s.showSignedArea !== undefined) {
@@ -2844,6 +3664,15 @@ function loadSessionJSON(file) {
           ayShape: '',
           initialNotes: ''
         };
+        state.selectedFits = {
+          xPos: 'linear',
+          yPos: 'quadratic',
+          yVel: 'linear',
+          xVel: 'constant',
+          xAcc: 'zero',
+          yAcc: 'constant'
+        };
+        state.tangentPoints = [];
         const gi = s.graphInterpretation || {};
         const sa = s.signedAreaValues || {};
         const cv = s.calcValues || {};
@@ -2893,14 +3722,19 @@ function loadSessionJSON(file) {
       updateScaleReadout();
       recalculateKinematics();
       autoFitAndDeriveAllGraphs();
+      if (state.firstAttemptPrediction.isSaved && (!state.tangentPoints || state.tangentPoints.length === 0)) {
+        sampleFiveTangentPoints();
+      }
       updateTable();
       updateSetupAndCoverageReadouts();
       populateDOMFromStudentState();
       updatePredictionGateUI();
       updatePosChart();
       if (state.firstAttemptPrediction.isSaved) {
+        renderBuildGraphStep();
         renderSixGraphPanel();
       }
+      renderSignedAreaTab5Chart();
       updateReferenceQuantitiesBar();
       updateRubricChecklistUI();
       preparePrintableReport();
@@ -2934,7 +3768,7 @@ function exportCSV() {
 // Event Listeners Binding
 // ============================================================================
 function initEventListeners() {
-  // 3-Step Navigation Buttons
+  // 6-Tab Navigation Buttons
   stepBtns.forEach((btn, idx) => {
     if (btn) btn.addEventListener('click', () => updateStepView(idx + 1));
   });
@@ -2944,6 +3778,48 @@ function initEventListeners() {
   if (el('btnProceedToStep3')) {
     el('btnProceedToStep3').addEventListener('click', () => updateStepView(3));
   }
+  if (el('btnProceedToStep4')) {
+    el('btnProceedToStep4').addEventListener('click', () => updateStepView(4));
+  }
+  if (el('btnProceedToStep5')) {
+    el('btnProceedToStep5').addEventListener('click', () => updateStepView(5));
+  }
+  if (el('btnProceedToStep6')) {
+    el('btnProceedToStep6').addEventListener('click', () => updateStepView(6));
+  }
+  if (el('btnBackToTab2FromLock')) {
+    el('btnBackToTab2FromLock').addEventListener('click', () => updateStepView(2));
+  }
+
+  // Sub-Tab Navigation (Tab 3, Tab 4, Tab 5)
+  document.querySelectorAll('button[data-graph-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => switchSubtab('data-graph-subtab', btn.getAttribute('data-graph-subtab')));
+  });
+  document.querySelectorAll('button[data-calc-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => switchSubtab('data-calc-subtab', btn.getAttribute('data-calc-subtab')));
+  });
+  document.querySelectorAll('button[data-area-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => switchSubtab('data-area-subtab', btn.getAttribute('data-area-subtab')));
+  });
+
+  // Next / Back Sub-Tab Buttons
+  const bindSubNav = (btnId, groupAttr, targetId) => {
+    if (el(btnId)) el(btnId).addEventListener('click', () => switchSubtab(groupAttr, targetId));
+  };
+  bindSubNav('btnNextTo3B', 'data-graph-subtab', 'subtab-3b');
+  bindSubNav('btnBackTo3A', 'data-graph-subtab', 'subtab-3a');
+  bindSubNav('btnNextTo3C', 'data-graph-subtab', 'subtab-3c');
+  bindSubNav('btnBackTo3B', 'data-graph-subtab', 'subtab-3b');
+  bindSubNav('btnNextTo3D', 'data-graph-subtab', 'subtab-3d');
+  bindSubNav('btnBackTo3C', 'data-graph-subtab', 'subtab-3c');
+
+  bindSubNav('btnNextTo4B', 'data-calc-subtab', 'subtab-4b');
+  bindSubNav('btnBackTo4A', 'data-calc-subtab', 'subtab-4a');
+  bindSubNav('btnNextTo4C', 'data-calc-subtab', 'subtab-4c');
+  bindSubNav('btnBackTo4B', 'data-calc-subtab', 'subtab-4b');
+
+  bindSubNav('btnNextTo5B', 'data-area-subtab', 'subtab-5b');
+  bindSubNav('btnBackTo5A', 'data-area-subtab', 'subtab-5a');
 
   // Primary Tracking Tools
   if (el('toolTrack')) el('toolTrack').addEventListener('click', () => setActiveTool('track'));
@@ -3317,7 +4193,7 @@ function initEventListeners() {
     });
   }
 
-  // Step 2 Controls: Position Filter, Save Prediction & Reveal, Signed Area Toggle, Optional Tangent Explorer
+  // Step 2 & Step 3 Controls: Position Filter, Save Prediction, Fit Radio Pills & Tangent-Slope Builder
   if (el('motionComponentSelect')) {
     el('motionComponentSelect').addEventListener('change', (e) => {
       state.motionFilter = e.target.value;
@@ -3327,6 +4203,29 @@ function initEventListeners() {
   if (el('btnSavePredictionAndReveal')) {
     el('btnSavePredictionAndReveal').addEventListener('click', saveInitialPredictionAndReveal);
   }
+
+  // Interactive Fit-Type Radio Selectors (3A, 3B, 3C)
+  const fitRadioMap = {
+    fitXPos: 'xPos',
+    fitYPos: 'yPos',
+    fitYVel: 'yVel',
+    fitXVel: 'xVel',
+    fitXAcc: 'xAcc',
+    fitYAcc: 'yAcc'
+  };
+  Object.keys(fitRadioMap).forEach(radioName => {
+    const stateKey = fitRadioMap[radioName];
+    document.querySelectorAll(`input[name="${radioName}"]`).forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          state.selectedFits[stateKey] = e.target.value;
+          renderBuildGraphStep();
+          renderSixGraphPanel();
+        }
+      });
+    });
+  });
+
   if (el('chkShowSignedArea')) {
     el('chkShowSignedArea').addEventListener('change', (e) => {
       state.showSignedArea = e.target.checked;
@@ -3335,6 +4234,7 @@ function initEventListeners() {
   }
   if (el('btnAutoFitAll')) {
     el('btnAutoFitAll').addEventListener('click', () => {
+      renderBuildGraphStep();
       renderSixGraphPanel();
       updateReferenceQuantitiesBar();
     });
@@ -3345,19 +4245,34 @@ function initEventListeners() {
       const cov = state.coverageStatus;
       const t = cov.tMin + (cov.tMax - cov.tMin) * (pct / 100);
       state.activeTangentTime = t;
-      const yFit = state.fitResults.yPos;
-      if (el('tangentReadoutCoordsHint') && yFit) {
-        const slope = 2 * yFit.A * t + yFit.B;
-        el('tangentReadoutCoordsHint').textContent = `t = ${t.toFixed(3)} s • Instantaneous Slope Δy/Δt = ${slope.toFixed(3)} m/s`;
-      }
-      renderSixGraphPanel();
+      renderBuildGraphStep();
     });
   }
-
-  // Student Inputs & Check Numbers Button
-  if (el('btnCheckWorksheet')) {
-    el('btnCheckWorksheet').addEventListener('click', checkNumbersForPracticeFeedback);
+  document.querySelectorAll('.btn-JumpTan').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pct = parseFloat(btn.getAttribute('data-tan-pct')) || 15;
+      if (el('tangentSlider')) el('tangentSlider').value = pct;
+      const cov = state.coverageStatus;
+      state.activeTangentTime = cov.tMin + (cov.tMax - cov.tMin) * (pct / 100);
+      renderBuildGraphStep();
+    });
+  });
+  if (el('btnAddTangentPoint')) {
+    el('btnAddTangentPoint').addEventListener('click', addTangentPointAtCurrentSlider);
   }
+  if (el('btnAutoSampleTangents')) {
+    el('btnAutoSampleTangents').addEventListener('click', sampleFiveTangentPoints);
+  }
+  if (el('btnClearTangentPoints')) {
+    el('btnClearTangentPoints').addEventListener('click', clearTangentPoints);
+  }
+
+  // Student Inputs & Check Numbers Buttons (Tab 4 & Tab 5)
+  ['btnCheckWorksheet', 'btnCheckAreaTab5', 'btnCheckIntervalsTab5'].forEach(btnId => {
+    if (el(btnId)) {
+      el(btnId).addEventListener('click', checkNumbersForPracticeFeedback);
+    }
+  });
   Object.keys(state.studentResponses).forEach(k => {
     const node = el(k);
     if (node) {
@@ -3371,12 +4286,14 @@ function initEventListeners() {
     el('txtPredictionRevision').addEventListener('input', (e) => {
       state.predictionRevision = e.target.value;
       updateWrittenStatusBadges();
+      renderBuildGraphStep();
     });
   }
   if (el('txtGraphConnections')) {
     el('txtGraphConnections').addEventListener('input', (e) => {
       state.graphConnections = e.target.value;
       updateWrittenStatusBadges();
+      renderBuildGraphStep();
     });
   }
 
