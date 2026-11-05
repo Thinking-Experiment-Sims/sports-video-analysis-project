@@ -2905,7 +2905,6 @@ function syncStudentInputsFromDOM() {
   if (el('teacherSelect')) {
     state.teacherName = el('teacherSelect').value;
   }
-  updateWrittenStatusBadges();
 }
 
 function populateDOMFromStudentState() {
@@ -3161,11 +3160,18 @@ function updateCheckButtonsAvailability() {
   }
 }
 
+let _autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(saveToLocalStorage, 800);
+}
+
 function updateWrittenStatusBadges() {
+  syncStudentInputsFromDOM();
   updateSimplifiedComparisons();
   updateCheckButtonsAvailability();
   updateRubricChecklistUI();
-  saveToLocalStorage();
+  scheduleAutosave();
 
   const revBadge = el('statusRevisionBadge');
   if (revBadge) {
@@ -3851,7 +3857,7 @@ function preparePrintableReport() {
                 </tr>
                 <tr>
                   <td><strong>Total Tracked Duration t<sub>hang</sub></strong></td>
-                  <td><strong>${exp ? exp.T.toFixed(3) + ' s' : '—'}</strong> (${pts.length} tracked instants over [0.000 s, ${exp ? exp.tMax.toFixed(3) : '0.000'} s])</td>
+                  <td><strong>${exp ? exp.T.toFixed(3) + ' s' : '—'}</strong> (${pts.length} tracked instants over [0.000 s, ${exp && Number.isFinite(exp.T) ? exp.T.toFixed(3) : '0.000'} s])</td>
                 </tr>
                 <tr>
                   <td><strong>Tracking Method &amp; Shortcuts</strong></td>
