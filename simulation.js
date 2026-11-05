@@ -124,6 +124,19 @@ const state = {
   selectedAreaRegion: 'none', // 'none' | 'ascent' | 'descent' | 'both'
   activeTangentTime: 0.15,
 
+  // Course Level & Pedagogical Gating
+  courseLevel: 'honors', // 'on-level' | 'honors'
+  isTeacherMode: false,
+  usedShortcuts: {
+    autoTrack: false,
+    autoTangents: false
+  },
+  checkCounts: {
+    calculations: 0,
+    area: 0,
+    intervals: 0
+  },
+
   // Step 2C: Student Submitted Responses (Raw strings; NEVER auto-filled with model answers)
   studentResponses: {
     // 5a: Horizontal velocity slope on fitted x-t line
@@ -193,9 +206,9 @@ const state = {
 // Synthetic Model Definitions (y = 0 at floor, y0 > 0 at release, clip ends before ground impact so T != 2*t_up)
 const SYNTHETIC_MODELS = {
   basketball: {
-    label: 'SYNTHETIC MODEL CLIP: Basketball Launch (Practice)',
+    label: 'SYNTHETIC MODEL CLIP: Basketball Practice Arc (First Tracked Frame y₀ = 1.43 m)',
     ballType: 'basketball',
-    y0: 1.20,       // Released 1.20 m above floor
+    y0: 1.20,       // Released 1.20 m above floor (first tracked airborne frame at t=0.05s has y = 1.433 m)
     vx0: 2.65,      // Horizontal velocity (m/s)
     vy0: 4.90,      // Initial upward velocity -> t_up = 4.90 / 9.8 = 0.500 s
     g: 9.80,
@@ -203,7 +216,7 @@ const SYNTHETIC_MODELS = {
     sampleTimes: [0.05, 0.13, 0.21, 0.30, 0.38, 0.46, 0.55, 0.63, 0.72, 0.80, 0.88, 0.97, 1.05]
   },
   projectile: {
-    label: 'SYNTHETIC MODEL CLIP: Ball Toss Arc (Practice)',
+    label: 'SYNTHETIC MODEL CLIP: Ball Toss Arc (First Tracked Frame y₀ = 1.16 m)',
     ballType: 'baseball',
     y0: 1.00,       // Released 1.00 m above floor
     vx0: 2.40,
@@ -213,7 +226,7 @@ const SYNTHETIC_MODELS = {
     sampleTimes: [0.04, 0.12, 0.20, 0.28, 0.36, 0.44, 0.49, 0.57, 0.65, 0.73, 0.81, 0.89, 0.97]
   },
   soccer: {
-    label: 'SYNTHETIC MODEL CLIP: Soccer Chip Kick (Practice)',
+    label: 'SYNTHETIC MODEL CLIP: Soccer Chip Kick (First Tracked Frame y₀ = 0.58 m)',
     ballType: 'soccer',
     y0: 0.45,       // Chipped from elevated ramp/platform 0.45 m above turf reference
     vx0: 3.40,
@@ -265,7 +278,10 @@ function init() {
   initEventListeners();
   initPosChart();
   initSyntheticExperiment('basketball');
-  loadSamplePointsForActivePreset(); // Provide a ready-to-explore synthetic trajectory out of the box
+  loadSamplePointsForActivePreset();
+  setTeacherMode(false);
+  updateCheckButtonsAvailability();
+  checkAutosaveOnLoad();
   updateStepView(1);
   triggerKaTeXRender(document.body);
 }
@@ -1159,13 +1175,17 @@ function linearRegression(points) {
 
   const meanY = sumY / n;
   let ssTot = 0, ssRes = 0;
+  const residuals = [];
   points.forEach(p => {
     const pred = slope * p.x + intercept;
+    const res = p.y - pred;
     ssTot += (p.y - meanY) ** 2;
-    ssRes += (p.y - pred) ** 2;
+    ssRes += res ** 2;
+    residuals.push({ x: p.x, y: p.y, pred, res });
   });
   const r2 = ssTot > 0 ? Math.max(0, 1 - (ssRes / ssTot)) : 1;
-  return { slope, intercept, r2 };
+  const rmse = Math.sqrt(ssRes / n);
+  return { slope, intercept, r2, rmse, residuals };
 }
 
 function quadraticRegression(points) {
@@ -1217,14 +1237,18 @@ function quadraticRegression(points) {
 
   const meanY = sumY / n;
   let ssTot = 0, ssRes = 0;
+  const residuals = [];
   points.forEach(p => {
     const pred = A * p.x * p.x + B * p.x + C;
+    const res = p.y - pred;
     ssTot += (p.y - meanY) ** 2;
-    ssRes += (p.y - pred) ** 2;
+    ssRes += res ** 2;
+    residuals.push({ x: p.x, y: p.y, pred, res });
   });
   const r2 = ssTot > 0 ? Math.max(0, 1 - (ssRes / ssTot)) : 1;
+  const rmse = Math.sqrt(ssRes / n);
 
-  return { A, B, C, r2 };
+  return { A, B, C, r2, rmse, residuals };
 }
 
 function autoFitAndDeriveAllGraphs() {
@@ -1316,6 +1340,33 @@ function autoFitAndDeriveAllGraphs() {
   state.fitResults.xAcc = xFit ? { ax: 0.0 } : null;
   state.fitResults.yVel = yFit ? { slope: 2 * yFit.A, intercept: yFit.B, tZero: rawTZero } : null;
   state.fitResults.yAcc = yFit ? { ay: 2 * yFit.A, ref: FIXED_AY_REF } : null;
+
+  // Automatic Frame-Rate (FPS) Error Diagnostic Check
+  const fpsBanner = el('fpsWarningBanner');
+  const fpsMsg = el('fpsWarningMessage');
+  if (fpsBanner && fpsMsg) {
+    if (yFit && pts.length >= 5) {
+      const ayFitted = 2 * yFit.A;
+      if (ayFitted > -7.5 || ayFitted < -13.0) {
+        fpsBanner.style.display = 'block';
+        if (ayFitted > 0) {
+          fpsMsg.innerHTML = `Vertical acceleration slope is positive (<code>a<sub>y</sub> = +${ayFitted.toFixed(2)} m/s²</code>). Ensure your coordinate origin has +y pointing upward and you tracked the motion forward in time.`;
+        } else if (Math.abs(ayFitted) < 7.5) {
+          const k = Math.sqrt(9.80 / Math.max(0.01, Math.abs(ayFitted)));
+          const suggestedFps = Math.round(state.fps * k);
+          fpsMsg.innerHTML = `Fitted vertical acceleration is <strong>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</strong>, which is much weaker than gravity (−9.8 m/s²). Because acceleration scales as 1/t² &propto; FPS², an entered FPS that is <em>k</em>× too low makes gravity appear <em>k</em>²× too weak. Your video frame rate may be <strong>~${k.toFixed(1).replace('.0','')}× too low</strong> (e.g. entering ${state.fps} FPS for a ~${suggestedFps} FPS slow-motion clip). Please check Tab 1: Video Setup &amp; Frame Rate.`;
+        } else {
+          const k = Math.sqrt(Math.abs(ayFitted) / 9.80);
+          const suggestedFps = Math.round(state.fps / k);
+          fpsMsg.innerHTML = `Fitted vertical acceleration is <strong>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</strong>, which is much stronger than gravity (−9.8 m/s²). Your video frame rate may be <strong>~${k.toFixed(1).replace('.0','')}× too high</strong> (entered ${state.fps} FPS vs ~${suggestedFps} FPS), or your calibration stick length scale may be inaccurate. Please check Tab 1 setup.`;
+        }
+      } else {
+        fpsBanner.style.display = 'none';
+      }
+    } else {
+      fpsBanner.style.display = 'none';
+    }
+  }
 }
 
 // ============================================================================
@@ -1550,6 +1601,7 @@ function addTangentPointAtCurrentSlider() {
 }
 
 function sampleFiveTangentPoints() {
+  state.usedShortcuts.autoTangents = true;
   autoFitAndDeriveAllGraphs();
   const cov = state.coverageStatus;
   const yFit = state.fitResults.yPos;
@@ -1781,6 +1833,16 @@ function renderBuildGraphStep() {
   const allX = pts.map(p => p.x);
   renderBuildChartInstance('canvasBuildXPos', xDatasets, tMin, tMax, 'Horizontal Position x (m)', Math.min(0, ...allX), Math.max(1.0, ...allX) * 1.18);
 
+  const qualX = el('fitQualityXPos');
+  if (qualX) {
+    if (sf.xPos === 'linear' && xFit) {
+      qualX.style.display = 'block';
+      qualX.innerHTML = `<strong>Fit Quality:</strong> R² = <strong>${xFit.r2.toFixed(4)}</strong> &bull; RMSE = <strong>${(xFit.rmse * 100).toFixed(1)} cm</strong>`;
+    } else {
+      qualX.style.display = 'none';
+    }
+  }
+
   // --- 3A: Vertical Position y(t) ---
   const yDatasets = [
     {
@@ -1870,6 +1932,37 @@ function renderBuildGraphStep() {
   }
   const allY = pts.map(p => p.y);
   renderBuildChartInstance('canvasBuildYPos', yDatasets, tMin, tMax, 'Vertical Position y (m)', Math.min(0, ...allY), Math.max(1.0, ...allY) * 1.22);
+
+  const qualY = el('fitQualityYPos');
+  const detResY = el('detailsResidualsY');
+  const resContentY = el('residualsContentY');
+  if (qualY) {
+    if (sf.yPos === 'quadratic' && yFit) {
+      const maxRes = yFit.residuals && yFit.residuals.length > 0 ? Math.max(...yFit.residuals.map(r => Math.abs(r.res))) : 0;
+      qualY.style.display = 'block';
+      qualY.innerHTML = `<strong>Fit Quality:</strong> R² = <strong>${yFit.r2.toFixed(4)}</strong> &bull; RMSE = <strong>${(yFit.rmse * 100).toFixed(1)} cm</strong> &bull; Max Error = <strong>${(maxRes * 100).toFixed(1)} cm</strong>`;
+    } else {
+      qualY.style.display = 'none';
+    }
+  }
+  if (detResY && resContentY) {
+    if (sf.yPos === 'quadratic' && yFit && yFit.residuals && yFit.residuals.length > 0) {
+      detResY.style.display = 'block';
+      let tblHtml = '<table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.73rem; margin-top:0.25rem;">';
+      tblHtml += '<tr style="border-bottom:1.5px solid #cbd5e1; font-weight:700; color:var(--primary-teal);"><th>t (s)</th><th>Obs y (m)</th><th>Fit y (m)</th><th>Residual (cm)</th><th>Status</th></tr>';
+      yFit.residuals.forEach(r => {
+        const resCm = (r.res * 100).toFixed(1);
+        const absCm = Math.abs(r.res * 100);
+        const isOutlier = absCm > Math.max(9.0, yFit.rmse * 220);
+        const statusBadge = isOutlier ? '<span style="color:#dc2626; font-weight:700;">⚠️ Check frame click</span>' : '<span style="color:#16a34a; font-weight:600;">✓ Good</span>';
+        tblHtml += `<tr style="border-bottom:1px solid #f1f5f9; ${isOutlier ? 'background:#fee2e2;' : ''}"><td>${r.x.toFixed(3)}</td><td>${r.y.toFixed(3)}</td><td>${r.pred.toFixed(3)}</td><td>${Number(resCm) > 0 ? '+' : ''}${resCm} cm</td><td>${statusBadge}</td></tr>`;
+      });
+      tblHtml += '</table>';
+      resContentY.innerHTML = tblHtml;
+    } else {
+      detResY.style.display = 'none';
+    }
+  }
 
   // --- 3B Left: Tangent-Line Explorer on y(t) ---
   if (state.activeTangentTime === null || state.activeTangentTime < tMin || state.activeTangentTime > tMax) {
@@ -2694,7 +2787,20 @@ function updateReferenceQuantitiesBar() {
     el('inpCalcTUp').value = state.observedTUp || '';
   }
   if (el('refReadoutY0')) el('refReadoutY0').textContent = `y₀ = ${exp.y0.toFixed(3)} m`;
-  if (el('refReadoutFitC')) el('refReadoutFitC').textContent = `C = ${exp.C.toFixed(3)} m`;
+  if (el('refReadoutFitC')) {
+    if (state.courseLevel === 'on-level') {
+      el('refReadoutFitC').style.display = 'none';
+      if (el('refReadoutFitC').previousSibling && el('refReadoutFitC').previousSibling.nodeType === Node.TEXT_NODE) {
+        el('refReadoutFitC').previousSibling.textContent = '';
+      }
+    } else {
+      el('refReadoutFitC').style.display = 'inline';
+      if (el('refReadoutFitC').previousSibling && el('refReadoutFitC').previousSibling.nodeType === Node.TEXT_NODE) {
+        el('refReadoutFitC').previousSibling.textContent = ' | ';
+      }
+      el('refReadoutFitC').textContent = `C = ${exp.C.toFixed(3)} m`;
+    }
+  }
   if (el('refReadoutEndpoints')) {
     el('refReadoutEndpoints').textContent = `Δx = ${exp.dxTrack.toFixed(3)} m, Δy = ${exp.dyTrack.toFixed(3)} m`;
   }
@@ -2706,6 +2812,20 @@ function updateReferenceQuantitiesBar() {
   }
   if (el('refReadoutFitB')) {
     el('refReadoutFitB').textContent = `B = ${exp.B.toFixed(3)} m/s`;
+  }
+  updateObservedTUpUncertainty();
+}
+
+function updateObservedTUpUncertainty() {
+  const node = el('tUpUncertaintyNotice');
+  if (!node) return;
+  const dtStep = (state.stepFrames || 1) / (state.fps || 30);
+  const halfStep = dtStep / 2;
+  const tVal = parseFloat(state.observedTUp);
+  if (Number.isFinite(tVal) && tVal > 0) {
+    node.innerHTML = `t<sub>up</sub> = <strong>${tVal.toFixed(3)} s &plusmn; ${halfStep.toFixed(3)} s</strong> (frame step spacing &Delta;t<sub>step</sub> = ${dtStep.toFixed(3)} s)`;
+  } else {
+    node.innerHTML = `Frame spacing uncertainty: &plusmn;${halfStep.toFixed(3)} s (&Delta;t<sub>step</sub> = ${dtStep.toFixed(3)} s)`;
   }
 }
 
@@ -2748,7 +2868,167 @@ function populateDOMFromStudentState() {
   updateWrittenStatusBadges();
 }
 
+const AUTOSAVE_STORAGE_KEY = 'projectile_video_lab_autosave_v2';
+
+function saveToLocalStorage() {
+  try {
+    syncStudentInputsFromDOM();
+    const payload = {
+      timestamp: Date.now(),
+      studentName: state.studentName,
+      activeSeries: state.activeSeries,
+      series: state.series,
+      observedTUp: state.observedTUp,
+      selectedFits: state.selectedFits,
+      tangentPoints: state.tangentPoints,
+      studentResponses: state.studentResponses,
+      firstAttemptPrediction: state.firstAttemptPrediction,
+      predictionRevision: state.predictionRevision,
+      graphConnections: state.graphConnections,
+      courseLevel: state.courseLevel,
+      isTeacherMode: state.isTeacherMode,
+      usedShortcuts: state.usedShortcuts,
+      checkCounts: state.checkCounts
+    };
+    localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('Autosave error:', err);
+  }
+}
+
+function checkAutosaveOnLoad() {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    const hasData = (data.series && data.series.A && data.series.A.length > 0) ||
+                    (data.studentResponses && Object.values(data.studentResponses).some(v => Boolean(v && String(v).trim())));
+    if (!hasData) return;
+
+    const banner = el('autosaveNoticeBanner');
+    const desc = el('autosaveNoticeDesc');
+    if (banner && desc) {
+      const timeStr = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      desc.textContent = `Autosaved work from ${timeStr} (${(data.series.A || []).length} tracked frames, answers saved) found.`;
+      banner.style.display = 'block';
+    }
+  } catch (err) {
+    console.warn('Check autosave error:', err);
+  }
+}
+
+function restoreAutosave() {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.studentName) state.studentName = data.studentName;
+    if (data.series) state.series = data.series;
+    if (data.observedTUp) state.observedTUp = data.observedTUp;
+    if (data.selectedFits) state.selectedFits = data.selectedFits;
+    if (data.tangentPoints) state.tangentPoints = data.tangentPoints;
+    if (data.studentResponses) state.studentResponses = data.studentResponses;
+    if (data.firstAttemptPrediction) state.firstAttemptPrediction = data.firstAttemptPrediction;
+    if (data.predictionRevision) state.predictionRevision = data.predictionRevision;
+    if (data.graphConnections) state.graphConnections = data.graphConnections;
+    if (data.courseLevel) setCourseLevel(data.courseLevel);
+    if (data.usedShortcuts) state.usedShortcuts = data.usedShortcuts;
+    if (data.checkCounts) state.checkCounts = data.checkCounts;
+
+    populateDOMFromStudentState();
+    autoFitAndDeriveAllGraphs();
+    updatePosChart();
+    drawOverlay();
+    updateReferenceQuantitiesBar();
+
+    const banner = el('autosaveNoticeBanner');
+    if (banner) banner.style.display = 'none';
+  } catch (err) {
+    alert('Could not restore autosave: ' + err.message);
+  }
+}
+
+function setCourseLevel(level) {
+  state.courseLevel = level === 'on-level' ? 'on-level' : 'honors';
+  if (el('btnLevelOnLevel')) el('btnLevelOnLevel').classList.toggle('active', state.courseLevel === 'on-level');
+  if (el('btnLevelHonors')) el('btnLevelHonors').classList.toggle('active', state.courseLevel === 'honors');
+  updateReferenceQuantitiesBar();
+}
+
+function setTeacherMode(enabled) {
+  state.isTeacherMode = Boolean(enabled);
+  const txt = el('teacherModeStateText');
+  if (txt) txt.textContent = state.isTeacherMode ? 'ON' : 'OFF';
+  const btn = el('btnTeacherModeToggle');
+  if (btn) btn.className = state.isTeacherMode ? 'btn btn-amber' : 'btn';
+
+  const btnTrack = el('btnAutoDemoTrack');
+  const btnTangents = el('btnAutoSampleTangents');
+  if (btnTrack) btnTrack.style.display = state.isTeacherMode ? 'inline-flex' : 'none';
+  if (btnTangents) btnTangents.style.display = state.isTeacherMode ? 'inline-flex' : 'none';
+}
+
+function updateCheckButtonsAvailability() {
+  const sr = state.studentResponses;
+  // Tab 4: Show work in calculation work boxes
+  const work4 = [
+    (sr.work5aVx || ''),
+    (sr.work5bAy || ''),
+    (sr.work5cVy0 || ''),
+    (sr.work5dDisp || ''),
+    (sr.workMaxHeight || ''),
+    (sr.workVector || '')
+  ].join(' ').trim();
+
+  const btnCheck4 = el('btnCheckWorksheet');
+  const hint4 = el('checkWorksheetHint');
+  if (btnCheck4) {
+    if (work4.length >= 8) {
+      btnCheck4.disabled = false;
+      if (hint4) hint4.textContent = '✓ Work entered — ready to check';
+    } else {
+      btnCheck4.disabled = true;
+      if (hint4) hint4.textContent = '✍️ Enter written work below to unlock check';
+    }
+  }
+
+  // Tab 5A: Signed Area work box
+  const workArea = (sr.workSignedArea || '').trim();
+  const btnCheckArea = el('btnCheckAreaTab5');
+  const hintArea = el('checkAreaHint');
+  if (btnCheckArea) {
+    if (workArea.length >= 6) {
+      btnCheckArea.disabled = false;
+      if (hintArea) hintArea.textContent = '✓ Work entered — ready to check';
+    } else {
+      btnCheckArea.disabled = true;
+      if (hintArea) hintArea.textContent = '✍️ Show work below to unlock check';
+    }
+  }
+
+  // Tab 5B: Explanations
+  const workIntervals = [
+    (sr.txtStopExplanation || ''),
+    (sr.txtAccSignExplanation || ''),
+    (sr.reflectionText || '')
+  ].join(' ').trim();
+  const btnCheckIntervals = el('btnCheckIntervalsTab5');
+  const hintIntervals = el('checkIntervalsHint');
+  if (btnCheckIntervals) {
+    if (workIntervals.length >= 8) {
+      btnCheckIntervals.disabled = false;
+      if (hintIntervals) hintIntervals.textContent = '✓ Explanations entered — ready to check';
+    } else {
+      btnCheckIntervals.disabled = true;
+      if (hintIntervals) hintIntervals.textContent = '✍️ Complete answers to unlock check';
+    }
+  }
+}
+
 function updateWrittenStatusBadges() {
+  updateCheckButtonsAvailability();
+  saveToLocalStorage();
+
   const revBadge = el('statusRevisionBadge');
   if (revBadge) {
     const hasRev = (state.predictionRevision || '').trim().length >= 10;
@@ -2786,7 +3066,14 @@ function setFeedbackBox(boxId, status, message) {
   node.innerHTML = message;
 }
 
-function checkNumbersForPracticeFeedback() {
+function checkNumbersForPracticeFeedback(e) {
+  // Track verification check counts to prevent guess-and-check abuse
+  const triggerId = (e && e.target) ? e.target.id : '';
+  if (triggerId === 'btnCheckWorksheet') state.checkCounts.calculations++;
+  else if (triggerId === 'btnCheckAreaTab5') state.checkCounts.area++;
+  else if (triggerId === 'btnCheckIntervalsTab5') state.checkCounts.intervals++;
+  else { state.checkCounts.calculations++; }
+
   syncStudentInputsFromDOM();
   autoFitAndDeriveAllGraphs();
   const exp = getExpectedPhysicsValues();
@@ -2806,7 +3093,7 @@ function checkNumbersForPracticeFeedback() {
     return Math.abs(val - target) <= Math.max(absTol, Math.abs(target) * relTol);
   };
 
-  // --- 5a: Horizontal velocity v0x = dx / dt ---
+  // --- 4a: Horizontal velocity v0x = dx / dt ---
   const v0xVal = parseNum(sr.inpVx0);
   let ok5a = false;
   if (v0xVal === null) {
@@ -2818,7 +3105,7 @@ function checkNumbersForPracticeFeedback() {
     setFeedbackBox('fb5a', 'warn', `Check your slope calculation Δx / Δt using two points on the fitted x–t line. Expected slope is near ${exp.m.toFixed(3)} m/s.`);
   }
 
-  // --- 5b: Vertical acceleration ay,fit = dvy / dt ---
+  // --- 4b: Vertical acceleration ay,fit = dvy / dt ---
   const ayVal = parseNum(sr.inpAy);
   let ok5b = false;
   if (ayVal === null) {
@@ -2838,7 +3125,7 @@ function checkNumbersForPracticeFeedback() {
     badgeAB.className = `pct-diff-badge ${(ok5a && ok5b) ? 'good' : 'warn'}`;
   }
 
-  // --- 5c: Predicted v0y,pred = -ay,ref * t_up ---
+  // --- 4c: Predicted v0y,pred = -ay,ref * t_up (Split Arithmetic vs Agreement with B) ---
   const vy0PredVal = parseNum(sr.inpVy0Pred);
   let ok5c = false;
   if (exp.tUp === null) {
@@ -2847,13 +3134,19 @@ function checkNumbersForPracticeFeedback() {
     setFeedbackBox('fb5c', 'hint', 'Calculate v₀ᵧ,pred = −aᵧ,ref · t_up using aᵧ,ref = −9.8 m/s² and your observed t_up.');
   } else if (vy0PredVal < 0 && withinTol(Math.abs(vy0PredVal), exp.vy0Pred)) {
     setFeedbackBox('fb5c', 'warn', 'Check the sign: at the first tracked frame (t = 0), the ball is moving upward (+y), so v₀ᵧ,pred = −(−9.8 m/s²)·t_up is positive.');
-  } else if (withinTol(vy0PredVal, exp.B, 0.01, 0.01) && !withinTol(exp.vy0Pred, exp.B, 0.02, 0.02)) {
-    setFeedbackBox('fb5c', 'warn', 'Use v₀ᵧ,pred = −(−9.8 m/s²)·t_up from your observed video rise time t_up rather than copying B directly from the fit; then compare v₀ᵧ,pred with B.');
-  } else if (withinTol(vy0PredVal, exp.vy0Pred)) {
-    ok5c = true;
-    setFeedbackBox('fb5c', 'good', `✓ Numbers checked: v₀ᵧ,pred = ${vy0PredVal.toFixed(3)} m/s (using t_up = ${exp.tUp.toFixed(3)} s and aᵧ,ref = −9.8 m/s²). Compare this with fitted B = ${exp.B.toFixed(3)} m/s in your notes.`);
   } else {
-    setFeedbackBox('fb5c', 'warn', `Check your multiplication: v₀ᵧ,pred = −(−9.8 m/s²)(${exp.tUp.toFixed(3)} s) ≈ ${exp.vy0Pred.toFixed(3)} m/s.`);
+    // 1. Check Arithmetic: is vy0PredVal equal to 9.80 * t_up?
+    const expectedVy0Arithmetic = 9.80 * exp.tUp;
+    const isArithmeticCorrect = withinTol(vy0PredVal, expectedVy0Arithmetic, 0.04, 0.06);
+    if (!isArithmeticCorrect) {
+      setFeedbackBox('fb5c', 'warn', `Check arithmetic: v₀ᵧ,pred should equal −(−9.80 m/s²) × t_up (${exp.tUp.toFixed(3)} s) = ${expectedVy0Arithmetic.toFixed(3)} m/s.`);
+    } else {
+      ok5c = true;
+      // 2. Separate Comparison with B:
+      const diffB = Math.abs(vy0PredVal - exp.B);
+      const pctB = exp.B > 0 ? ((diffB / exp.B) * 100).toFixed(1) : '0';
+      setFeedbackBox('fb5c', 'good', `✓ Arithmetic Correct: v₀ᵧ,pred = ${vy0PredVal.toFixed(3)} m/s (using 9.80 × ${exp.tUp.toFixed(3)} s).<br><span style="font-size:0.75rem; color:#475569;">📊 Comparison with fitted B: B = ${exp.B.toFixed(3)} m/s (diff: ${diffB.toFixed(3)} m/s, ${pctB}%). Disagreeing with B is normal due to discrete video frame spacing! In your work box below, explain why this difference occurs.</span>`);
+    }
   }
 
   // --- 5d: Displacements dx, dy at t_hang and final height y_final = y0 + dy ---
@@ -3339,8 +3632,23 @@ function preparePrintableReport() {
                   <td><strong>${exp ? exp.T.toFixed(3) + ' s' : '—'}</strong> (${pts.length} tracked instants over [0.000 s, ${exp ? exp.tMax.toFixed(3) : '0.000'} s])</td>
                 </tr>
                 <tr>
-                  <td><strong>Observed Video Rise Time t<sub>up</sub></strong></td>
-                  <td>${fmtStudentVal(state.observedTUp, 's')} <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
+                  <td><strong>Tracking Method &amp; Shortcuts</strong></td>
+                  <td>
+                    ${state.usedShortcuts && state.usedShortcuts.autoTrack ? '<span class="report-shortcut-tag">⚠️ Tracked coordinates: auto-loaded (Teacher Demo)</span>' : '<span style="color:#15803d; font-weight:600;">✓ Coordinates manually tracked by student</span>'}
+                    ${state.usedShortcuts && state.usedShortcuts.autoTangents ? '<span class="report-shortcut-tag">⚠️ Tangent slopes: auto-sampled (Teacher Demo)</span>' : '<span style="color:#15803d; font-weight:600; margin-left:0.4rem;">✓ Tangent slopes: student plotted</span>'}
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Number Verification Checks Used</strong></td>
+                  <td>
+                    Tab 4 Calculations: <strong>${state.checkCounts ? state.checkCounts.calculations : 0}</strong> &bull;
+                    Tab 5A Area: <strong>${state.checkCounts ? state.checkCounts.area : 0}</strong> &bull;
+                    Tab 5B Intervals: <strong>${state.checkCounts ? state.checkCounts.intervals : 0}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Observed Video Rise Time t<sub>up</sub> &amp; Uncertainty</strong></td>
+                  <td>${fmtStudentVal(state.observedTUp, 's')} &plusmn; ${((state.stepFrames || 1) / (state.fps || 30) / 2).toFixed(3)} s (frame step spacing) <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
                 </tr>
                 <tr>
                   <td><strong>Tracked Endpoint Changes at t<sub>hang</sub></strong></td>
@@ -3409,9 +3717,9 @@ function preparePrintableReport() {
         </div>
       </section>
 
-      <!-- SECTION 3: Slopes & Projectile Model Calculations (Student Steps 5a–5f) -->
+      <!-- SECTION 3: Slopes & Projectile Model Calculations (Student Steps 4a–4f) -->
       <section class="report-section">
-        <h2 class="report-section-title">3. Shown Slope Calculations &amp; Projectile Predictions (Steps 5a–5f; Fixed a<sub>y,ref</sub> = &minus;9.8 m/s²)</h2>
+        <h2 class="report-section-title">3. Shown Slope Calculations &amp; Projectile Predictions (Steps 4a–4f; Fixed a<sub>y,ref</sub> = &minus;9.8 m/s²)</h2>
         <table class="report-table">
           <thead>
             <tr>
@@ -3423,7 +3731,7 @@ function preparePrintableReport() {
           </thead>
           <tbody>
             <tr>
-              <td><strong>5a. Horizontal Velocity</strong><br><small>Slope v<sub>0x</sub> = &Delta;x / &Delta;t on fitted x–t line</small></td>
+              <td><strong>4a. Horizontal Velocity</strong><br><small>Slope v<sub>0x</sub> = &Delta;x / &Delta;t on fitted x–t line</small></td>
               <td>
                 <div>Pt 1: ${fmtStudentVal(sr.inp5aPt1)}</div>
                 <div>Pt 2: ${fmtStudentVal(sr.inp5aPt2)}</div>
@@ -3433,7 +3741,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5aVx)}</td>
             </tr>
             <tr>
-              <td><strong>5b. Vertical Acceleration</strong><br><small>Slope a<sub>y,fit</sub> = &Delta;v<sub>y</sub> / &Delta;t on derived v<sub>y</sub>–t line</small></td>
+              <td><strong>4b. Vertical Acceleration</strong><br><small>Slope a<sub>y,fit</sub> = &Delta;v<sub>y</sub> / &Delta;t on derived v<sub>y</sub>–t line</small></td>
               <td>
                 <div>Pt 1: ${fmtStudentVal(sr.inp5bPt1)}</div>
                 <div>Pt 2: ${fmtStudentVal(sr.inp5bPt2)}</div>
@@ -3443,7 +3751,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5bAy)}</td>
             </tr>
             <tr>
-              <td><strong>5c. Initial Vertical Velocity</strong><br><small>v<sub>0y,pred</sub> = &minus;a<sub>y,ref</sub> t<sub>up</sub> vs. fitted B</small></td>
+              <td><strong>4c. Initial Vertical Velocity</strong><br><small>v<sub>0y,pred</sub> = &minus;a<sub>y,ref</sub> t<sub>up</sub> vs. fitted B</small></td>
               <td>
                 <div>Observed t<sub>up</sub>: ${fmtStudentVal(state.observedTUp, 's')}</div>
                 <div>v<sub>0y,pred</sub>: ${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</div>
@@ -3455,7 +3763,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5cVy0)}</td>
             </tr>
             <tr>
-              <td><strong>5d. Displacements &amp; Final Height at t<sub>hang</sub></strong><br><small>&Delta;x, &Delta;y over t<sub>hang</sub>, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
+              <td><strong>4d. Displacements &amp; Final Height at t<sub>hang</sub></strong><br><small>&Delta;x, &Delta;y over t<sub>hang</sub>, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
               <td>
                 <div>Pred &Delta;x: ${fmtStudentVal(sr.inpCalcRange, 'm')}</div>
                 <div>Pred &Delta;y: ${fmtStudentVal(sr.inpPredDy, 'm')}</div>
@@ -3469,7 +3777,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.work5dDisp)}</td>
             </tr>
             <tr>
-              <td><strong>5e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and measured y<sub>0</sub></small></td>
+              <td><strong>4e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and measured y<sub>0</sub></small></td>
               <td>
                 <div>Pred &Delta;y<sub>up</sub>: ${fmtStudentVal(sr.inpPredDyUp, 'm')}</div>
                 <div>Pred y<sub>max</sub>: ${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</div>
@@ -3482,7 +3790,7 @@ function preparePrintableReport() {
               <td>${fmtStudentText(sr.workMaxHeight)}</td>
             </tr>
             <tr>
-              <td><strong>5f. Initial Speed &amp; Launch Angle</strong><br><small>At first tracked airborne instant (t = 0)</small></td>
+              <td><strong>4f. Initial Speed &amp; Launch Angle</strong><br><small>At first tracked airborne instant (t = 0)</small></td>
               <td>
                 <div>Speed v<sub>0</sub>: ${fmtStudentVal(sr.inpSpeedV0, 'm/s')}</div>
                 <div>Angle &theta;: ${fmtStudentVal(sr.inpAngleTheta, '°')}</div>
@@ -3972,6 +4280,7 @@ function initEventListeners() {
   }
   if (el('btnAutoDemoTrack')) {
     el('btnAutoDemoTrack').addEventListener('click', () => {
+      state.usedShortcuts.autoTrack = true;
       if (!state.isSynthetic) {
         initSyntheticExperiment(el('presetModelSelect') ? el('presetModelSelect').value : 'basketball');
       }
@@ -4420,6 +4729,43 @@ function initEventListeners() {
   }
   document.querySelectorAll('.help-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => openHelpModal(btn.dataset.helpTab));
+  });
+
+  // Course Level Toggle (On-Level vs. Honors)
+  if (el('btnLevelOnLevel')) {
+    el('btnLevelOnLevel').addEventListener('click', () => setCourseLevel('on-level'));
+  }
+  if (el('btnLevelHonors')) {
+    el('btnLevelHonors').addEventListener('click', () => setCourseLevel('honors'));
+  }
+
+  // Teacher Mode Toggle
+  if (el('btnTeacherModeToggle')) {
+    el('btnTeacherModeToggle').addEventListener('click', () => {
+      setTeacherMode(!state.isTeacherMode);
+    });
+  }
+
+  // Autosave Banner Buttons
+  if (el('btnRestoreAutosave')) {
+    el('btnRestoreAutosave').addEventListener('click', restoreAutosave);
+  }
+  if (el('btnDismissAutosave')) {
+    el('btnDismissAutosave').addEventListener('click', () => {
+      const banner = el('autosaveNoticeBanner');
+      if (banner) banner.style.display = 'none';
+    });
+  }
+
+  // Warn before closing tab if student has tracked data or written responses
+  window.addEventListener('beforeunload', (e) => {
+    const pts = state.series[state.activeSeries] || [];
+    const hasWork = pts.length > 2 || Object.values(state.studentResponses).some(v => Boolean(v && String(v).trim()));
+    if (hasWork) {
+      saveToLocalStorage();
+      e.preventDefault();
+      e.returnValue = '';
+    }
   });
 }
 

@@ -28,6 +28,18 @@
           <span class="lab-badge">🎯 Projectile Video Lab</span>
         </div>
         <div class="header-actions">
+          <!-- Course Level Selector (On-Level vs. Honors) -->
+          <div class="level-toggle-group" title="Toggle between On-Level (simplified C=y₀ reference) and Honors mode">
+            <span style="font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-right: 0.2rem;">Level:</span>
+            <button type="button" class="level-btn" id="btnLevelOnLevel" data-level="on-level">On-Level</button>
+            <button type="button" class="level-btn active" id="btnLevelHonors" data-level="honors">Honors</button>
+          </div>
+
+          <!-- Teacher Mode Toggle -->
+          <button type="button" id="btnTeacherModeToggle" class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.55rem;" title="Teacher / Demo Mode (Unlocks shortcuts; shortcuts will be noted on printed report)">
+            🎓 Teacher Mode: <span id="teacherModeStateText">OFF</span>
+          </button>
+
           <button type="button" id="btnLabHelp" class="btn btn-amber" style="font-weight: 700;" title="Open Student Directions &amp; 10-Point Lab Rubric">
             📖 Quick Guide &amp; Rubric
           </button>
@@ -52,6 +64,20 @@
         <span style="font-size: 0.84rem; color: var(--muted);">Follow Tabs 1 → 6 in order. Each tab focuses on one step.</span>
       </div>
     </header>
+
+    <!-- Browser Autosave Recovery Banner -->
+    <div id="autosaveNoticeBanner" style="display: none; margin: 0 0 0.75rem 0; padding: 0.65rem 1rem; background: #eef7fa; border: 1.5px solid var(--primary-teal); border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--ink);">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+        <div>
+          <strong style="color: var(--primary-teal);">📂 Autosaved Work Found:</strong>
+          <span id="autosaveNoticeDesc">Found autosaved progress from your previous browser session.</span>
+        </div>
+        <div style="display: flex; gap: 0.4rem;">
+          <button type="button" id="btnRestoreAutosave" class="btn btn-primary" style="font-size: 0.78rem; padding: 0.28rem 0.65rem;">Restore Progress</button>
+          <button type="button" id="btnDismissAutosave" class="btn" style="font-size: 0.78rem; padding: 0.28rem 0.55rem;">Dismiss</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== SIX-TAB MAIN WORKFLOW NAVIGATION ===== -->
     <div class="project-stepper-wrap" style="padding: 0.5rem 1rem; margin-bottom: 0.75rem; border-radius: 10px; border: 1px solid var(--border);">
@@ -159,11 +185,11 @@
           <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
             <label for="presetModelSelect" style="font-size: 0.75rem; color: var(--muted); font-weight: 600;">Clip:</label>
             <select id="presetModelSelect" class="input-control" style="font-size: 0.75rem; padding: 0.18rem 0.4rem; width: auto;">
-              <option value="basketball" selected>🏀 Basketball Launch (y₀ = 1.20 m)</option>
-              <option value="projectile">⚾ Ball Toss Arc (y₀ = 1.00 m)</option>
-              <option value="soccer">⚽ Soccer Chip Kick (y₀ = 0.45 m)</option>
+              <option value="basketball" selected>🏀 Basketball Practice Arc (First Tracked Frame y₀ = 1.43 m)</option>
+              <option value="projectile">⚾ Ball Toss Arc (First Tracked Frame y₀ = 1.16 m)</option>
+              <option value="soccer">⚽ Soccer Chip Kick (First Tracked Frame y₀ = 0.58 m)</option>
             </select>
-            <button type="button" id="btnAutoDemoTrack" class="btn btn-ghost" style="font-size: 0.74rem; padding: 0.18rem 0.5rem;">
+            <button type="button" id="btnAutoDemoTrack" class="btn btn-ghost" style="font-size: 0.74rem; padding: 0.18rem 0.5rem;" title="Teacher Demo: Load sample tracked coordinates">
               ⚡ Load Sample Points
             </button>
           </div>
@@ -291,9 +317,12 @@
               <label for="inpObservedTUp" style="font-size: 0.78rem; font-weight: 700; color: var(--accent-amber-dark); display: block; margin-bottom: 0.2rem;">
                 Observed Video Rise Time to Apex \(t_{\text{up}}\) (s):
               </label>
-              <div style="display: flex; gap: 0.4rem;">
+              <div style="display: flex; gap: 0.4rem; align-items: center;">
                 <input type="number" id="inpObservedTUp" class="input-control" step="0.001" min="0" placeholder="e.g. 0.500" style="flex: 1; font-weight: 700;">
                 <button type="button" id="btnUsePeakFrameTUp" class="btn" style="font-size: 0.73rem; padding: 0.3rem 0.55rem;">Use Peak Frame \(t\)</button>
+              </div>
+              <div id="tUpUncertaintyNotice" style="margin-top: 0.35rem; font-size: 0.74rem; color: var(--muted); font-weight: 600;">
+                Uncertainty: ±0.000 s (discrete frame step spacing)
               </div>
             </div>
           </div>
@@ -429,6 +458,17 @@
 
       <!-- Unlocked Graph-Building Workspace with 4 Focused Sub-Tabs -->
       <div id="sixGraphRevealSection">
+        <!-- Automatic Video Frame-Rate Error Detection Banner -->
+        <div id="fpsWarningBanner" class="fps-warning-banner" style="display: none; margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1.5px solid #ef4444; border-radius: var(--radius-sm);">
+          <div style="display: flex; gap: 0.65rem; align-items: flex-start;">
+            <div style="font-size: 1.4rem; line-height: 1;">⚠️</div>
+            <div style="flex: 1;">
+              <strong style="color: #991b1b; font-size: 0.92rem; display: block; margin-bottom: 0.2rem;">Video Frame Rate (FPS) Setting Error Detected!</strong>
+              <div id="fpsWarningMessage" style="font-size: 0.82rem; color: #7f1d1d; line-height: 1.45;"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="subtab-nav" role="tablist" aria-label="Build Graphs Sub-Steps">
           <button type="button" class="subtab-btn active" data-graph-subtab="subtab-3a" id="btnSubtab3A">
             <span class="subtab-check" id="chkSub3A">1</span> 3A. Fit Position (\(x\) &amp; \(y\))
@@ -469,6 +509,7 @@
                 <div style="height: 240px; position: relative;">
                   <canvas id="canvasBuildXPos"></canvas>
                 </div>
+                <div id="fitQualityXPos" class="fit-quality-bar" style="display:none; font-size:0.75rem; padding: 0.35rem 0.55rem; background: var(--surface-alt); border-radius: 4px; border: 1px solid var(--border-light); margin-top: 0.35rem;"></div>
                 <div id="coachFitXPos" class="per-coach-box">
                   👆 Select a curve fit above to model your tracked \(x(t)\) points.
                 </div>
@@ -489,6 +530,11 @@
                 <div style="height: 240px; position: relative;">
                   <canvas id="canvasBuildYPos"></canvas>
                 </div>
+                <div id="fitQualityYPos" class="fit-quality-bar" style="display:none; font-size:0.75rem; padding: 0.35rem 0.55rem; background: #fff7ed; border-radius: 4px; border: 1px solid var(--accent-amber-border); margin-top: 0.35rem;"></div>
+                <details class="per-hint" id="detailsResidualsY" style="display:none; margin-top:0.35rem;">
+                  <summary style="font-size:0.76rem;">📊 Point Residuals &amp; Outlier Check (Catch Misclicks)</summary>
+                  <div id="residualsContentY" style="font-size:0.74rem; margin-top:0.3rem; max-height:150px; overflow-y:auto;"></div>
+                </details>
                 <div id="coachFitYPos" class="per-coach-box">
                   👆 Select a curve fit above to model your tracked \(y(t)\) arch.
                 </div>
@@ -816,7 +862,7 @@
             <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
               <button type="button" class="btn" id="btnBackTo3C">&larr; Back: 3C. Fit Acceleration</button>
               <button type="button" class="btn btn-amber" id="btnProceedToStep4" style="font-weight: 700;">
-                Next: Tab 4 — Calculations (5a–5f) &rarr;
+                Next: Tab 4 — Kinematics Calculations (4a–4f) &rarr;
               </button>
             </div>
           </div>
@@ -825,16 +871,19 @@
     </section>
 
     <!-- =====================================================================
-         TAB 4: KINEMATICS CALCULATIONS (5a–5f Split into 3 Clean Sub-Tabs)
+         TAB 4: KINEMATICS CALCULATIONS (4a–4f Split into 3 Clean Sub-Tabs)
          ===================================================================== -->
     <section id="stepView4" class="step-view" style="padding: 0.5rem 0; max-width: 1360px; margin: 0 auto; display: none;">
       <!-- Persistent Compact Reference Values Bar -->
       <div class="card" style="padding: 0.85rem 1.1rem; margin-bottom: 0.85rem; background: #eef7fa; border: 1.5px solid var(--primary-teal);">
         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
-          <strong style="color: var(--primary-teal); font-size: 0.88rem;">📌 Your Reference Values (Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) for predictions 5c–5e)</strong>
-          <button type="button" id="btnCheckWorksheet" class="btn btn-amber" style="font-weight: 700; padding: 0.38rem 0.85rem;">
-            ✓ Check My Numbers
-          </button>
+          <strong style="color: var(--primary-teal); font-size: 0.88rem;">📌 Your Reference Values (Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) for predictions 4c–4e)</strong>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span id="checkWorksheetHint" class="check-lock-hint" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Enter written work to unlock check</span>
+            <button type="button" id="btnCheckWorksheet" class="btn btn-amber" style="font-weight: 700; padding: 0.38rem 0.85rem;" disabled>
+              ✓ Check My Numbers
+            </button>
+          </div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.45rem; font-size: 0.76rem;">
           <div style="background: #ffffff; padding: 0.35rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
@@ -863,27 +912,27 @@
       <!-- Sub-Tab Navigation for Tab 4 -->
       <div class="subtab-nav" role="tablist" aria-label="Calculations Sub-Tabs">
         <button type="button" class="subtab-btn active" data-calc-subtab="subtab-4a" id="btnSubtab4A">
-          <span class="subtab-check" id="chkSub4A">1</span> 4A. Graph Slopes (5a &amp; 5b)
+          <span class="subtab-check" id="chkSub4A">1</span> 4A. Graph Slopes (4a &amp; 4b)
         </button>
         <button type="button" class="subtab-btn" data-calc-subtab="subtab-4b" id="btnSubtab4B">
-          <span class="subtab-check" id="chkSub4B">2</span> 4B. Velocities &amp; Displacements (5c &amp; 5d)
+          <span class="subtab-check" id="chkSub4B">2</span> 4B. Velocities &amp; Displacements (4c &amp; 4d)
         </button>
         <button type="button" class="subtab-btn" data-calc-subtab="subtab-4c" id="btnSubtab4C">
-          <span class="subtab-check" id="chkSub4C">3</span> 4C. Max Height &amp; Launch Vector (5e &amp; 5f)
+          <span class="subtab-check" id="chkSub4C">3</span> 4C. Max Height &amp; Launch Vector (4e &amp; 4f)
         </button>
       </div>
 
-      <!-- SUB-TAB 4A: 5a & 5b -->
+      <!-- SUB-TAB 4A: 4a & 4b -->
       <div id="subtab-4a" class="subtab-panel active">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4A: Two-Point Slope Calculations (5a &amp; 5b)</h3>
+            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4A: Two-Point Slope Calculations (4a &amp; 4b)</h3>
             <span class="pct-diff-badge" id="badgeSlopesAB">Not checked</span>
           </div>
           <div class="calc-grid-2">
-            <!-- 5a -->
+            <!-- 4a -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5a. Horizontal Velocity from Graph Slope</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">4a. Horizontal Velocity from Graph Slope</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Pick two points on your fitted \(x\)–\(t\) line and compute the slope.
               </p>
@@ -900,9 +949,9 @@
               <textarea id="work5aVx" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your slope equation, substitution with units, and explain why horizontal velocity is constant in your model..."></textarea>
             </div>
 
-            <!-- 5b -->
+            <!-- 4b -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">5b. Vertical Acceleration from Graph Slope</h4>
+              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">4b. Vertical Acceleration from Graph Slope</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Pick two points on your fitted \(v_y\)–\(t\) line and compute the slope. Compare with free-fall reference.
               </p>
@@ -922,23 +971,23 @@
 
           <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
             <button type="button" class="btn btn-amber" id="btnNextTo4B" style="font-weight: 700;">
-              Next: 4B. Velocities &amp; Displacements (5c &amp; 5d) &rarr;
+              Next: 4B. Velocities &amp; Displacements (4c &amp; 4d) &rarr;
             </button>
           </div>
         </div>
       </div>
 
-      <!-- SUB-TAB 4B: 5c & 5d -->
+      <!-- SUB-TAB 4B: 4c & 4d -->
       <div id="subtab-4b" class="subtab-panel">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4B: Initial Vertical Velocity (5c) &amp; Flight Displacements (5d)</h3>
+            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4B: Initial Vertical Velocity (4c) &amp; Flight Displacements (4d)</h3>
             <span class="pct-diff-badge" id="badgePredictionsCF">Not checked</span>
           </div>
           <div class="calc-grid-2">
-            <!-- 5c -->
+            <!-- 4c -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5c. Initial Vertical Velocity Predicted from Apex Condition</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">4c. Initial Vertical Velocity Predicted from Apex Condition</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 At the apex, vertical velocity reaches zero. Use your observed video rise time \(t_{\text{up}}\) and reference gravity to predict \(v_{0y,\text{pred}}\), then compare with fitted parameter \(B\).
               </p>
@@ -951,9 +1000,9 @@
               <textarea id="work5cVy0" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your kinematic equation, substitution with units, compare with B from your fit, and explain possible sources of difference..."></textarea>
             </div>
 
-            <!-- 5d -->
+            <!-- 4d -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5d. Displacements &amp; Final Height at \(t_{\text{hang}}\)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">4d. Displacements &amp; Final Height at \(t_{\text{hang}}\)</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Use your velocities, total flight duration \(t_{\text{hang}}\), and reference gravity to predict horizontal displacement, vertical displacement, and final height.
               </p>
@@ -978,24 +1027,24 @@
           </div>
 
           <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
-            <button type="button" class="btn" id="btnBackTo4A">&larr; Back: 4A. Slopes (5a &amp; 5b)</button>
+            <button type="button" class="btn" id="btnBackTo4A">&larr; Back: 4A. Slopes (4a &amp; 4b)</button>
             <button type="button" class="btn btn-amber" id="btnNextTo4C" style="font-weight: 700;">
-              Next: 4C. Max Height &amp; Launch Vector (5e &amp; 5f) &rarr;
+              Next: 4C. Max Height &amp; Launch Vector (4e &amp; 4f) &rarr;
             </button>
           </div>
         </div>
       </div>
 
-      <!-- SUB-TAB 4C: 5e & 5f -->
+      <!-- SUB-TAB 4C: 4e & 4f -->
       <div id="subtab-4c" class="subtab-panel">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4C: Maximum Height at \(t_{\text{up}}\) (5e) &amp; Launch Vector (5f)</h3>
+            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4C: Maximum Height at \(t_{\text{up}}\) (4e) &amp; Launch Vector (4f)</h3>
           </div>
           <div class="calc-grid-2">
-            <!-- 5e -->
+            <!-- 4e -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">5e. Maximum Height Using \(t_{\text{up}}\) (Not \(t_{\text{hang}}\))</h4>
+              <h4 style="font-size: 0.9rem; color: var(--accent-amber-dark); margin: 0 0 0.25rem 0;">4e. Maximum Height Using \(t_{\text{up}}\) (Not \(t_{\text{hang}}\))</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Use observed rise time \(t_{\text{up}}\) to determine upward displacement to the apex, then determine maximum height above the ground.
               </p>
@@ -1014,9 +1063,9 @@
               <textarea id="workMaxHeight" class="input-control" rows="2" style="width: 100%; font-size: 0.78rem; margin-top: 0.15rem;" placeholder="Show your work to find upward displacement and maximum height, and compare with your highest tracked point..."></textarea>
             </div>
 
-            <!-- 5f -->
+            <!-- 4f -->
             <div style="background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
-              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">5f. Launch Speed &amp; Angle at \(t = 0\)</h4>
+              <h4 style="font-size: 0.9rem; color: var(--primary-teal); margin: 0 0 0.25rem 0;">4f. Launch Speed &amp; Angle at \(t = 0\)</h4>
               <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem 0;">
                 Combine your horizontal velocity and initial vertical velocity to find the launch speed and launch angle above the horizontal.
               </p>
@@ -1037,7 +1086,7 @@
           </div>
 
           <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
-            <button type="button" class="btn" id="btnBackTo4B">&larr; Back: 4B. Displacements (5c &amp; 5d)</button>
+            <button type="button" class="btn" id="btnBackTo4B">&larr; Back: 4B. Displacements (4c &amp; 4d)</button>
             <button type="button" class="btn btn-amber" id="btnProceedToStep5" style="font-weight: 700;">
               Next: Tab 5 — Signed Area &amp; Motion Meaning &rarr;
             </button>
@@ -1066,9 +1115,10 @@
             <div>
               <strong>🎯 Step 5A Goal:</strong> Select a region on your \(v_y(t)\) graph to examine its geometric shape. Calculate the <strong>ascent area</strong> and <strong>descent area</strong> from the graph dimensions, determine the net vertical displacement \(\Delta y_{\text{area}}\), and check consistency with your fitted initial height \(C\).
             </div>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+              <span id="checkAreaHint" class="check-lock-hint" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Show work below to unlock check</span>
               <span class="pct-diff-badge" id="badgeSignedAreaVerify">Not checked</span>
-              <button type="button" id="btnCheckAreaTab5" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;">✓ Check Numbers</button>
+              <button type="button" id="btnCheckAreaTab5" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;" disabled>✓ Check Numbers</button>
             </div>
           </div>
 
@@ -1160,9 +1210,10 @@
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 5B: Direction Intervals, 2D Apex Rest &amp; Measurement Limitation</h3>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+              <span id="checkIntervalsHint" class="check-lock-hint" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Complete answers to unlock check</span>
               <span class="pct-diff-badge" id="badgeMotionReasoning">Teacher review</span>
-              <button type="button" id="btnCheckIntervalsTab5" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;">✓ Check Interval Numbers</button>
+              <button type="button" id="btnCheckIntervalsTab5" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;" disabled>✓ Check Interval Numbers</button>
             </div>
           </div>
 
@@ -1308,9 +1359,9 @@
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkStatus2">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light);">
-                <td style="padding: 0.45rem 0.7rem; font-weight: 700;">3. Slopes &amp; Projectile Calculations 5a–5f (Tab 4)</td>
+                <td style="padding: 0.45rem 0.7rem; font-weight: 700;">3. Slopes &amp; Projectile Calculations 4a–4f (Tab 4)</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
-                <td style="padding: 0.45rem 0.7rem;">Slopes \(v_{0x}\) and \(a_{y,\text{fit}}\); predictions 5c–5f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), \(t_{\text{up}}, t_{\text{hang}}, y_0\) with work shown.</td>
+                <td style="padding: 0.45rem 0.7rem;">Slopes \(v_{0x}\) and \(a_{y,\text{fit}}\); predictions 4c–4f using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\), \(t_{\text{up}}, t_{\text{hang}}, y_0\) with work shown.</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkStatus3">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);">
@@ -1382,11 +1433,11 @@
         </div>
 
         <div id="help-step4" class="help-tab-panel">
-          <h4>Tabs 4–5: Projectile Calculations (5a–5f) &amp; Signed Area</h4>
+          <h4>Tabs 4–5: Projectile Calculations (4a–4f) &amp; Signed Area</h4>
           <ul class="help-list">
-            <li><strong>4A (Slopes 5a–5b):</strong> Compute \(v_{0x} = \Delta x / \Delta t\) on fitted \(x(t)\) and \(a_{y,\text{fit}} = \Delta v_y / \Delta t\) on fitted \(v_y(t)\).</li>
-            <li><strong>4B (5c–5d):</strong> Using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) and video \(t_{\text{up}}\), find \(v_{0y,\text{pred}} = -a_{y,\text{ref}}t_{\text{up}}\), then predict \(\Delta x, \Delta y,\) and \(y_{\text{final}} = y_0 + \Delta y\) at \(t_{\text{hang}}\).</li>
-            <li><strong>4C (5e–5f):</strong> Find \(y_{\max} = y_0 + \Delta y_{\text{up}}\) using \(t_{\text{up}}\) (not \(t_{\text{hang}}\)), plus launch speed \(v_0\) and angle \(\theta\).</li>
+            <li><strong>4A (Slopes 4a–4b):</strong> Compute \(v_{0x} = \Delta x / \Delta t\) on fitted \(x(t)\) and \(a_{y,\text{fit}} = \Delta v_y / \Delta t\) on fitted \(v_y(t)\).</li>
+            <li><strong>4B (4c–4d):</strong> Using \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) and video \(t_{\text{up}}\), find \(v_{0y,\text{pred}} = -a_{y,\text{ref}}t_{\text{up}}\), then predict \(\Delta x, \Delta y,\) and \(y_{\text{final}} = y_0 + \Delta y\) at \(t_{\text{hang}}\).</li>
+            <li><strong>4C (4e–4f):</strong> Find \(y_{\max} = y_0 + \Delta y_{\text{up}}\) using \(t_{\text{up}}\) (not \(t_{\text{hang}}\)), plus launch speed \(v_0\) and angle \(\theta\).</li>
             <li><strong>5A–5B (Area &amp; Motion):</strong> Sum the positive ascent area and negative descent area on \(v_y(t)\), add fitted \(C\) to check \(y_{\text{fit}}(t_{\text{hang}})\), and explain the intervals, apex motion, and one limitation.</li>
           </ul>
         </div>
