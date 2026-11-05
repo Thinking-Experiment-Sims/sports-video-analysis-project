@@ -16,7 +16,10 @@ const FIXED_AY_REF = -9.8; // Fixed reference vertical acceleration for lab pred
 // Global Application State
 // ============================================================================
 const state = {
-  schemaVersion: '2.0',
+  schemaVersion: '2.1',
+  mode: 'full', // 'full' | 'simplified'
+  autoSampled: false,
+  gravityWarningShown: false,
   currentStep: 1, // 1: Track the Flight, 2: Explain the Motion, 3: Submit Report
   studentName: '',
   teacherName: 'Mr. Lopez',
@@ -125,13 +128,21 @@ const state = {
   activeTangentTime: 0.15,
 
   // Course Level & Pedagogical Gating
-  courseLevel: 'honors', // 'on-level' | 'honors'
+  courseLevel: 'honors',
   isTeacherMode: false,
   usedShortcuts: {
     autoTrack: false,
     autoTangents: false
   },
   checkCounts: {
+    '5a': 0,
+    '5b': 0,
+    '5c': 0,
+    '5d': 0,
+    '5e': 0,
+    '5f': 0,
+    '5A_area': 0,
+    '5B_intervals': 0,
     calculations: 0,
     area: 0,
     intervals: 0
@@ -182,7 +193,10 @@ const state = {
     inpNegAccEnd: '',
     txtAccSignExplanation: '',
     // Specific measurement limitation tied to a reported result
-    reflectionText: ''
+    reflectionText: '',
+    // Simplified Mode Specific Fields
+    txtLimitationDirection: '',
+    txtConclusionGravity: ''
   },
 
   // Practice Feedback State (Saved separately from student responses)
@@ -279,11 +293,29 @@ function init() {
   initPosChart();
   initSyntheticExperiment('basketball');
   loadSamplePointsForActivePreset();
-  setTeacherMode(false);
+
+  // Mode and Teacher URL Parameters
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'simplified') {
+      setAppMode('simplified');
+    } else {
+      setAppMode('full');
+    }
+    const isTeacher = urlParams.get('teacher') === '1';
+    setTeacherShortcutVisibility(isTeacher);
+  } catch (err) {
+    console.warn('URL parameter parsing warning:', err);
+    setAppMode('full');
+  }
+
   updateCheckButtonsAvailability();
   checkAutosaveOnLoad();
   updateStepView(1);
   triggerKaTeXRender(document.body);
+
+  // Autosave interval every 30 seconds
+  setInterval(saveToLocalStorage, 30000);
 }
 
 function triggerKaTeXRender(container) {
@@ -366,9 +398,14 @@ function updateStepView(stepNum) {
   } else if (stepNum === 4) {
     autoFitAndDeriveAllGraphs();
     updateReferenceQuantitiesBar();
+    updateSimplifiedComparisons();
   } else if (stepNum === 5) {
     autoFitAndDeriveAllGraphs();
-    renderSignedAreaTab5Chart();
+    if (state.mode === 'simplified') {
+      switchSubtab('data-area-subtab', 'subtab-5b');
+    } else {
+      renderSignedAreaTab5Chart();
+    }
     updateWrittenStatusBadges();
   } else if (stepNum === 6) {
     autoFitAndDeriveAllGraphs();
@@ -376,6 +413,7 @@ function updateStepView(stepNum) {
     preparePrintableReport();
   }
 
+  saveToLocalStorage();
   triggerKaTeXRender(stepViews[stepNum - 1] || document.body);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1341,24 +1379,42 @@ function autoFitAndDeriveAllGraphs() {
   state.fitResults.yVel = yFit ? { slope: 2 * yFit.A, intercept: yFit.B, tZero: rawTZero } : null;
   state.fitResults.yAcc = yFit ? { ay: 2 * yFit.A, ref: FIXED_AY_REF } : null;
 
-  // Automatic Frame-Rate (FPS) Error Diagnostic Check
+  // Automatic Frame-Rate (FPS) Error Diagnostic Check (Part B Item 1)
   const fpsBanner = el('fpsWarningBanner');
   const fpsMsg = el('fpsWarningMessage');
   if (fpsBanner && fpsMsg) {
     if (yFit && pts.length >= 5) {
       const ayFitted = 2 * yFit.A;
-      if (ayFitted > -7.5 || ayFitted < -13.0) {
+      if (ayFitted < -11.3 || ayFitted > -8.3) {
         fpsBanner.style.display = 'block';
-        if (ayFitted > 0) {
-          fpsMsg.innerHTML = `Vertical acceleration slope is positive (<code>a<sub>y</sub> = +${ayFitted.toFixed(2)} m/s²</code>). Ensure your coordinate origin has +y pointing upward and you tracked the motion forward in time.`;
-        } else if (Math.abs(ayFitted) < 7.5) {
-          const k = Math.sqrt(9.80 / Math.max(0.01, Math.abs(ayFitted)));
-          const suggestedFps = Math.round(state.fps * k);
-          fpsMsg.innerHTML = `Fitted vertical acceleration is <strong>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</strong>, which is much weaker than gravity (−9.8 m/s²). Because acceleration scales as 1/t² &propto; FPS², an entered FPS that is <em>k</em>× too low makes gravity appear <em>k</em>²× too weak. Your video frame rate may be <strong>~${k.toFixed(1).replace('.0','')}× too low</strong> (e.g. entering ${state.fps} FPS for a ~${suggestedFps} FPS slow-motion clip). Please check Tab 1: Video Setup &amp; Frame Rate.`;
+        state.gravityWarningShown = true;
+        const absAy = Math.max(0.001, Math.abs(ayFitted));
+        const k = Math.sqrt(9.80 / absAy);
+        const invK = 1 / k;
+
+        let matchedN = null;
+        let isTooLow = true;
+        for (const N of [2, 4, 8]) {
+          if (Math.abs(k - N) / N <= 0.15) {
+            matchedN = N;
+            isTooLow = true;
+            break;
+          }
+          if (Math.abs(invK - N) / N <= 0.15) {
+            matchedN = N;
+            isTooLow = false;
+            break;
+          }
+        }
+
+        if (matchedN !== null) {
+          if (isTooLow) {
+            fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too low</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at. (Slow-motion clips often export at 30 fps.)`;
+          } else {
+            fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too high</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at.`;
+          }
         } else {
-          const k = Math.sqrt(Math.abs(ayFitted) / 9.80);
-          const suggestedFps = Math.round(state.fps / k);
-          fpsMsg.innerHTML = `Fitted vertical acceleration is <strong>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</strong>, which is much stronger than gravity (−9.8 m/s²). Your video frame rate may be <strong>~${k.toFixed(1).replace('.0','')}× too high</strong> (entered ${state.fps} FPS vs ~${suggestedFps} FPS), or your calibration stick length scale may be inaccurate. Please check Tab 1 setup.`;
+          fpsMsg.innerHTML = `Fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code> (outside [−11.3, −8.3] m/s²). Check your scale: is the meter stick in the same plane as the ball, and is the right length typed in 1A?`;
         }
       } else {
         fpsBanner.style.display = 'none';
@@ -1601,6 +1657,7 @@ function addTangentPointAtCurrentSlider() {
 }
 
 function sampleFiveTangentPoints() {
+  state.autoSampled = true;
   state.usedShortcuts.autoTangents = true;
   autoFitAndDeriveAllGraphs();
   const cov = state.coverageStatus;
@@ -2820,12 +2877,11 @@ function updateObservedTUpUncertainty() {
   const node = el('tUpUncertaintyNotice');
   if (!node) return;
   const dtStep = (state.stepFrames || 1) / (state.fps || 30);
-  const halfStep = dtStep / 2;
   const tVal = parseFloat(state.observedTUp);
   if (Number.isFinite(tVal) && tVal > 0) {
-    node.innerHTML = `t<sub>up</sub> = <strong>${tVal.toFixed(3)} s &plusmn; ${halfStep.toFixed(3)} s</strong> (frame step spacing &Delta;t<sub>step</sub> = ${dtStep.toFixed(3)} s)`;
+    node.innerHTML = `t<sub>up</sub> = <strong>${tVal.toFixed(2)} s &plusmn; ${dtStep.toFixed(2)} s</strong> (frame spacing)`;
   } else {
-    node.innerHTML = `Frame spacing uncertainty: &plusmn;${halfStep.toFixed(3)} s (&Delta;t<sub>step</sub> = ${dtStep.toFixed(3)} s)`;
+    node.innerHTML = `Frame spacing: &plusmn;${dtStep.toFixed(2)} s (&Delta;t = step &divide; FPS)`;
   }
 }
 
@@ -2888,7 +2944,10 @@ function saveToLocalStorage() {
       courseLevel: state.courseLevel,
       isTeacherMode: state.isTeacherMode,
       usedShortcuts: state.usedShortcuts,
-      checkCounts: state.checkCounts
+      checkCounts: state.checkCounts,
+      mode: state.mode || 'full',
+      autoSampled: Boolean(state.autoSampled),
+      gravityWarningShown: Boolean(state.gravityWarningShown)
     };
     localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
@@ -2922,6 +2981,7 @@ function restoreAutosave() {
     const raw = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
     if (!raw) return;
     const data = JSON.parse(raw);
+    if (data.mode) setAppMode(data.mode);
     if (data.studentName) state.studentName = data.studentName;
     if (data.series) state.series = data.series;
     if (data.observedTUp) state.observedTUp = data.observedTUp;
@@ -2934,12 +2994,18 @@ function restoreAutosave() {
     if (data.courseLevel) setCourseLevel(data.courseLevel);
     if (data.usedShortcuts) state.usedShortcuts = data.usedShortcuts;
     if (data.checkCounts) state.checkCounts = data.checkCounts;
+    if (data.autoSampled !== undefined) state.autoSampled = Boolean(data.autoSampled);
+    if (data.gravityWarningShown !== undefined) state.gravityWarningShown = Boolean(data.gravityWarningShown);
 
     populateDOMFromStudentState();
     autoFitAndDeriveAllGraphs();
     updatePosChart();
     drawOverlay();
     updateReferenceQuantitiesBar();
+    updateSimplifiedComparisons();
+    updateRubricChecklistUI();
+    updateCheckButtonsAvailability();
+    preparePrintableReport();
 
     const banner = el('autosaveNoticeBanner');
     if (banner) banner.style.display = 'none';
@@ -2948,42 +3014,112 @@ function restoreAutosave() {
   }
 }
 
-function setCourseLevel(level) {
-  state.courseLevel = level === 'on-level' ? 'on-level' : 'honors';
-  if (el('btnLevelOnLevel')) el('btnLevelOnLevel').classList.toggle('active', state.courseLevel === 'on-level');
-  if (el('btnLevelHonors')) el('btnLevelHonors').classList.toggle('active', state.courseLevel === 'honors');
-  updateReferenceQuantitiesBar();
+function setAppMode(mode) {
+  state.mode = (mode === 'simplified') ? 'simplified' : 'full';
+  if (el('btnModeFull')) el('btnModeFull').classList.toggle('active', state.mode === 'full');
+  if (el('btnModeSimplified')) el('btnModeSimplified').classList.toggle('active', state.mode === 'simplified');
+
+  document.body.classList.toggle('mode-simplified', state.mode === 'simplified');
+
+  const badge = el('simplifiedHeaderBadge');
+  if (badge) badge.style.display = (state.mode === 'simplified') ? 'inline-block' : 'none';
+
+  const checkFull = el('checklistContainerFull');
+  const checkSimp = el('checklistContainerSimplified');
+  if (checkFull) checkFull.style.display = (state.mode === 'simplified') ? 'none' : 'block';
+  if (checkSimp) checkSimp.style.display = (state.mode === 'simplified') ? 'block' : 'none';
+
+  if (state.currentStep === 5 && state.mode === 'simplified') {
+    switchSubtab('data-area-subtab', 'subtab-5b');
+  }
+
+  updateSimplifiedComparisons();
+  updateRubricChecklistUI();
+  updateCheckButtonsAvailability();
+  preparePrintableReport();
+  saveToLocalStorage();
 }
 
-function setTeacherMode(enabled) {
-  state.isTeacherMode = Boolean(enabled);
-  const txt = el('teacherModeStateText');
-  if (txt) txt.textContent = state.isTeacherMode ? 'ON' : 'OFF';
-  const btn = el('btnTeacherModeToggle');
-  if (btn) btn.className = state.isTeacherMode ? 'btn btn-amber' : 'btn';
-
+function setTeacherShortcutVisibility(enabled) {
+  const isTeacher = Boolean(enabled);
   const btnTrack = el('btnAutoDemoTrack');
   const btnTangents = el('btnAutoSampleTangents');
-  if (btnTrack) btnTrack.style.display = state.isTeacherMode ? 'inline-flex' : 'none';
-  if (btnTangents) btnTangents.style.display = state.isTeacherMode ? 'inline-flex' : 'none';
+  if (btnTrack) btnTrack.style.display = isTeacher ? 'inline-flex' : 'none';
+  if (btnTangents) btnTangents.style.display = isTeacher ? 'inline-flex' : 'none';
+}
+
+function updateSimplifiedComparisons() {
+  const exp = getExpectedPhysicsValues();
+  const sr = state.studentResponses;
+  const parseNum = (str) => {
+    if (str === undefined || str === null || String(str).trim() === '') return null;
+    const v = parseFloat(str);
+    return Number.isFinite(v) ? v : null;
+  };
+  const calcDiff = (val, target) => {
+    if (val === null || target === null || target === 0) return { text: '—', cls: '' };
+    const diff = Math.abs(val - target);
+    const pct = ((diff / Math.abs(target)) * 100).toFixed(1);
+    let cls = 'good';
+    if (pct > 25) cls = 'alert';
+    else if (pct > 10) cls = 'warn';
+    return { text: `${pct}% diff (${val >= target ? '+' : '-'}${diff.toFixed(3)})`, cls };
+  };
+
+  // 5a v0x: compare to fitted slope m of x(t)
+  const target5a = exp && exp.m !== null ? exp.m : null;
+  if (el('compTarget5a')) el('compTarget5a').textContent = target5a !== null ? `${target5a.toFixed(3)} m/s` : '—';
+  const val5a = parseNum(sr.inpVx0);
+  const diff5a = calcDiff(val5a, target5a);
+  if (el('compDiff5a')) {
+    el('compDiff5a').textContent = diff5a.text;
+    el('compDiff5a').className = `comp-diff-tag ${diff5a.cls}`;
+  }
+
+  // 5b a_y,fit: compare to -9.8 m/s^2 (also show 2A)
+  const target5b = -9.800;
+  const fitted2A = exp && exp.ayFit !== null ? exp.ayFit : null;
+  if (el('compTarget5b')) el('compTarget5b').textContent = fitted2A !== null ? `${fitted2A.toFixed(3)} m/s²` : '—';
+  const val5b = parseNum(sr.inpAy);
+  const diff5b = calcDiff(val5b, target5b);
+  if (el('compDiff5b')) {
+    el('compDiff5b').textContent = diff5b.text;
+    el('compDiff5b').className = `comp-diff-tag ${diff5b.cls}`;
+  }
+
+  // 5c v0y,pred: compare to fitted B
+  const target5c = exp && exp.B !== null ? exp.B : null;
+  if (el('compTarget5c')) el('compTarget5c').textContent = target5c !== null ? `${target5c.toFixed(3)} m/s` : '—';
+  const val5c = parseNum(sr.inpVy0Pred);
+  const diff5c = calcDiff(val5c, target5c);
+  if (el('compDiff5c')) {
+    el('compDiff5c').textContent = diff5c.text;
+    el('compDiff5c').className = `comp-diff-tag ${diff5c.cls}`;
+  }
+
+  // 5e y_max: compare to highest tracked y from Tab 1B
+  const target5e = exp && exp.yMaxTrack !== null ? exp.yMaxTrack : null;
+  if (el('compTarget5e')) el('compTarget5e').textContent = target5e !== null ? `${target5e.toFixed(3)} m` : '—';
+  const val5e = parseNum(sr.inpCalcMaxHeight);
+  const diff5e = calcDiff(val5e, target5e);
+  if (el('compDiff5e')) {
+    el('compDiff5e').textContent = diff5e.text;
+    el('compDiff5e').className = `comp-diff-tag ${diff5e.cls}`;
+  }
 }
 
 function updateCheckButtonsAvailability() {
   const sr = state.studentResponses;
   // Tab 4: Show work in calculation work boxes
-  const work4 = [
-    (sr.work5aVx || ''),
-    (sr.work5bAy || ''),
-    (sr.work5cVy0 || ''),
-    (sr.work5dDisp || ''),
-    (sr.workMaxHeight || ''),
-    (sr.workVector || '')
-  ].join(' ').trim();
+  const workBoxes = (state.mode === 'simplified')
+    ? [(sr.work5aVx || ''), (sr.work5bAy || ''), (sr.work5cVy0 || ''), (sr.workMaxHeight || '')]
+    : [(sr.work5aVx || ''), (sr.work5bAy || ''), (sr.work5cVy0 || ''), (sr.work5dDisp || ''), (sr.workMaxHeight || ''), (sr.workVector || '')];
 
+  const hasAnyWork = workBoxes.some(w => w.trim().length >= 4);
   const btnCheck4 = el('btnCheckWorksheet');
   const hint4 = el('checkWorksheetHint');
   if (btnCheck4) {
-    if (work4.length >= 8) {
+    if (hasAnyWork) {
       btnCheck4.disabled = false;
       if (hint4) hint4.textContent = '✓ Work entered — ready to check';
     } else {
@@ -3026,7 +3162,9 @@ function updateCheckButtonsAvailability() {
 }
 
 function updateWrittenStatusBadges() {
+  updateSimplifiedComparisons();
   updateCheckButtonsAvailability();
+  updateRubricChecklistUI();
   saveToLocalStorage();
 
   const revBadge = el('statusRevisionBadge');
@@ -3067,13 +3205,6 @@ function setFeedbackBox(boxId, status, message) {
 }
 
 function checkNumbersForPracticeFeedback(e) {
-  // Track verification check counts to prevent guess-and-check abuse
-  const triggerId = (e && e.target) ? e.target.id : '';
-  if (triggerId === 'btnCheckWorksheet') state.checkCounts.calculations++;
-  else if (triggerId === 'btnCheckAreaTab5') state.checkCounts.area++;
-  else if (triggerId === 'btnCheckIntervalsTab5') state.checkCounts.intervals++;
-  else { state.checkCounts.calculations++; }
-
   syncStudentInputsFromDOM();
   autoFitAndDeriveAllGraphs();
   const exp = getExpectedPhysicsValues();
@@ -3093,8 +3224,38 @@ function checkNumbersForPracticeFeedback(e) {
     return Math.abs(val - target) <= Math.max(absTol, Math.abs(target) * relTol);
   };
 
-  // --- 4a: Horizontal velocity v0x = dx / dt ---
   const v0xVal = parseNum(sr.inpVx0);
+  const ayVal = parseNum(sr.inpAy);
+  const vy0PredVal = parseNum(sr.inpVy0Pred);
+  const dxVal = parseNum(sr.inpCalcRange);
+  const dyVal = parseNum(sr.inpPredDy);
+  const yfVal = parseNum(sr.inpPredYFinal);
+  const dyUpVal = parseNum(sr.inpPredDyUp);
+  const yMaxVal = parseNum(sr.inpCalcMaxHeight);
+  const v0Val = parseNum(sr.inpSpeedV0);
+  const thetaVal = parseNum(sr.inpAngleTheta);
+
+  // Track verification check counts per item to prevent guess-and-check abuse
+  const triggerId = (e && e.target) ? e.target.id : '';
+  if (triggerId === 'btnCheckWorksheet') {
+    state.checkCounts.calculations++;
+    if (v0xVal !== null || (sr.work5aVx && sr.work5aVx.trim())) state.checkCounts['5a'] = (state.checkCounts['5a'] || 0) + 1;
+    if (ayVal !== null || (sr.work5bAy && sr.work5bAy.trim())) state.checkCounts['5b'] = (state.checkCounts['5b'] || 0) + 1;
+    if (vy0PredVal !== null || (sr.work5cVy0 && sr.work5cVy0.trim())) state.checkCounts['5c'] = (state.checkCounts['5c'] || 0) + 1;
+    if (state.mode !== 'simplified' && (dxVal !== null || dyVal !== null || yfVal !== null || (sr.work5dDisp && sr.work5dDisp.trim()))) state.checkCounts['5d'] = (state.checkCounts['5d'] || 0) + 1;
+    if (yMaxVal !== null || (sr.workMaxHeight && sr.workMaxHeight.trim())) state.checkCounts['5e'] = (state.checkCounts['5e'] || 0) + 1;
+    if (state.mode !== 'simplified' && (v0Val !== null || thetaVal !== null || (sr.workVector && sr.workVector.trim()))) state.checkCounts['5f'] = (state.checkCounts['5f'] || 0) + 1;
+  } else if (triggerId === 'btnCheckAreaTab5') {
+    state.checkCounts.area++;
+    state.checkCounts['5A_area'] = (state.checkCounts['5A_area'] || 0) + 1;
+  } else if (triggerId === 'btnCheckIntervalsTab5') {
+    state.checkCounts.intervals++;
+    state.checkCounts['5B_intervals'] = (state.checkCounts['5B_intervals'] || 0) + 1;
+  } else {
+    state.checkCounts.calculations++;
+  }
+
+  // --- 5a: Horizontal velocity v0x = dx / dt ---
   let ok5a = false;
   if (v0xVal === null) {
     setFeedbackBox('fb5a', 'hint', 'Enter your calculated horizontal slope v₀ₓ = Δx / Δt (m/s).');
@@ -3105,8 +3266,7 @@ function checkNumbersForPracticeFeedback(e) {
     setFeedbackBox('fb5a', 'warn', `Check your slope calculation Δx / Δt using two points on the fitted x–t line. Expected slope is near ${exp.m.toFixed(3)} m/s.`);
   }
 
-  // --- 4b: Vertical acceleration ay,fit = dvy / dt ---
-  const ayVal = parseNum(sr.inpAy);
+  // --- 5b: Vertical acceleration ay,fit = dvy / dt ---
   let ok5b = false;
   if (ayVal === null) {
     setFeedbackBox('fb5b', 'hint', 'Enter your calculated slope aᵧ,fit = Δvᵧ / Δt (m/s²) from two points on the derived vᵧ–t line.');
@@ -3125,8 +3285,7 @@ function checkNumbersForPracticeFeedback(e) {
     badgeAB.className = `pct-diff-badge ${(ok5a && ok5b) ? 'good' : 'warn'}`;
   }
 
-  // --- 4c: Predicted v0y,pred = -ay,ref * t_up (Split Arithmetic vs Agreement with B) ---
-  const vy0PredVal = parseNum(sr.inpVy0Pred);
+  // --- 5c: Predicted v0y,pred = -ay,ref * t_up (Split Arithmetic vs Agreement with B) ---
   let ok5c = false;
   if (exp.tUp === null) {
     setFeedbackBox('fb5c', 'warn', 'First enter your observed video rise time t_up (s) from Step 1.');
@@ -3135,11 +3294,12 @@ function checkNumbersForPracticeFeedback(e) {
   } else if (vy0PredVal < 0 && withinTol(Math.abs(vy0PredVal), exp.vy0Pred)) {
     setFeedbackBox('fb5c', 'warn', 'Check the sign: at the first tracked frame (t = 0), the ball is moving upward (+y), so v₀ᵧ,pred = −(−9.8 m/s²)·t_up is positive.');
   } else {
-    // 1. Check Arithmetic: is vy0PredVal equal to 9.80 * t_up?
+    // 1. Check Arithmetic: is vy0PredVal equal to 9.80 * t_up (within 2%)?
     const expectedVy0Arithmetic = 9.80 * exp.tUp;
-    const isArithmeticCorrect = withinTol(vy0PredVal, expectedVy0Arithmetic, 0.04, 0.06);
+    const arithDiff = Math.abs(vy0PredVal - expectedVy0Arithmetic);
+    const isArithmeticCorrect = (expectedVy0Arithmetic > 0 && (arithDiff / expectedVy0Arithmetic) <= 0.02) || arithDiff <= 0.05;
     if (!isArithmeticCorrect) {
-      setFeedbackBox('fb5c', 'warn', `Check arithmetic: v₀ᵧ,pred should equal −(−9.80 m/s²) × t_up (${exp.tUp.toFixed(3)} s) = ${expectedVy0Arithmetic.toFixed(3)} m/s.`);
+      setFeedbackBox('fb5c', 'warn', `Check arithmetic: v₀ᵧ,pred should equal −(−9.80 m/s²) × t_up (${exp.tUp.toFixed(3)} s) = ${expectedVy0Arithmetic.toFixed(3)} m/s (within 2%).`);
     } else {
       ok5c = true;
       // 2. Separate Comparison with B:
@@ -3150,9 +3310,6 @@ function checkNumbersForPracticeFeedback(e) {
   }
 
   // --- 5d: Displacements dx, dy at t_hang and final height y_final = y0 + dy ---
-  const dxVal = parseNum(sr.inpCalcRange);
-  const dyVal = parseNum(sr.inpPredDy);
-  const yfVal = parseNum(sr.inpPredYFinal);
   let ok5d = false;
   if (dxVal === null || dyVal === null || yfVal === null) {
     setFeedbackBox('fb5d', 'hint', 'Enter all three values for 5d: predicted Δx, predicted Δy over duration t_hang, and predicted final height y_final = y₀ + Δy.');
@@ -3179,8 +3336,6 @@ function checkNumbersForPracticeFeedback(e) {
   }
 
   // --- 5e: Maximum height using t_up (not t_hang) and measured y0 ---
-  const dyUpVal = parseNum(sr.inpPredDyUp);
-  const yMaxVal = parseNum(sr.inpCalcMaxHeight);
   let ok5e = false;
   if (exp.tUp === null) {
     setFeedbackBox('fb5e', 'warn', 'Enter observed video t_up first.');
@@ -3206,8 +3361,6 @@ function checkNumbersForPracticeFeedback(e) {
   }
 
   // --- 5f: Initial speed v0 and launch angle theta ---
-  const v0Val = parseNum(sr.inpSpeedV0);
-  const thetaVal = parseNum(sr.inpAngleTheta);
   let ok5f = false;
   if (v0Val === null || thetaVal === null) {
     setFeedbackBox('fb5f', 'hint', 'Enter both initial speed v₀ (m/s) and launch angle θ (degrees above +x).');
@@ -3351,7 +3504,7 @@ function updateRubricChecklistUI() {
       : '<span class="pct-diff-badge warn">Complete area &amp; interval fields</span>';
   }
 
-  // Criterion 5 (1 pt): Specific measurement limitation
+  // Full Mode: Criterion 5 (1 pt): Specific measurement limitation
   const c5Ok = hasVal(sr.reflectionText) && sr.reflectionText.trim().length >= 15;
   if (el('chkStatus5')) {
     el('chkStatus5').innerHTML = c5Ok
@@ -3364,6 +3517,59 @@ function updateRubricChecklistUI() {
   if (badge) {
     badge.textContent = `${readyCount} / 5 Rubric Sections Populated`;
     badge.className = `pct-diff-badge ${readyCount === 5 ? 'good' : 'warn'}`;
+  }
+
+  // Simplified Mode: 20-Point Rubric Live Filled/Missing Checks
+  const s1Ok = cov.hasEnoughPoints && cov.hasValidTurnaround && hasVal(state.observedTUp);
+  if (el('chkSimpStatus1')) {
+    el('chkSimpStatus1').innerHTML = s1Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const s2Ok = state.firstAttemptPrediction.isSaved && hasVal(state.predictionRevision);
+  if (el('chkSimpStatus2')) {
+    el('chkSimpStatus2').innerHTML = s2Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const s3Ok = sf.xPos === 'linear' && sf.yPos === 'quadratic' && sf.yVel === 'linear' && (state.tangentPoints || []).length >= 3 && hasVal(state.graphConnections);
+  if (el('chkSimpStatus3')) {
+    el('chkSimpStatus3').innerHTML = s3Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const s4Ok = hasVal(sr.inpVx0) && hasVal(sr.work5aVx) &&
+    hasVal(sr.inpAy) && hasVal(sr.work5bAy) &&
+    hasVal(sr.inpVy0Pred) && hasVal(sr.work5cVy0) &&
+    hasVal(sr.inpCalcMaxHeight) && hasVal(sr.workMaxHeight);
+  if (el('chkSimpStatus4')) {
+    el('chkSimpStatus4').innerHTML = s4Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const s5Ok = hasVal(sr.txtStopExplanation) && hasVal(sr.txtAccSignExplanation) && hasVal(sr.txtConclusionGravity);
+  if (el('chkSimpStatus5')) {
+    el('chkSimpStatus5').innerHTML = s5Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const s6Ok = hasVal(sr.reflectionText) && hasVal(sr.txtLimitationDirection);
+  if (el('chkSimpStatus6')) {
+    el('chkSimpStatus6').innerHTML = s6Ok
+      ? '<span class="pct-diff-badge good">Filled</span>'
+      : '<span class="pct-diff-badge warn">Missing</span>';
+  }
+
+  const simpReadyCount = [s1Ok, s2Ok, s3Ok, s4Ok, s5Ok, s6Ok].filter(Boolean).length;
+  const simpBadge = el('rubricReadinessBadgeSimplified');
+  if (simpBadge) {
+    simpBadge.textContent = `${simpReadyCount} / 6 Criteria Filled`;
+    simpBadge.className = `pct-diff-badge ${simpReadyCount === 6 ? 'good' : 'warn'}`;
   }
 }
 
@@ -3569,13 +3775,29 @@ function preparePrintableReport() {
       `)
     : '<span class="not-submitted-tag">Not submitted (Prediction not saved before reveal)</span>';
 
+  const isSimp = state.mode === 'simplified';
+  const calcDiffPct = (valStr, target) => {
+    if (valStr === undefined || valStr === null || String(valStr).trim() === '' || target === null || target === 0) return '—';
+    const v = parseFloat(valStr);
+    if (!Number.isFinite(v)) return '—';
+    const diff = Math.abs(v - target);
+    return `${((diff / Math.abs(target)) * 100).toFixed(1)}%`;
+  };
+
+  const checkCountsSummary = isSimp
+    ? `5a: <strong>${state.checkCounts['5a'] || 0}</strong> &bull; 5b: <strong>${state.checkCounts['5b'] || 0}</strong> &bull; 5c: <strong>${state.checkCounts['5c'] || 0}</strong> &bull; 5e: <strong>${state.checkCounts['5e'] || 0}</strong>`
+    : `5a: <strong>${state.checkCounts['5a'] || 0}</strong> &bull; 5b: <strong>${state.checkCounts['5b'] || 0}</strong> &bull; 5c: <strong>${state.checkCounts['5c'] || 0}</strong> &bull; 5d: <strong>${state.checkCounts['5d'] || 0}</strong> &bull; 5e: <strong>${state.checkCounts['5e'] || 0}</strong> &bull; 5f: <strong>${state.checkCounts['5f'] || 0}</strong> &bull; Tab 5A Area: <strong>${state.checkCounts['5A_area'] || 0}</strong> &bull; Tab 5B Intervals: <strong>${state.checkCounts['5B_intervals'] || 0}</strong>`;
+
   const reportHtml = `
     <div class="lab-report-document">
       <!-- Report Header -->
       <header class="report-doc-header">
         <div>
           <div class="report-doc-kicker">THE THINKING EXPERIMENT &bull; PROJECTILE VIDEO PROJECT REPORT</div>
-          <h1 class="report-doc-title">2D Projectile Motion &amp; Kinematic Graph Analysis</h1>
+          <h1 class="report-doc-title">
+            2D Projectile Motion &amp; Kinematic Graph Analysis
+            ${isSimp ? '<span class="simplified-badge" style="margin-left: 0.5rem; font-size: 0.72rem; vertical-align: middle;">SIMPLIFIED VERSION</span>' : ''}
+          </h1>
           <div class="report-doc-meta">
             <span><strong>Student:</strong> ${escapeHtml(sName)}</span>
             <span><strong>Teacher:</strong> ${escapeHtml(tName)}</span>
@@ -3634,26 +3856,27 @@ function preparePrintableReport() {
                 <tr>
                   <td><strong>Tracking Method &amp; Shortcuts</strong></td>
                   <td>
-                    ${state.usedShortcuts && state.usedShortcuts.autoTrack ? '<span class="report-shortcut-tag">⚠️ Tracked coordinates: auto-loaded (Teacher Demo)</span>' : '<span style="color:#15803d; font-weight:600;">✓ Coordinates manually tracked by student</span>'}
-                    ${state.usedShortcuts && state.usedShortcuts.autoTangents ? '<span class="report-shortcut-tag">⚠️ Tangent slopes: auto-sampled (Teacher Demo)</span>' : '<span style="color:#15803d; font-weight:600; margin-left:0.4rem;">✓ Tangent slopes: student plotted</span>'}
+                    ${state.autoSampled ? '<span class="report-shortcut-tag">Auto-sampled: yes (Teacher demo shortcuts were used)</span>' : '<span style="color:#15803d; font-weight:600;">Auto-sampled: no (Manual student work)</span>'}
                   </td>
                 </tr>
                 <tr>
                   <td><strong>Number Verification Checks Used</strong></td>
-                  <td>
-                    Tab 4 Calculations: <strong>${state.checkCounts ? state.checkCounts.calculations : 0}</strong> &bull;
-                    Tab 5A Area: <strong>${state.checkCounts ? state.checkCounts.area : 0}</strong> &bull;
-                    Tab 5B Intervals: <strong>${state.checkCounts ? state.checkCounts.intervals : 0}</strong>
-                  </td>
+                  <td>${checkCountsSummary}</td>
                 </tr>
                 <tr>
                   <td><strong>Observed Video Rise Time t<sub>up</sub> &amp; Uncertainty</strong></td>
-                  <td>${fmtStudentVal(state.observedTUp, 's')} &plusmn; ${((state.stepFrames || 1) / (state.fps || 30) / 2).toFixed(3)} s (frame step spacing) <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
+                  <td>${fmtStudentVal(state.observedTUp, 's')} &plusmn; ${((state.stepFrames || 1) / (state.fps || 30)).toFixed(3)} s (frame step spacing) <span style="color:#4b6570; font-size:0.75rem;">(Highest tracked point: ${exp && exp.yMaxTrack !== null ? `${exp.yMaxTrack.toFixed(3)} m at t = ${exp.tPeakTrack.toFixed(3)} s` : '—'})</span></td>
                 </tr>
                 <tr>
                   <td><strong>Tracked Endpoint Changes at t<sub>hang</sub></strong></td>
                   <td>&Delta;x<sub>track</sub> = ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'}, &Delta;y<sub>track</sub> = ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'}, y(t<sub>hang</sub>) = ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'}</td>
                 </tr>
+                ${state.gravityWarningShown ? `
+                <tr>
+                  <td><strong>Gravity Sanity Check</strong></td>
+                  <td><span class="report-shortcut-tag">⚠️ Sanity warning was triggered during fits (fitted a<sub>y</sub> was outside [−11.3, −8.3] m/s²)</span></td>
+                </tr>
+                ` : ''}
               </tbody>
             </table>
           </div>
@@ -3676,7 +3899,11 @@ function preparePrintableReport() {
             <div style="margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed #c8dbe3; font-size: 0.76rem; color: #123140;">
               <div><strong>Fitted x(t):</strong> <code>${escapeHtml(eqs.xPos)}</code></div>
               <div><strong>Derived v<sub>x</sub>(t) &amp; a<sub>x</sub>(t):</strong> <code>vₓ = ${exp ? exp.m.toFixed(3) : '—'} m/s</code>, <code>aₓ = 0.000 m/s²</code> (follows from linear x model)</div>
-              <div><strong>Fitted y(t):</strong> <code>${escapeHtml(eqs.yPos)}</code> (Measured y<sub>0</sub> = ${exp ? exp.y0.toFixed(3) : '—'} m vs. Fitted C = ${exp ? exp.C.toFixed(3) : '—'} m)</div>
+              ${isSimp ? `
+                <div><strong>Fitted y(t):</strong> <code>${escapeHtml(eqs.yPos)}</code></div>
+              ` : `
+                <div><strong>Fitted y(t):</strong> <code>${escapeHtml(eqs.yPos)}</code> (Measured y<sub>0</sub> = ${exp ? exp.y0.toFixed(3) : '—'} m vs. Fitted C = ${exp ? exp.C.toFixed(3) : '—'} m)</div>
+              `}
               <div><strong>Derived v<sub>y</sub>(t) &amp; a<sub>y</sub>(t):</strong> <code>${escapeHtml(eqs.yVel)}</code>, <code>aᵧ = ${exp ? exp.ayFit.toFixed(3) : '—'} m/s²</code></div>
             </div>
           </div>
@@ -3717,133 +3944,234 @@ function preparePrintableReport() {
         </div>
       </section>
 
-      <!-- SECTION 3: Slopes & Projectile Model Calculations (Student Steps 4a–4f) -->
-      <section class="report-section">
-        <h2 class="report-section-title">3. Shown Slope Calculations &amp; Projectile Predictions (Steps 4a–4f; Fixed a<sub>y,ref</sub> = &minus;9.8 m/s²)</h2>
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th style="width: 22%;">Calculation Step</th>
-              <th style="width: 24%;">Student Submitted Value(s)</th>
-              <th style="width: 22%;">Model / Fit Reference Check</th>
-              <th style="width: 32%;">Student Equations, Substitutions, Units &amp; Comparison Work</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>4a. Horizontal Velocity</strong><br><small>Slope v<sub>0x</sub> = &Delta;x / &Delta;t on fitted x–t line</small></td>
-              <td>
-                <div>Pt 1: ${fmtStudentVal(sr.inp5aPt1)}</div>
-                <div>Pt 2: ${fmtStudentVal(sr.inp5aPt2)}</div>
-                <div>v<sub>0x</sub>: ${fmtStudentVal(sr.inpVx0, 'm/s')}</div>
-              </td>
-              <td>Fitted slope m = <strong>${exp ? exp.m.toFixed(3) + ' m/s' : '—'}</strong></td>
-              <td>${fmtStudentText(sr.work5aVx)}</td>
-            </tr>
-            <tr>
-              <td><strong>4b. Vertical Acceleration</strong><br><small>Slope a<sub>y,fit</sub> = &Delta;v<sub>y</sub> / &Delta;t on derived v<sub>y</sub>–t line</small></td>
-              <td>
-                <div>Pt 1: ${fmtStudentVal(sr.inp5bPt1)}</div>
-                <div>Pt 2: ${fmtStudentVal(sr.inp5bPt2)}</div>
-                <div>a<sub>y,fit</sub>: ${fmtStudentVal(sr.inpAy, 'm/s²')}</div>
-              </td>
-              <td>Derived 2A = <strong>${exp ? exp.ayFit.toFixed(3) + ' m/s²' : '—'}</strong><br>Ref a<sub>y,ref</sub> = <strong>&minus;9.8 m/s²</strong></td>
-              <td>${fmtStudentText(sr.work5bAy)}</td>
-            </tr>
-            <tr>
-              <td><strong>4c. Initial Vertical Velocity</strong><br><small>v<sub>0y,pred</sub> = &minus;a<sub>y,ref</sub> t<sub>up</sub> vs. fitted B</small></td>
-              <td>
-                <div>Observed t<sub>up</sub>: ${fmtStudentVal(state.observedTUp, 's')}</div>
-                <div>v<sub>0y,pred</sub>: ${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</div>
-              </td>
-              <td>
-                Ref &minus;(&minus;9.8)t<sub>up</sub>: <strong>${exp && exp.vy0Pred !== null ? exp.vy0Pred.toFixed(3) + ' m/s' : 'Requires t_up'}</strong><br>
-                Fitted B: <strong>${exp ? exp.B.toFixed(3) + ' m/s' : '—'}</strong>
-              </td>
-              <td>${fmtStudentText(sr.work5cVy0)}</td>
-            </tr>
-            <tr>
-              <td><strong>4d. Displacements &amp; Final Height at t<sub>hang</sub></strong><br><small>&Delta;x, &Delta;y over t<sub>hang</sub>, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
-              <td>
-                <div>Pred &Delta;x: ${fmtStudentVal(sr.inpCalcRange, 'm')}</div>
-                <div>Pred &Delta;y: ${fmtStudentVal(sr.inpPredDy, 'm')}</div>
-                <div>Pred y<sub>final</sub>: ${fmtStudentVal(sr.inpPredYFinal, 'm')}</div>
-              </td>
-              <td>
-                Pred &Delta;x = ${exp ? exp.dxPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'})<br>
-                Pred &Delta;y = ${exp && exp.dyPred !== null ? exp.dyPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'})<br>
-                Pred y<sub>final</sub> = ${exp && exp.yFinalPred !== null ? exp.yFinalPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'})
-              </td>
-              <td>${fmtStudentText(sr.work5dDisp)}</td>
-            </tr>
-            <tr>
-              <td><strong>4e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and measured y<sub>0</sub></small></td>
-              <td>
-                <div>Pred &Delta;y<sub>up</sub>: ${fmtStudentVal(sr.inpPredDyUp, 'm')}</div>
-                <div>Pred y<sub>max</sub>: ${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</div>
-              </td>
-              <td>
-                Pred &Delta;y<sub>up</sub> = ${exp && exp.dyUpPred !== null ? exp.dyUpPred.toFixed(3) + ' m' : '—'}<br>
-                Pred y<sub>max</sub> = ${exp && exp.yMaxPred !== null ? exp.yMaxPred.toFixed(3) + ' m' : '—'}<br>
-                Highest tracked y = <strong>${exp && exp.yMaxTrack !== null ? exp.yMaxTrack.toFixed(3) + ' m' : '—'}</strong>
-              </td>
-              <td>${fmtStudentText(sr.workMaxHeight)}</td>
-            </tr>
-            <tr>
-              <td><strong>4f. Initial Speed &amp; Launch Angle</strong><br><small>At first tracked airborne instant (t = 0)</small></td>
-              <td>
-                <div>Speed v<sub>0</sub>: ${fmtStudentVal(sr.inpSpeedV0, 'm/s')}</div>
-                <div>Angle &theta;: ${fmtStudentVal(sr.inpAngleTheta, '°')}</div>
-              </td>
-              <td>
-                Ref v<sub>0</sub> = ${exp && exp.v0Pred !== null ? exp.v0Pred.toFixed(3) + ' m/s' : '—'}<br>
-                Ref &theta; = ${exp && exp.thetaPred !== null ? exp.thetaPred.toFixed(2) + '°' : '—'}
-              </td>
-              <td>${fmtStudentText(sr.workVector)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <!-- SECTION 3: Calculations Table -->
+      ${isSimp ? `
+        <section class="report-section">
+          <h2 class="report-section-title">3. Results &amp; Model Comparisons (Calculations 5a, 5b, 5c, 5e)</h2>
+          <table class="report-table" style="margin-bottom: 0.85rem;">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Quantity</th>
+                <th style="width: 18%;">My Value</th>
+                <th style="width: 26%;">Compare To</th>
+                <th style="width: 18%;">Compare Value</th>
+                <th style="width: 13%;">% Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5a. Horizontal Velocity v₀ₓ</strong></td>
+                <td>${fmtStudentVal(sr.inpVx0, 'm/s')}</td>
+                <td>Fitted slope m of x(t)</td>
+                <td><strong>${exp && exp.m !== null ? exp.m.toFixed(3) + ' m/s' : '—'}</strong></td>
+                <td><strong>${calcDiffPct(sr.inpVx0, exp ? exp.m : null)}</strong></td>
+              </tr>
+              <tr>
+                <td><strong>5b. Vertical Acceleration a<sub>y,fit</sub></strong></td>
+                <td>${fmtStudentVal(sr.inpAy, 'm/s²')}</td>
+                <td>Standard g (−9.8 m/s²) [2A: ${exp && exp.ayFit !== null ? exp.ayFit.toFixed(3) : '—'}]</td>
+                <td><strong>−9.800 m/s²</strong></td>
+                <td><strong>${calcDiffPct(sr.inpAy, -9.800)}</strong></td>
+              </tr>
+              <tr>
+                <td><strong>5c. Predicted Vertical Velocity v<sub>0y,pred</sub></strong></td>
+                <td>${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</td>
+                <td>Fitted parameter B</td>
+                <td><strong>${exp && exp.B !== null ? exp.B.toFixed(3) + ' m/s' : '—'}</strong></td>
+                <td><strong>${calcDiffPct(sr.inpVy0Pred, exp ? exp.B : null)}</strong></td>
+              </tr>
+              <tr>
+                <td><strong>5e. Maximum Height y<sub>max</sub></strong></td>
+                <td>${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</td>
+                <td>Highest tracked y from Tab 1B</td>
+                <td><strong>${exp && exp.yMaxTrack !== null ? exp.yMaxTrack.toFixed(3) + ' m' : '—'}</strong></td>
+                <td><strong>${calcDiffPct(sr.inpCalcMaxHeight, exp ? exp.yMaxTrack : null)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
 
-      <!-- SECTION 4: Signed-Area Consistency Check, Direction Intervals & Limitation -->
-      <section class="report-section">
-        <h2 class="report-section-title">4. Signed-Area Check, Motion Intervals, Apex Reasoning &amp; Measurement Limitation</h2>
-        <div class="report-box" style="margin-bottom: 0.75rem;">
-          <div class="report-box-title">Signed-Area Check on Derived v<sub>y</sub>–t Graph (Using Fitted v<sub>y</sub> = 2At + B and Fitted Initial Height C)</div>
-          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; font-size: 0.78rem; margin-bottom: 0.45rem;">
-            <div>Zero Crossing t<sub>zero</sub>:<br>${fmtStudentVal(sr.inpZeroCrossT, 's')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.tZero !== null ? exp.tZero.toFixed(3) + ' s' : 'N/A'})</small></div>
-            <div>Ascent +Area<sub>up</sub>:<br>${fmtStudentVal(sr.inpAreaUp, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaUp !== null ? '+' + exp.areaUp.toFixed(3) + ' m' : 'N/A'})</small></div>
-            <div>Descent Area<sub>down</sub>:<br>${fmtStudentVal(sr.inpAreaDown, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaDown !== null ? exp.areaDown.toFixed(3) + ' m' : 'N/A'})</small></div>
-            <div>Sum &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpNetDyArea, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.netDyArea !== null ? exp.netDyArea.toFixed(3) + ' m' : 'N/A'})</small></div>
-            <div>Fitted C + &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpYFinalFromArea, 'm')}<br><small style="color:#4b6570;">(y<sub>fit</sub>(t<sub>hang</sub>) = ${exp ? exp.yFitAtT.toFixed(3) + ' m' : '—'})</small></div>
-          </div>
-          <div style="font-size: 0.78rem; font-weight: 700; color: #0f7e9b; margin-bottom: 0.2rem;">Student Area Calculations &amp; Comparison with y<sub>fit</sub>(t<sub>hang</sub>):</div>
-          ${fmtStudentText(sr.workSignedArea)}
-        </div>
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 28%;">Calculation Step</th>
+                <th style="width: 72%;">Student Equations, Substitutions, Units &amp; Comparison Work</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5a. Horizontal Velocity Work</strong><br><small>Two points on fitted x–t line &amp; constant reasoning</small></td>
+                <td>${fmtStudentText(sr.work5aVx)}</td>
+              </tr>
+              <tr>
+                <td><strong>5b. Vertical Acceleration Work</strong><br><small>Two points on fitted v<sub>y</sub>–t line &amp; reference comparison</small></td>
+                <td>${fmtStudentText(sr.work5bAy)}</td>
+              </tr>
+              <tr>
+                <td><strong>5c. Initial Vertical Velocity Work</strong><br><small>Apex condition v<sub>y</sub> = 0 using &minus;a<sub>y,ref</sub>·t<sub>up</sub></small></td>
+                <td>${fmtStudentText(sr.work5cVy0)}</td>
+              </tr>
+              <tr>
+                <td><strong>5e. Maximum Height Work</strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and initial height y₀</small></td>
+                <td>${fmtStudentText(sr.workMaxHeight)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      ` : `
+        <section class="report-section">
+          <h2 class="report-section-title">3. Shown Slope Calculations &amp; Projectile Predictions (Steps 5a–5f; Fixed a<sub>y,ref</sub> = &minus;9.8 m/s²)</h2>
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 22%;">Calculation Step</th>
+                <th style="width: 24%;">Student Submitted Value(s)</th>
+                <th style="width: 22%;">Model / Fit Reference Check</th>
+                <th style="width: 32%;">Student Equations, Substitutions, Units &amp; Comparison Work</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5a. Horizontal Velocity</strong><br><small>Slope v<sub>0x</sub> = &Delta;x / &Delta;t on fitted x–t line</small></td>
+                <td>
+                  <div>Pt 1: ${fmtStudentVal(sr.inp5aPt1)}</div>
+                  <div>Pt 2: ${fmtStudentVal(sr.inp5aPt2)}</div>
+                  <div>v<sub>0x</sub>: ${fmtStudentVal(sr.inpVx0, 'm/s')}</div>
+                </td>
+                <td>Fitted slope m = <strong>${exp ? exp.m.toFixed(3) + ' m/s' : '—'}</strong></td>
+                <td>${fmtStudentText(sr.work5aVx)}</td>
+              </tr>
+              <tr>
+                <td><strong>5b. Vertical Acceleration</strong><br><small>Slope a<sub>y,fit</sub> = &Delta;v<sub>y</sub> / &Delta;t on derived v<sub>y</sub>–t line</small></td>
+                <td>
+                  <div>Pt 1: ${fmtStudentVal(sr.inp5bPt1)}</div>
+                  <div>Pt 2: ${fmtStudentVal(sr.inp5bPt2)}</div>
+                  <div>a<sub>y,fit</sub>: ${fmtStudentVal(sr.inpAy, 'm/s²')}</div>
+                </td>
+                <td>Derived 2A = <strong>${exp ? exp.ayFit.toFixed(3) + ' m/s²' : '—'}</strong><br>Ref a<sub>y,ref</sub> = <strong>&minus;9.8 m/s²</strong></td>
+                <td>${fmtStudentText(sr.work5bAy)}</td>
+              </tr>
+              <tr>
+                <td><strong>5c. Initial Vertical Velocity</strong><br><small>v<sub>0y,pred</sub> = &minus;a<sub>y,ref</sub> t<sub>up</sub> vs. fitted B</small></td>
+                <td>
+                  <div>Observed t<sub>up</sub>: ${fmtStudentVal(state.observedTUp, 's')}</div>
+                  <div>v<sub>0y,pred</sub>: ${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</div>
+                </td>
+                <td>
+                  Ref &minus;(&minus;9.8)t<sub>up</sub>: <strong>${exp && exp.vy0Pred !== null ? exp.vy0Pred.toFixed(3) + ' m/s' : 'Requires t_up'}</strong><br>
+                  Fitted B: <strong>${exp ? exp.B.toFixed(3) + ' m/s' : '—'}</strong>
+                </td>
+                <td>${fmtStudentText(sr.work5cVy0)}</td>
+              </tr>
+              <tr>
+                <td><strong>5d. Displacements &amp; Final Height at t<sub>hang</sub></strong><br><small>&Delta;x, &Delta;y over t<sub>hang</sub>, and y<sub>final</sub> = y<sub>0</sub> + &Delta;y</small></td>
+                <td>
+                  <div>Pred &Delta;x: ${fmtStudentVal(sr.inpCalcRange, 'm')}</div>
+                  <div>Pred &Delta;y: ${fmtStudentVal(sr.inpPredDy, 'm')}</div>
+                  <div>Pred y<sub>final</sub>: ${fmtStudentVal(sr.inpPredYFinal, 'm')}</div>
+                </td>
+                <td>
+                  Pred &Delta;x = ${exp ? exp.dxPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dxTrack.toFixed(3) + ' m' : '—'})<br>
+                  Pred &Delta;y = ${exp && exp.dyPred !== null ? exp.dyPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.dyTrack.toFixed(3) + ' m' : '—'})<br>
+                  Pred y<sub>final</sub> = ${exp && exp.yFinalPred !== null ? exp.yFinalPred.toFixed(3) + ' m' : '—'} (Track: ${exp ? exp.yFinalTrack.toFixed(3) + ' m' : '—'})
+                </td>
+                <td>${fmtStudentText(sr.work5dDisp)}</td>
+              </tr>
+              <tr>
+                <td><strong>5e. Maximum Height at t<sub>up</sub></strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and measured y<sub>0</sub></small></td>
+                <td>
+                  <div>Pred &Delta;y<sub>up</sub>: ${fmtStudentVal(sr.inpPredDyUp, 'm')}</div>
+                  <div>Pred y<sub>max</sub>: ${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</div>
+                </td>
+                <td>
+                  Pred &Delta;y<sub>up</sub> = ${exp && exp.dyUpPred !== null ? exp.dyUpPred.toFixed(3) + ' m' : '—'}<br>
+                  Pred y<sub>max</sub> = ${exp && exp.yMaxPred !== null ? exp.yMaxPred.toFixed(3) + ' m' : '—'}<br>
+                  Highest tracked y = <strong>${exp && exp.yMaxTrack !== null ? exp.yMaxTrack.toFixed(3) + ' m' : '—'}</strong>
+                </td>
+                <td>${fmtStudentText(sr.workMaxHeight)}</td>
+              </tr>
+              <tr>
+                <td><strong>5f. Initial Speed &amp; Launch Angle</strong><br><small>At first tracked airborne instant (t = 0)</small></td>
+                <td>
+                  <div>Speed v<sub>0</sub>: ${fmtStudentVal(sr.inpSpeedV0, 'm/s')}</div>
+                  <div>Angle &theta;: ${fmtStudentVal(sr.inpAngleTheta, '°')}</div>
+                </td>
+                <td>
+                  Ref v<sub>0</sub> = ${exp && exp.v0Pred !== null ? exp.v0Pred.toFixed(3) + ' m/s' : '—'}<br>
+                  Ref &theta; = ${exp && exp.thetaPred !== null ? exp.thetaPred.toFixed(2) + '°' : '—'}
+                </td>
+                <td>${fmtStudentText(sr.workVector)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      `}
 
-        <div class="report-two-col" style="margin-bottom: 0.75rem;">
-          <div class="report-box">
-            <div class="report-box-title">Upward &amp; Downward Intervals (Excluding Turnaround) &amp; Meaning of v<sub>y</sub> = 0 in 2D</div>
-            <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
-              <div><strong>Upward Interval (v<sub>y</sub> &gt; 0):</strong> ${fmtStudentVal(sr.inpPosDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpPosDirEnd, 's')}</div>
-              <div><strong>Downward Interval (v<sub>y</sub> &lt; 0):</strong> ${fmtStudentVal(sr.inpNegDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpNegDirEnd, 's')}</div>
+      <!-- SECTION 4: Motion Meaning, Apex, Limitation & Conclusion -->
+      ${isSimp ? `
+        <section class="report-section">
+          <h2 class="report-section-title">4. Motion Explanations, Gravity Conclusion &amp; Measurement Limitation</h2>
+          <div class="report-two-col" style="margin-bottom: 0.75rem;">
+            <div class="report-box">
+              <div class="report-box-title">Meaning of v<sub>y</sub> = 0 at Apex: Is the Ball at Rest in 2D?</div>
+              ${fmtStudentText(sr.txtStopExplanation)}
             </div>
-            ${fmtStudentText(sr.txtStopExplanation)}
-          </div>
-          <div class="report-box">
-            <div class="report-box-title">When Is Vertical Acceleration Negative? Reasoning on Both Sides of Apex</div>
-            <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
-              <strong>Submitted Interval where a<sub>y</sub> &lt; 0:</strong> ${fmtStudentVal(sr.inpNegAccStart, 's')} to ${fmtStudentVal(sr.inpNegAccEnd, 's')}
+            <div class="report-box">
+              <div class="report-box-title">Why Vertical Acceleration a<sub>y</sub> Is Negative on Both Sides of Apex</div>
+              ${fmtStudentText(sr.txtAccSignExplanation)}
             </div>
-            ${fmtStudentText(sr.txtAccSignExplanation)}
           </div>
-        </div>
 
-        <div class="report-box">
-          <div class="report-box-title">Specific Measurement Limitation Tied to a Reported Result</div>
-          ${fmtStudentText(sr.reflectionText)}
-        </div>
-      </section>
+          <div class="report-box" style="margin-bottom: 0.75rem; background: #eef7fa; border: 1.5px solid #0f7e9b;">
+            <div class="report-box-title" style="color: #0f7e9b;">Conclusion: Experimental Gravity Measurement</div>
+            ${fmtStudentText(sr.txtConclusionGravity)}
+          </div>
+
+          <div class="report-box">
+            <div class="report-box-title">Specific Measurement Limitation &amp; Direction of Effect</div>
+            <div><strong>Reported Limitation:</strong> ${fmtStudentText(sr.reflectionText)}</div>
+            <div style="margin-top: 0.45rem;"><strong>Direction (Too High or Too Low):</strong> ${fmtStudentText(sr.txtLimitationDirection)}</div>
+          </div>
+        </section>
+      ` : `
+        <section class="report-section">
+          <h2 class="report-section-title">4. Signed-Area Check, Motion Intervals, Apex Reasoning &amp; Measurement Limitation</h2>
+          <div class="report-box" style="margin-bottom: 0.75rem;">
+            <div class="report-box-title">Signed-Area Check on Derived v<sub>y</sub>–t Graph (Using Fitted v<sub>y</sub> = 2At + B and Fitted Initial Height C)</div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; font-size: 0.78rem; margin-bottom: 0.45rem;">
+              <div>Zero Crossing t<sub>zero</sub>:<br>${fmtStudentVal(sr.inpZeroCrossT, 's')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.tZero !== null ? exp.tZero.toFixed(3) + ' s' : 'N/A'})</small></div>
+              <div>Ascent +Area<sub>up</sub>:<br>${fmtStudentVal(sr.inpAreaUp, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaUp !== null ? '+' + exp.areaUp.toFixed(3) + ' m' : 'N/A'})</small></div>
+              <div>Descent Area<sub>down</sub>:<br>${fmtStudentVal(sr.inpAreaDown, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.areaDown !== null ? exp.areaDown.toFixed(3) + ' m' : 'N/A'})</small></div>
+              <div>Sum &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpNetDyArea, 'm')}<br><small style="color:#4b6570;">(Fit: ${exp && exp.netDyArea !== null ? exp.netDyArea.toFixed(3) + ' m' : 'N/A'})</small></div>
+              <div>Fitted C + &Delta;y<sub>area</sub>:<br>${fmtStudentVal(sr.inpYFinalFromArea, 'm')}<br><small style="color:#4b6570;">(y<sub>fit</sub>(t<sub>hang</sub>) = ${exp ? exp.yFitAtT.toFixed(3) + ' m' : '—'})</small></div>
+            </div>
+            <div style="font-size: 0.78rem; font-weight: 700; color: #0f7e9b; margin-bottom: 0.2rem;">Student Area Calculations &amp; Comparison with y<sub>fit</sub>(t<sub>hang</sub>):</div>
+            ${fmtStudentText(sr.workSignedArea)}
+          </div>
+
+          <div class="report-two-col" style="margin-bottom: 0.75rem;">
+            <div class="report-box">
+              <div class="report-box-title">Upward &amp; Downward Intervals (Excluding Turnaround) &amp; Meaning of v<sub>y</sub> = 0 in 2D</div>
+              <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
+                <div><strong>Upward Interval (v<sub>y</sub> &gt; 0):</strong> ${fmtStudentVal(sr.inpPosDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpPosDirEnd, 's')}</div>
+                <div><strong>Downward Interval (v<sub>y</sub> &lt; 0):</strong> ${fmtStudentVal(sr.inpNegDirStart, 's')} &lt; t &lt; ${fmtStudentVal(sr.inpNegDirEnd, 's')}</div>
+              </div>
+              ${fmtStudentText(sr.txtStopExplanation)}
+            </div>
+            <div class="report-box">
+              <div class="report-box-title">When Is Vertical Acceleration Negative? Reasoning on Both Sides of Apex</div>
+              <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
+                <strong>Submitted Interval where a<sub>y</sub> &lt; 0:</strong> ${fmtStudentVal(sr.inpNegAccStart, 's')} to ${fmtStudentVal(sr.inpNegAccEnd, 's')}
+              </div>
+              ${fmtStudentText(sr.txtAccSignExplanation)}
+            </div>
+          </div>
+
+          <div class="report-box">
+            <div class="report-box-title">Specific Measurement Limitation Tied to a Reported Result</div>
+            ${fmtStudentText(sr.reflectionText)}
+          </div>
+        </section>
+      `}
     </div>
   `;
 
@@ -3863,11 +4191,17 @@ function saveSessionJSON() {
   autoFitAndDeriveAllGraphs();
 
   const sessionPayload = {
-    schemaVersion: '2.0',
+    schemaVersion: '2.1',
     savedAt: new Date().toISOString(),
     studentName: state.studentName,
     teacherName: state.teacherName,
     state: {
+      mode: state.mode || 'full',
+      autoSampled: Boolean(state.autoSampled),
+      gravityWarningShown: Boolean(state.gravityWarningShown),
+      checkCounts: state.checkCounts || {},
+      courseLevel: state.courseLevel,
+      usedShortcuts: state.usedShortcuts,
       isSynthetic: state.isSynthetic,
       syntheticType: state.syntheticType,
       videoFileName: state.videoFileName,
@@ -3911,10 +4245,25 @@ function loadSessionJSON(file) {
     try {
       const data = JSON.parse(e.target.result);
       const s = data.state || {};
-      const isV2 = data.schemaVersion === '2.0' || s.firstAttemptPrediction !== undefined;
+      const isV2 = data.schemaVersion === '2.0' || data.schemaVersion === '2.1' || s.firstAttemptPrediction !== undefined;
 
       state.studentName = data.studentName || '';
       state.teacherName = data.teacherName || 'Mr. Lopez';
+
+      // Restore mode: full is default if omitted
+      if (s.mode === 'simplified') {
+        setAppMode('simplified');
+      } else {
+        setAppMode('full');
+      }
+
+      state.autoSampled = Boolean(s.autoSampled);
+      state.gravityWarningShown = Boolean(s.gravityWarningShown);
+      if (s.checkCounts) {
+        state.checkCounts = { ...state.checkCounts, ...s.checkCounts };
+      }
+      if (s.courseLevel) setCourseLevel(s.courseLevel);
+      if (s.usedShortcuts) state.usedShortcuts = { ...state.usedShortcuts, ...s.usedShortcuts };
 
       // Restore video / synthetic setup
       if (s.isSynthetic === false) {
@@ -4083,7 +4432,9 @@ function loadSessionJSON(file) {
       }
       renderSignedAreaTab5Chart();
       updateReferenceQuantitiesBar();
+      updateSimplifiedComparisons();
       updateRubricChecklistUI();
+      updateCheckButtonsAvailability();
       preparePrintableReport();
       drawOverlay();
     } catch (err) {
@@ -4280,6 +4631,7 @@ function initEventListeners() {
   }
   if (el('btnAutoDemoTrack')) {
     el('btnAutoDemoTrack').addEventListener('click', () => {
+      state.autoSampled = true;
       state.usedShortcuts.autoTrack = true;
       if (!state.isSynthetic) {
         initSyntheticExperiment(el('presetModelSelect') ? el('presetModelSelect').value : 'basketball');
@@ -4635,6 +4987,9 @@ function initEventListeners() {
       node.addEventListener('input', () => {
         state.studentResponses[k] = node.value;
         updateWrittenStatusBadges();
+        updateCheckButtonsAvailability();
+        updateSimplifiedComparisons();
+        updateRubricChecklistUI();
       });
     }
   });
@@ -4730,6 +5085,14 @@ function initEventListeners() {
   document.querySelectorAll('.help-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => openHelpModal(btn.dataset.helpTab));
   });
+
+  // Mode Switch (Version: Full | Simplified)
+  if (el('btnModeFull')) {
+    el('btnModeFull').addEventListener('click', () => setAppMode('full'));
+  }
+  if (el('btnModeSimplified')) {
+    el('btnModeSimplified').addEventListener('click', () => setAppMode('simplified'));
+  }
 
   // Course Level Toggle (On-Level vs. Honors)
   if (el('btnLevelOnLevel')) {

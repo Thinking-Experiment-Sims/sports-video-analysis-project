@@ -2342,9 +2342,9 @@ details.per-hint[open] summary {
 }
 
 /* ==========================================================================
-   Level Selector (On-Level vs. Honors) & Teacher Mode
+   Version Mode Switch (Full vs. Simplified)
    ========================================================================== */
-.level-toggle-group {
+.mode-toggle-group {
   display: inline-flex;
   align-items: center;
   background: #f1f5f9;
@@ -2353,7 +2353,7 @@ details.per-hint[open] summary {
   padding: 2px;
 }
 
-.level-btn {
+.mode-btn {
   background: transparent;
   border: none;
   font-size: 0.73rem;
@@ -2365,15 +2365,71 @@ details.per-hint[open] summary {
   transition: all 0.15s ease;
 }
 
-.level-btn:hover {
+.mode-btn:hover {
   color: var(--ink);
 }
 
-.level-btn.active {
+.mode-btn.active {
   background: #ffffff;
   color: var(--primary-teal);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.simplified-badge {
+  display: inline-block;
+  background: #fef3c7;
+  border: 1.5px solid #d97706;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* Visibility rules for Full vs Simplified Mode */
+.show-in-simplified-only {
+  display: none !important;
+}
+
+body.mode-simplified .hide-in-simplified {
+  display: none !important;
+}
+
+body.mode-simplified .show-in-simplified-only {
+  display: block !important;
+}
+
+body.mode-simplified #subtab-4b .calc-grid-2,
+body.mode-simplified #subtab-4c .calc-grid-2 {
+  grid-template-columns: 1fr;
+}
+
+.comp-diff-tag {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: var(--ink);
+}
+
+.comp-diff-tag.good {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.comp-diff-tag.warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.comp-diff-tag.alert {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 /* ==========================================================================
