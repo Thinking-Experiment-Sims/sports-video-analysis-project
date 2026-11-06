@@ -17,7 +17,7 @@ const FIXED_AY_REF = -9.8; // Fixed reference vertical acceleration for lab pred
 // ============================================================================
 const state = {
   schemaVersion: '2.1',
-  mode: 'full', // 'full' | 'simplified'
+  mode: 'simplified', // 'simplified' = Standard (default 3-day project) | 'full' = Extended
   autoSampled: false,
   gravityWarningShown: false,
   currentStep: 1, // 1: Track the Flight, 2: Explain the Motion, 3: Submit Report
@@ -196,7 +196,14 @@ const state = {
     reflectionText: '',
     // Simplified Mode Specific Fields
     txtLimitationDirection: '',
-    txtConclusionGravity: ''
+    txtConclusionGravity: '',
+    // Standard version: Calculations 1-7 (Fall 2025 worksheet design)
+    stdX0: '', stdY0: '', stdVx0: '', stdVy0: '', stdAx: '', stdAy: '', stdAyPct: '', stdWork1: '',
+    stdHangCalc: '', stdHangMeas: '', stdHangPct: '', stdWork2: '',
+    stdRangeCalc: '', stdRangeMeas: '', stdRangePct: '', stdWork3: '',
+    stdYmaxCalc: '', stdYmaxMeas: '', stdYmaxPct: '', stdWork4: '',
+    stdV0: '', stdWork5: '', stdTheta: '', stdWork6: '',
+    stdVxCheck: '', stdVxCheckPct: '', stdVyCheck: '', stdVyCheckPct: '', stdWork7: ''
   },
 
   // Practice Feedback State (Saved separately from student responses)
@@ -209,7 +216,9 @@ const state = {
     fb5e: { status: 'unchecked', text: '' },
     fb5f: { status: 'unchecked', text: '' },
     fbSignedArea: { status: 'unchecked', text: '' },
-    fbIntervals: { status: 'unchecked', text: '' }
+    fbIntervals: { status: 'unchecked', text: '' },
+    fbStd1: { status: 'unchecked', text: '' }, fbStd2: { status: 'unchecked', text: '' }, fbStd3: { status: 'unchecked', text: '' },
+    fbStd4: { status: 'unchecked', text: '' }, fbStd5: { status: 'unchecked', text: '' }, fbStd7: { status: 'unchecked', text: '' }
   },
 
   // Synthetic Canvas Buffer
@@ -297,16 +306,17 @@ function init() {
   // Mode and Teacher URL Parameters
   try {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('mode') === 'simplified') {
-      setAppMode('simplified');
-    } else {
+    const modeParam = (urlParams.get('mode') || '').toLowerCase();
+    if (modeParam === 'extended' || modeParam === 'full') {
       setAppMode('full');
+    } else {
+      setAppMode('simplified');
     }
     const isTeacher = urlParams.get('teacher') === '1';
     setTeacherShortcutVisibility(isTeacher);
   } catch (err) {
     console.warn('URL parameter parsing warning:', err);
-    setAppMode('full');
+    setAppMode('simplified');
   }
 
   updateCheckButtonsAvailability();
@@ -2800,6 +2810,27 @@ function getExpectedPhysicsValues() {
   const yFinalFromArea = netDyArea !== null ? (C + netDyArea) : null;
   const yFitAtT = A * T * T + B * T + C;
 
+  // Standard version (Calculations 1-7): predictions from fit values and fitted a_y = 2A
+  let hangCalcFit = null;
+  if (cov.yFinal !== null && cov.yFinal !== undefined && Math.abs(A) > 1e-9) {
+    const qa = A, qb = B, qc = C - cov.yFinal;
+    const disc = qb * qb - 4 * qa * qc;
+    if (disc >= 0) {
+      const r1 = (-qb + Math.sqrt(disc)) / (2 * qa);
+      const r2 = (-qb - Math.sqrt(disc)) / (2 * qa);
+      const roots = [r1, r2].filter(r => r > 0);
+      hangCalcFit = roots.length ? Math.max(...roots) : null;
+    }
+  }
+  const rangeCalcFit = hangCalcFit !== null ? m * hangCalcFit : null;
+  const dyUpFit = Math.abs(A) > 1e-9 ? (B * B) / (-4 * A) : null;
+  const yMaxCalcFit = dyUpFit !== null ? C + dyUpFit : null;
+  const v0Fit = Math.hypot(m, B);
+  const thetaFit = Math.abs(m) > 1e-9 ? Math.atan(Math.abs(B) / Math.abs(m)) * 180 / Math.PI : null;
+  const yMaxTrackVal = cov.peakPoint ? cov.peakPoint.y : null;
+  const vxCheckMeas = (T > 0 && cov.dxTrack !== null && cov.dxTrack !== undefined) ? cov.dxTrack / T : null;
+  const vyCheckMeas = (yMaxTrackVal !== null && yMaxTrackVal > y0) ? Math.sqrt(2 * Math.abs(ayFit) * (yMaxTrackVal - y0)) : null;
+
   return {
     T,
     tUp,
@@ -2810,6 +2841,7 @@ function getExpectedPhysicsValues() {
     dxTrack: cov.dxTrack,
     dyTrack: cov.dyTrack,
     yMaxTrack: cov.peakPoint ? cov.peakPoint.y : null,
+    hangCalcFit, rangeCalcFit, yMaxCalcFit, v0Fit, thetaFit, vxCheckMeas, vyCheckMeas,
     tPeakTrack: cov.peakPoint ? cov.peakPoint.time : null,
     m,
     c,
@@ -2986,7 +3018,7 @@ function restoreAutosave() {
     if (data.observedTUp) state.observedTUp = data.observedTUp;
     if (data.selectedFits) state.selectedFits = data.selectedFits;
     if (data.tangentPoints) state.tangentPoints = data.tangentPoints;
-    if (data.studentResponses) state.studentResponses = data.studentResponses;
+    if (data.studentResponses) state.studentResponses = { ...state.studentResponses, ...data.studentResponses };
     if (data.firstAttemptPrediction) state.firstAttemptPrediction = data.firstAttemptPrediction;
     if (data.predictionRevision) state.predictionRevision = data.predictionRevision;
     if (data.graphConnections) state.graphConnections = data.graphConnections;
@@ -3021,7 +3053,7 @@ function setAppMode(mode) {
   document.body.classList.toggle('mode-simplified', state.mode === 'simplified');
 
   const badge = el('simplifiedHeaderBadge');
-  if (badge) badge.style.display = (state.mode === 'simplified') ? 'inline-block' : 'none';
+  if (badge) badge.style.display = (state.mode === 'full') ? 'inline-block' : 'none';
 
   const checkFull = el('checklistContainerFull');
   const checkSimp = el('checklistContainerSimplified');
@@ -3111,7 +3143,7 @@ function updateCheckButtonsAvailability() {
   const sr = state.studentResponses;
   // Tab 4: Show work in calculation work boxes
   const workBoxes = (state.mode === 'simplified')
-    ? [(sr.work5aVx || ''), (sr.work5bAy || ''), (sr.work5cVy0 || ''), (sr.workMaxHeight || '')]
+    ? [(sr.stdWork1 || ''), (sr.stdWork2 || ''), (sr.stdWork3 || ''), (sr.stdWork4 || ''), (sr.stdWork5 || ''), (sr.stdWork6 || ''), (sr.stdWork7 || '')]
     : [(sr.work5aVx || ''), (sr.work5bAy || ''), (sr.work5cVy0 || ''), (sr.work5dDisp || ''), (sr.workMaxHeight || ''), (sr.workVector || '')];
 
   const hasAnyWork = workBoxes.some(w => w.trim().length >= 4);
@@ -3210,12 +3242,106 @@ function setFeedbackBox(boxId, status, message) {
   node.innerHTML = message;
 }
 
+
+// ============================================================================
+// Standard version: Check Calculations 1-7 (Fall 2025 worksheet design)
+// ============================================================================
+function checkStandardCalculations(exp) {
+  const sr = state.studentResponses;
+  const P = (str) => {
+    if (str === undefined || str === null || String(str).trim() === '') return null;
+    const v = parseFloat(str);
+    return Number.isFinite(v) ? v : null;
+  };
+  const near = (val, target, rel = 0.03, abs = 0.02) => val !== null && target !== null && target !== undefined && Math.abs(val - target) <= Math.max(abs, Math.abs(target) * rel);
+  const nearAny = (val, targets, rel, abs) => targets.some(t => near(val, t, rel, abs));
+  const pctOf = (a, b) => (a !== null && b !== null && b !== 0) ? Math.abs(a - b) / Math.abs(b) * 100 : null;
+  const pctOk = (pct, a, b) => { const p = pctOf(a, b); return pct !== null && p !== null && Math.abs(Math.abs(pct) - p) <= 0.6; };
+  const res = [];
+  const report = (id, ok, okMsg, badMsg) => { setFeedbackBox(id, ok ? 'good' : 'warn', ok ? okMsg : badMsg); res.push(ok); };
+
+  state.checkCounts.std = (state.checkCounts.std || 0) + 1;
+
+  // 1. Fit values
+  const x0 = P(sr.stdX0), y0 = P(sr.stdY0), vx = P(sr.stdVx0), vy = P(sr.stdVy0), ax = P(sr.stdAx), ay = P(sr.stdAy), ayPct = P(sr.stdAyPct);
+  const bad1 = [];
+  if (!near(x0, exp.c, 0.03, 0.03)) bad1.push('x₀ (intercept c of your x(t) line)');
+  if (!nearAny(y0, [exp.C, exp.y0], 0.03, 0.03)) bad1.push('y₀ (C of your y(t) curve)');
+  if (!near(vx, exp.m)) bad1.push('v₀ₓ (slope m)');
+  if (!near(vy, exp.B)) bad1.push('v₀ᵧ (B)');
+  if (ax === null || Math.abs(ax) > 0.05) bad1.push('aₓ (a straight-line x(t) means aₓ = 0)');
+  if (!near(ay, exp.ayFit)) bad1.push('aᵧ (= 2A, watch the sign)');
+  if (!pctOk(ayPct, ay, -9.8)) bad1.push('% difference of aᵧ from −9.8');
+  report('fbStd1', bad1.length === 0, '✓ Fit values and % difference check out.', 'Check: ' + bad1.join('; ') + '.');
+
+  // 2. Hang time
+  const hc = P(sr.stdHangCalc), hm = P(sr.stdHangMeas), hp = P(sr.stdHangPct);
+  const bad2 = [];
+  if (!near(hc, exp.hangCalcFit, 0.03, 0.02)) bad2.push('calculated hang time (use the quadratic formula with your fit values and the height of your last tracked point; keep the positive root)');
+  if (!near(hm, exp.T, 0.02, 0.01)) bad2.push('measured hang time (last tracked time − first tracked time)');
+  if (!pctOk(hp, hc, hm)) bad2.push('% difference');
+  report('fbStd2', bad2.length === 0, '✓ Hang time calculated, measured and compared.', 'Check: ' + bad2.join('; ') + '.');
+
+  // 3. Range
+  const rc = P(sr.stdRangeCalc), rm = P(sr.stdRangeMeas), rp = P(sr.stdRangePct);
+  const bad3 = [];
+  const ownRange = (vx !== null && hc !== null) ? vx * hc : null;
+  if (!nearAny(rc, [exp.rangeCalcFit, ownRange], 0.03, 0.02)) bad3.push('calculated range (Δx = v₀ₓ × your calculated hang time)');
+  if (!near(rm, exp.dxTrack, 0.03, 0.02)) bad3.push('measured range (x of last point − x of first point)');
+  if (!pctOk(rp, rc, rm)) bad3.push('% difference');
+  report('fbStd3', bad3.length === 0, '✓ Range calculated, measured and compared.', 'Check: ' + bad3.join('; ') + '.');
+
+  // 4. Maximum height
+  const yc = P(sr.stdYmaxCalc), ym = P(sr.stdYmaxMeas), yp = P(sr.stdYmaxPct);
+  const bad4 = [];
+  const dyUp = exp.yMaxCalcFit !== null ? exp.yMaxCalcFit - exp.C : null;
+  const ownYmax = (vy !== null && ay !== null && ay !== 0 && y0 !== null) ? y0 + (vy * vy) / (2 * Math.abs(ay)) : null;
+  if (!nearAny(yc, [exp.yMaxCalcFit, dyUp !== null ? exp.y0 + dyUp : null, ownYmax], 0.03, 0.02)) bad4.push('calculated maximum height (find Δy_up from v₀ᵧ² ÷ (2|aᵧ|), then add y₀)');
+  if (!near(ym, exp.yMaxTrack, 0.02, 0.01)) bad4.push('measured maximum height (highest y in your data table)');
+  if (!pctOk(yp, yc, ym)) bad4.push('% difference');
+  report('fbStd4', bad4.length === 0, '✓ Maximum height calculated, measured and compared.', 'Check: ' + bad4.join('; ') + '.');
+
+  // 5 & 6. Launch speed and angle
+  const v0 = P(sr.stdV0), th = P(sr.stdTheta);
+  const bad5 = [];
+  const ownV0 = (vx !== null && vy !== null) ? Math.hypot(vx, vy) : null;
+  const ownTh = (vx !== null && vy !== null && vx !== 0) ? Math.atan(Math.abs(vy) / Math.abs(vx)) * 180 / Math.PI : null;
+  if (!nearAny(v0, [exp.v0Fit, ownV0], 0.02, 0.02)) bad5.push('launch speed (Pythagorean theorem with v₀ₓ and v₀ᵧ; units are m/s)');
+  if (th === null || !( (exp.thetaFit !== null && Math.abs(Math.abs(th) - exp.thetaFit) <= 1.0) || (ownTh !== null && Math.abs(Math.abs(th) - ownTh) <= 1.0) )) bad5.push('launch angle (tan⁻¹ of v₀ᵧ ÷ v₀ₓ, calculator in DEGREES)');
+  report('fbStd5', bad5.length === 0, '✓ Launch speed and angle check out.', 'Check: ' + bad5.join('; ') + '.');
+
+  // 7. Consistency check from measured values
+  const vxc = P(sr.stdVxCheck), vyc = P(sr.stdVyCheck), vxp = P(sr.stdVxCheckPct), vyp = P(sr.stdVyCheckPct);
+  const bad7 = [];
+  const ownVxc = (rm !== null && hm) ? rm / hm : null;
+  const vyAlt = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.C) ? Math.sqrt(2 * Math.abs(exp.ayFit) * (exp.yMaxTrack - exp.C)) : null;
+  const vyRef = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.y0) ? Math.sqrt(2 * 9.8 * (exp.yMaxTrack - exp.y0)) : null;
+  const ownVyc = (ym !== null && y0 !== null && ay !== null && ym > y0) ? Math.sqrt(2 * Math.abs(ay) * (ym - y0)) : null;
+  if (!nearAny(vxc, [exp.vxCheckMeas, ownVxc], 0.03, 0.02)) bad7.push('v₀ₓ from measured range ÷ measured hang time');
+  if (!nearAny(vyc, [exp.vyCheckMeas, vyAlt, vyRef, ownVyc], 0.04, 0.03)) bad7.push('v₀ᵧ from your measured maximum height');
+  if (!pctOk(vxp, vxc, vx)) bad7.push('% difference for v₀ₓ (compare with Calculation 1)');
+  if (!pctOk(vyp, vyc, vy)) bad7.push('% difference for v₀ᵧ (compare with Calculation 1)');
+  report('fbStd7', bad7.length === 0, '✓ Consistency check complete. Explain in your work whether the two methods agree.', 'Check: ' + bad7.join('; ') + '.');
+
+  const okCount = res.filter(Boolean).length;
+  const badge = el('badgeStdCalcs');
+  if (badge) {
+    badge.textContent = `${okCount} / ${res.length} checks OK`;
+    badge.className = `pct-diff-badge ${okCount === res.length ? 'good' : 'warn'}`;
+  }
+  updateWrittenStatusBadges();
+}
+
 function checkNumbersForPracticeFeedback(e) {
   syncStudentInputsFromDOM();
   autoFitAndDeriveAllGraphs();
   const exp = getExpectedPhysicsValues();
   if (!exp) {
     alert('Please track at least 5 airborne points in Step 1 before checking numbers.');
+    return;
+  }
+  if (state.mode === 'simplified' && e && e.target && e.target.id === 'btnCheckWorksheet') {
+    checkStandardCalculations(exp);
     return;
   }
 
@@ -3547,10 +3673,9 @@ function updateRubricChecklistUI() {
       : '<span class="pct-diff-badge warn">Missing</span>';
   }
 
-  const s4Ok = hasVal(sr.inpVx0) && hasVal(sr.work5aVx) &&
-    hasVal(sr.inpAy) && hasVal(sr.work5bAy) &&
-    hasVal(sr.inpVy0Pred) && hasVal(sr.work5cVy0) &&
-    hasVal(sr.inpCalcMaxHeight) && hasVal(sr.workMaxHeight);
+  const s4Ok = ['stdVx0', 'stdVy0', 'stdAy', 'stdAyPct', 'stdWork1', 'stdHangCalc', 'stdHangMeas', 'stdHangPct', 'stdWork2',
+    'stdRangeCalc', 'stdRangeMeas', 'stdRangePct', 'stdWork3', 'stdYmaxCalc', 'stdYmaxMeas', 'stdYmaxPct', 'stdWork4',
+    'stdV0', 'stdWork5', 'stdTheta', 'stdWork6', 'stdVxCheck', 'stdVyCheck', 'stdWork7'].every(k => hasVal(sr[k]));
   if (el('chkSimpStatus4')) {
     el('chkSimpStatus4').innerHTML = s4Ok
       ? '<span class="pct-diff-badge good">Filled</span>'
@@ -3791,7 +3916,7 @@ function preparePrintableReport() {
   };
 
   const checkCountsSummary = isSimp
-    ? `5a: <strong>${state.checkCounts['5a'] || 0}</strong> &bull; 5b: <strong>${state.checkCounts['5b'] || 0}</strong> &bull; 5c: <strong>${state.checkCounts['5c'] || 0}</strong> &bull; 5e: <strong>${state.checkCounts['5e'] || 0}</strong>`
+    ? `Calculations 1–7: <strong>${state.checkCounts.std || 0}</strong> &bull; Tab 5B: <strong>${state.checkCounts['5B_intervals'] || 0}</strong>`
     : `5a: <strong>${state.checkCounts['5a'] || 0}</strong> &bull; 5b: <strong>${state.checkCounts['5b'] || 0}</strong> &bull; 5c: <strong>${state.checkCounts['5c'] || 0}</strong> &bull; 5d: <strong>${state.checkCounts['5d'] || 0}</strong> &bull; 5e: <strong>${state.checkCounts['5e'] || 0}</strong> &bull; 5f: <strong>${state.checkCounts['5f'] || 0}</strong> &bull; Tab 5A Area: <strong>${state.checkCounts['5A_area'] || 0}</strong> &bull; Tab 5B Intervals: <strong>${state.checkCounts['5B_intervals'] || 0}</strong>`;
 
   const reportHtml = `
@@ -3802,7 +3927,7 @@ function preparePrintableReport() {
           <div class="report-doc-kicker">THE THINKING EXPERIMENT &bull; PROJECTILE VIDEO PROJECT REPORT</div>
           <h1 class="report-doc-title">
             2D Projectile Motion &amp; Kinematic Graph Analysis
-            ${isSimp ? '<span class="simplified-badge" style="margin-left: 0.5rem; font-size: 0.72rem; vertical-align: middle;">SIMPLIFIED VERSION</span>' : ''}
+            ${!isSimp ? '<span class="simplified-badge" style="margin-left: 0.5rem; font-size: 0.72rem; vertical-align: middle;">EXTENDED VERSION</span>' : ''}
           </h1>
           <div class="report-doc-meta">
             <span><strong>Student:</strong> ${escapeHtml(sName)}</span>
@@ -3953,73 +4078,54 @@ function preparePrintableReport() {
       <!-- SECTION 3: Calculations Table -->
       ${isSimp ? `
         <section class="report-section">
-          <h2 class="report-section-title">3. Results &amp; Model Comparisons (Calculations 5a, 5b, 5c, 5e)</h2>
+          <h2 class="report-section-title">3. Kinematics Calculations 1–7</h2>
           <table class="report-table" style="margin-bottom: 0.85rem;">
             <thead>
               <tr>
-                <th style="width: 25%;">Quantity</th>
-                <th style="width: 18%;">My Value</th>
-                <th style="width: 26%;">Compare To</th>
-                <th style="width: 18%;">Compare Value</th>
-                <th style="width: 13%;">% Difference</th>
+                <th style="width: 30%;">1. Values from best-fit lines &amp; curves</th>
+                <th style="width: 70%;">Student entries</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><strong>5a. Horizontal Velocity v₀ₓ</strong></td>
-                <td>${fmtStudentVal(sr.inpVx0, 'm/s')}</td>
-                <td>Fitted slope m of x(t)</td>
-                <td><strong>${exp && exp.m !== null ? exp.m.toFixed(3) + ' m/s' : '—'}</strong></td>
-                <td><strong>${calcDiffPct(sr.inpVx0, exp ? exp.m : null)}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>5b. Vertical Acceleration a<sub>y,fit</sub></strong></td>
-                <td>${fmtStudentVal(sr.inpAy, 'm/s²')}</td>
-                <td>Standard g (−9.8 m/s²) [2A: ${exp && exp.ayFit !== null ? exp.ayFit.toFixed(3) : '—'}]</td>
-                <td><strong>−9.800 m/s²</strong></td>
-                <td><strong>${calcDiffPct(sr.inpAy, -9.800)}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>5c. Predicted Vertical Velocity v<sub>0y,pred</sub></strong></td>
-                <td>${fmtStudentVal(sr.inpVy0Pred, 'm/s')}</td>
-                <td>Fitted parameter B</td>
-                <td><strong>${exp && exp.B !== null ? exp.B.toFixed(3) + ' m/s' : '—'}</strong></td>
-                <td><strong>${calcDiffPct(sr.inpVy0Pred, exp ? exp.B : null)}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>5e. Maximum Height y<sub>max</sub></strong></td>
-                <td>${fmtStudentVal(sr.inpCalcMaxHeight, 'm')}</td>
-                <td>Highest tracked y from Tab 1B</td>
-                <td><strong>${exp && exp.yMaxTrack !== null ? exp.yMaxTrack.toFixed(3) + ' m' : '—'}</strong></td>
-                <td><strong>${calcDiffPct(sr.inpCalcMaxHeight, exp ? exp.yMaxTrack : null)}</strong></td>
-              </tr>
+              <tr><td>x₀, y₀</td><td>${fmtStudentVal(sr.stdX0, 'm')}, ${fmtStudentVal(sr.stdY0, 'm')}</td></tr>
+              <tr><td>v₀ₓ, v₀ᵧ</td><td>${fmtStudentVal(sr.stdVx0, 'm/s')}, ${fmtStudentVal(sr.stdVy0, 'm/s')}</td></tr>
+              <tr><td>aₓ, aᵧ (% diff of aᵧ from −9.8 m/s²)</td><td>${fmtStudentVal(sr.stdAx, 'm/s²')}, ${fmtStudentVal(sr.stdAy, 'm/s²')} (${fmtStudentVal(sr.stdAyPct, '%')})</td></tr>
             </tbody>
           </table>
-
+          <table class="report-table" style="margin-bottom: 0.85rem;">
+            <thead>
+              <tr>
+                <th style="width: 28%;">Quantity</th>
+                <th style="width: 24%;">Calculated</th>
+                <th style="width: 24%;">Measured (video)</th>
+                <th style="width: 24%;">% Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>2. Hang time</strong></td><td>${fmtStudentVal(sr.stdHangCalc, 's')}</td><td>${fmtStudentVal(sr.stdHangMeas, 's')}</td><td>${fmtStudentVal(sr.stdHangPct, '%')}</td></tr>
+              <tr><td><strong>3. Range</strong></td><td>${fmtStudentVal(sr.stdRangeCalc, 'm')}</td><td>${fmtStudentVal(sr.stdRangeMeas, 'm')}</td><td>${fmtStudentVal(sr.stdRangePct, '%')}</td></tr>
+              <tr><td><strong>4. Maximum height</strong></td><td>${fmtStudentVal(sr.stdYmaxCalc, 'm')}</td><td>${fmtStudentVal(sr.stdYmaxMeas, 'm')}</td><td>${fmtStudentVal(sr.stdYmaxPct, '%')}</td></tr>
+              <tr><td><strong>5. Launch speed v₀</strong></td><td>${fmtStudentVal(sr.stdV0, 'm/s')}</td><td>—</td><td>—</td></tr>
+              <tr><td><strong>6. Launch angle θ</strong></td><td>${fmtStudentVal(sr.stdTheta, '°')}</td><td>—</td><td>—</td></tr>
+              <tr><td><strong>7. v₀ₓ from measured values</strong></td><td>${fmtStudentVal(sr.stdVxCheck, 'm/s')}</td><td>fit v₀ₓ: ${fmtStudentVal(sr.stdVx0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVxCheckPct, '%')}</td></tr>
+              <tr><td><strong>7. v₀ᵧ from measured values</strong></td><td>${fmtStudentVal(sr.stdVyCheck, 'm/s')}</td><td>fit v₀ᵧ: ${fmtStudentVal(sr.stdVy0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVyCheckPct, '%')}</td></tr>
+            </tbody>
+          </table>
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 28%;">Calculation Step</th>
-                <th style="width: 72%;">Student Equations, Substitutions, Units &amp; Comparison Work</th>
+                <th style="width: 28%;">Calculation</th>
+                <th style="width: 72%;">Student Equations, Substitutions, Units &amp; Comparisons</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><strong>5a. Horizontal Velocity Work</strong><br><small>Two points on fitted x–t line &amp; constant reasoning</small></td>
-                <td>${fmtStudentText(sr.work5aVx)}</td>
-              </tr>
-              <tr>
-                <td><strong>5b. Vertical Acceleration Work</strong><br><small>Two points on fitted v<sub>y</sub>–t line &amp; reference comparison</small></td>
-                <td>${fmtStudentText(sr.work5bAy)}</td>
-              </tr>
-              <tr>
-                <td><strong>5c. Initial Vertical Velocity Work</strong><br><small>Apex condition v<sub>y</sub> = 0 using &minus;a<sub>y,ref</sub>·t<sub>up</sub></small></td>
-                <td>${fmtStudentText(sr.work5cVy0)}</td>
-              </tr>
-              <tr>
-                <td><strong>5e. Maximum Height Work</strong><br><small>Using t<sub>up</sub> (not t<sub>hang</sub>) and initial height y₀</small></td>
-                <td>${fmtStudentText(sr.workMaxHeight)}</td>
-              </tr>
+              <tr><td><strong>1. Fit values &amp; comparison with references</strong></td><td>${fmtStudentText(sr.stdWork1)}</td></tr>
+              <tr><td><strong>2. Hang time</strong></td><td>${fmtStudentText(sr.stdWork2)}</td></tr>
+              <tr><td><strong>3. Range</strong></td><td>${fmtStudentText(sr.stdWork3)}</td></tr>
+              <tr><td><strong>4. Maximum height</strong></td><td>${fmtStudentText(sr.stdWork4)}</td></tr>
+              <tr><td><strong>5. Launch speed</strong></td><td>${fmtStudentText(sr.stdWork5)}</td></tr>
+              <tr><td><strong>6. Launch angle</strong></td><td>${fmtStudentText(sr.stdWork6)}</td></tr>
+              <tr><td><strong>7. Consistency check</strong></td><td>${fmtStudentText(sr.stdWork7)}</td></tr>
             </tbody>
           </table>
         </section>
@@ -4256,11 +4362,11 @@ function loadSessionJSON(file) {
       state.studentName = data.studentName || '';
       state.teacherName = data.teacherName || 'Mr. Lopez';
 
-      // Restore mode: full is default if omitted
-      if (s.mode === 'simplified') {
-        setAppMode('simplified');
-      } else {
+      // Restore mode: Standard ('simplified') is the default if omitted
+      if (s.mode === 'full') {
         setAppMode('full');
+      } else {
+        setAppMode('simplified');
       }
 
       state.autoSampled = Boolean(s.autoSampled);
@@ -4487,6 +4593,9 @@ function initEventListeners() {
   }
   if (el('btnProceedToStep5')) {
     el('btnProceedToStep5').addEventListener('click', () => updateStepView(5));
+  }
+  if (el('btnProceedToStep5Std')) {
+    el('btnProceedToStep5Std').addEventListener('click', () => updateStepView(5));
   }
   if (el('btnProceedToStep6')) {
     el('btnProceedToStep6').addEventListener('click', () => updateStepView(6));

@@ -28,15 +28,15 @@
           <span class="lab-badge">🎯 Projectile Video Lab</span>
         </div>
         <div class="header-actions">
-          <!-- Version Switch (Full vs. Simplified Mode) -->
-          <div class="mode-toggle-group" title="Toggle between Full and Simplified lab version">
+          <!-- Version Switch (Standard = default 3-day project; Extended = longer version). Internal mode values: 'simplified' = Standard, 'full' = Extended -->
+          <div class="mode-toggle-group" title="Switch between the Standard and Extended versions of the lab">
             <span style="font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-right: 0.2rem;">Version:</span>
-            <button type="button" class="mode-btn active" id="btnModeFull" data-mode="full">Full</button>
-            <button type="button" class="mode-btn" id="btnModeSimplified" data-mode="simplified">Simplified</button>
+            <button type="button" class="mode-btn active" id="btnModeSimplified" data-mode="simplified">Standard</button>
+            <button type="button" class="mode-btn" id="btnModeFull" data-mode="full">Extended</button>
           </div>
-          <span id="simplifiedHeaderBadge" class="simplified-badge" style="display: none;">SIMPLIFIED VERSION</span>
+          <span id="simplifiedHeaderBadge" class="simplified-badge" style="display: none;">EXTENDED VERSION</span>
 
-          <button type="button" id="btnLabHelp" class="btn btn-amber" style="font-weight: 700;" title="Open Student Directions &amp; 10-Point Lab Rubric">
+          <button type="button" id="btnLabHelp" class="btn btn-amber" style="font-weight: 700;" title="Open Student Directions &amp; Lab Rubric">
             📖 Quick Guide &amp; Rubric
           </button>
           <a href="student-guide.html" target="_blank" rel="noopener" class="btn" style="text-decoration: none; font-weight: 700; color: #0f7e9b;" title="Open Printable Student Handout">
@@ -858,7 +858,7 @@
             <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
               <button type="button" class="btn" id="btnBackTo3C">&larr; Back: 3C. Fit Acceleration</button>
               <button type="button" class="btn btn-amber" id="btnProceedToStep4" style="font-weight: 700;">
-                Next: Tab 4 — Kinematics Calculations (5a–5f) &rarr;
+                Next: Tab 4 — Kinematics Calculations &rarr;
               </button>
             </div>
           </div>
@@ -873,7 +873,7 @@
       <!-- Persistent Compact Reference Values Bar -->
       <div class="card" style="padding: 0.85rem 1.1rem; margin-bottom: 0.85rem; background: #eef7fa; border: 1.5px solid var(--primary-teal);">
         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
-          <strong style="color: var(--primary-teal); font-size: 0.88rem;">📌 Your Reference Values (Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) for predictions 5c–5e)</strong>
+          <strong style="color: var(--primary-teal); font-size: 0.88rem;">📌 Your Reference Values<span class="hide-in-simplified"> (Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) for predictions 5c–5e)</span><span class="show-in-simplified-only"> (measured from your tracked data)</span></strong>
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span id="checkWorksheetHint" class="check-lock-hint" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Enter written work to unlock check</span>
             <button type="button" id="btnCheckWorksheet" class="btn btn-amber" style="font-weight: 700; padding: 0.38rem 0.85rem;" disabled>
@@ -905,8 +905,116 @@
         </div>
       </div>
 
-      <!-- Sub-Tab Navigation for Tab 4 -->
-      <div class="subtab-nav" role="tablist" aria-label="Calculations Sub-Tabs">
+      <!-- =================== STANDARD VERSION: CALCULATIONS 1–7 (Fall 2025 worksheet design) =================== -->
+      <div id="stdCalcSection" class="show-in-simplified-only">
+        <div class="card" style="padding: 1.15rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Tab 4: Kinematics Calculations 1–7</h3>
+            <span class="pct-diff-badge" id="badgeStdCalcs">Not checked</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--muted); margin: 0 0 0.8rem 0;">
+            Use the values from your <strong>best-fit lines and curves</strong> (Tab 3) and the equations for accelerating motion. For each prediction, also <strong>measure</strong> the same quantity from your tracked data (table in Tab 1C or the reference bar above) and calculate a <strong>percent difference</strong>:
+            % diff = |calculated − measured| ÷ |measured| × 100. Show every equation, substitution, and unit in the work boxes.
+          </p>
+
+          <!-- Calculation 1 -->
+          <div class="std-calc-block">
+            <h4>1. Values from your best-fit lines and curves</h4>
+            <p class="std-calc-hint">\(x(t) = mt + c\) gives \(x_0 = c\), \(v_{0x} = m\), \(a_x = 0\). \(y(t) = At^2 + Bt + C\) gives \(y_0 = C\), \(v_{0y} = B\), \(a_y = 2A\).</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdX0">Initial horizontal position \(x_0\) (m)</label><input type="number" id="stdX0" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdY0">Initial vertical position \(y_0\) (m)</label><input type="number" id="stdY0" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdVx0">Initial horizontal velocity \(v_{0x}\) (m/s)</label><input type="number" id="stdVx0" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdVy0">Initial vertical velocity \(v_{0y}\) (m/s)</label><input type="number" id="stdVy0" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdAx">Horizontal acceleration \(a_x\) (m/s²)</label><input type="number" id="stdAx" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdAy">Vertical acceleration \(a_y\) (m/s²)</label><input type="number" id="stdAy" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdAyPct">% difference: \(a_y\) vs. −9.8 m/s²</label><input type="number" id="stdAyPct" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd1" class="practice-feedback-msg"></div>
+            <label for="stdWork1" class="std-work-label">Work: compare \(a_y\) with −9.8 m/s² (percent difference) and \(a_x\) with 0 m/s² (no percent difference):</label>
+            <textarea id="stdWork1" class="input-control" rows="2"></textarea>
+          </div>
+
+          <!-- Calculation 2 -->
+          <div class="std-calc-block">
+            <h4>2. Hang time</h4>
+            <p class="std-calc-hint">Calculate: solve \(y_{\text{final}} = y_0 + v_{0y}t + \tfrac{1}{2}a_y t^2\) for \(t\) (quadratic formula), where \(y_{\text{final}}\) is the height of your last tracked point. Measure: last tracked time − first tracked time.</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdHangCalc">Calculated hang time (s)</label><input type="number" id="stdHangCalc" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdHangMeas">Measured hang time (s)</label><input type="number" id="stdHangMeas" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdHangPct">% difference</label><input type="number" id="stdHangPct" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd2" class="practice-feedback-msg"></div>
+            <label for="stdWork2" class="std-work-label">Work (equation, quadratic formula with numbers, rejected root, % difference):</label>
+            <textarea id="stdWork2" class="input-control" rows="2"></textarea>
+          </div>
+
+          <!-- Calculation 3 -->
+          <div class="std-calc-block">
+            <h4>3. Range (horizontal displacement)</h4>
+            <p class="std-calc-hint">Calculate: \(\Delta x = v_{0x}t + \tfrac{1}{2}a_x t^2\) using your calculated hang time. Measure: \(x_{\text{final}} - x_{\text{initial}}\) from your tracked data.</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdRangeCalc">Calculated range (m)</label><input type="number" id="stdRangeCalc" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdRangeMeas">Measured range (m)</label><input type="number" id="stdRangeMeas" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdRangePct">% difference</label><input type="number" id="stdRangePct" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd3" class="practice-feedback-msg"></div>
+            <label for="stdWork3" class="std-work-label">Work:</label>
+            <textarea id="stdWork3" class="input-control" rows="2"></textarea>
+          </div>
+
+          <!-- Calculation 4 -->
+          <div class="std-calc-block">
+            <h4>4. Maximum height (above the ground)</h4>
+            <p class="std-calc-hint">Calculate: at the top \(v_y = 0\), so \(0 = v_{0y}^2 + 2a_y\Delta y_{\text{up}}\); then \(y_{\max} = y_0 + \Delta y_{\text{up}}\). Measure: the highest point in your data table.</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdYmaxCalc">Calculated \(y_{\max}\) (m)</label><input type="number" id="stdYmaxCalc" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdYmaxMeas">Measured \(y_{\max}\) (m)</label><input type="number" id="stdYmaxMeas" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdYmaxPct">% difference</label><input type="number" id="stdYmaxPct" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd4" class="practice-feedback-msg"></div>
+            <label for="stdWork4" class="std-work-label">Work:</label>
+            <textarea id="stdWork4" class="input-control" rows="2"></textarea>
+          </div>
+
+          <!-- Calculations 5 & 6 -->
+          <div class="std-calc-block">
+            <h4>5. Launch speed &nbsp;&nbsp;•&nbsp;&nbsp; 6. Launch angle</h4>
+            <p class="std-calc-hint">\(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\) and \(\theta = \tan^{-1}(v_{0y} / v_{0x})\) above the horizontal (calculator in degrees).</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdV0">5. Launch speed \(v_0\) (m/s)</label><input type="number" id="stdV0" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdTheta">6. Launch angle \(\theta\) (°)</label><input type="number" id="stdTheta" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd5" class="practice-feedback-msg"></div>
+            <label for="stdWork5" class="std-work-label">Work for 5 (speed):</label>
+            <textarea id="stdWork5" class="input-control" rows="2"></textarea>
+            <label for="stdWork6" class="std-work-label">Work for 6 (angle):</label>
+            <textarea id="stdWork6" class="input-control" rows="2"></textarea>
+          </div>
+
+          <!-- Calculation 7 -->
+          <div class="std-calc-block">
+            <h4>7. Consistency check: initial velocity from your measured values</h4>
+            <p class="std-calc-hint">Use your <strong>measured</strong> range, hang time and maximum height (not the fit values) with the equations for accelerating motion: \(v_{0x} = \Delta x_{\text{meas}} / t_{\text{meas}}\) and \(v_{0y} = \sqrt{2|a_y|\,(y_{\max,\text{meas}} - y_0)}\). Compare with \(v_{0x}\) and \(v_{0y}\) from Calculation 1.</p>
+            <div class="std-calc-grid">
+              <div class="calc-field-group"><label for="stdVxCheck">\(v_{0x}\) from measured values (m/s)</label><input type="number" id="stdVxCheck" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdVxCheckPct">% difference vs. fit \(v_{0x}\)</label><input type="number" id="stdVxCheckPct" class="input-control" step="0.1"></div>
+              <div class="calc-field-group"><label for="stdVyCheck">\(v_{0y}\) from measured values (m/s)</label><input type="number" id="stdVyCheck" class="input-control" step="0.001"></div>
+              <div class="calc-field-group"><label for="stdVyCheckPct">% difference vs. fit \(v_{0y}\)</label><input type="number" id="stdVyCheckPct" class="input-control" step="0.1"></div>
+            </div>
+            <div id="fbStd7" class="practice-feedback-msg"></div>
+            <label for="stdWork7" class="std-work-label">Work, and one sentence: do your two ways of finding the initial velocity agree?</label>
+            <textarea id="stdWork7" class="input-control" rows="2"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+            <button type="button" class="btn btn-amber" id="btnProceedToStep5Std" style="font-weight: 700;">Next: Tab 5 — Motion Meaning &amp; Conclusion &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-Tab Navigation for Tab 4 (Extended Version) -->
+      <div class="subtab-nav hide-in-simplified" role="tablist" aria-label="Calculations Sub-Tabs">
         <button type="button" class="subtab-btn active" data-calc-subtab="subtab-4a" id="btnSubtab4A">
           <span class="subtab-check" id="chkSub4A">1</span> 4A. Graph Slopes (5a &amp; 5b)
         </button>
@@ -919,7 +1027,7 @@
       </div>
 
       <!-- SUB-TAB 4A: 5a & 5b -->
-      <div id="subtab-4a" class="subtab-panel active">
+      <div id="subtab-4a" class="subtab-panel active hide-in-simplified">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4A: Two-Point Slope Calculations (5a &amp; 5b)</h3>
@@ -984,7 +1092,7 @@
       </div>
 
       <!-- SUB-TAB 4B: 5c & 5d -->
-      <div id="subtab-4b" class="subtab-panel">
+      <div id="subtab-4b" class="subtab-panel hide-in-simplified">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4B: Initial Vertical Velocity (5c) &amp; Flight Displacements (5d)</h3>
@@ -1047,7 +1155,7 @@
       </div>
 
       <!-- SUB-TAB 4C: 5e & 5f -->
-      <div id="subtab-4c" class="subtab-panel">
+      <div id="subtab-4c" class="subtab-panel hide-in-simplified">
         <div class="card" style="padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 4C: Maximum Height at \(t_{\text{up}}\) (5e) &amp; Launch Vector (5f)</h3>
@@ -1366,7 +1474,7 @@
         <!-- 10-Point Practice Report Rubric & Submission Checklist (Full Mode) -->
         <div id="checklistContainerFull" class="card" style="margin-bottom: 0.9rem; padding: 1rem 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.55rem;">
-            <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-teal); margin: 0;">✅ 10-Point Report Readiness Checklist</h3>
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-teal); margin: 0;">✅ 10-Point Report Readiness Checklist (Extended Version)</h3>
             <span id="rubricReadinessBadge" class="pct-diff-badge">Checking...</span>
           </div>
 
@@ -1417,7 +1525,7 @@
         <!-- 20-Point Practice Report Rubric & Submission Checklist (Simplified Mode) -->
         <div id="checklistContainerSimplified" class="card" style="display: none; margin-bottom: 0.9rem; padding: 1rem 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.55rem;">
-            <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-teal); margin: 0;">✅ 20-Point Simplified Report Readiness Checklist</h3>
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-teal); margin: 0;">✅ 20-Point Report Readiness Checklist</h3>
             <span id="rubricReadinessBadgeSimplified" class="pct-diff-badge">Checking...</span>
           </div>
 
@@ -1439,25 +1547,25 @@
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);">
                 <td style="padding: 0.45rem 0.7rem; font-weight: 700;">2. Prediction vs. result</td>
-                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td>
+                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
                 <td style="padding: 0.45rem 0.7rem;">Predicted graph shapes locked before reveal, followed by reasoned comparison and revision notes in Tab 3D.</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkSimpStatus2">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding: 0.45rem 0.7rem; font-weight: 700;">3. Graph connections</td>
-                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">4</td>
+                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td>
                 <td style="padding: 0.45rem 0.7rem;">Position fits chosen, at least 3 tangent slopes plotted across ascent/apex/descent, velocity &amp; acceleration fits selected, and connections explained.</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkSimpStatus3">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);">
-                <td style="padding: 0.45rem 0.7rem; font-weight: 700;">4. Calculations 5a, 5b, 5c, 5e with comparisons</td>
-                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">4</td>
-                <td style="padding: 0.45rem 0.7rem;">Shown work and values for 5a (\(v_{0x}\)), 5b (\(a_{y,\text{fit}}\)), 5c (\(v_{0y,\text{pred}}\)), and 5e (\(y_{\max}\)) with comparisons to model values.</td>
+                <td style="padding: 0.45rem 0.7rem; font-weight: 700;">4. Calculations 1–7</td>
+                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">7</td>
+                <td style="padding: 0.45rem 0.7rem;">Fit values; hang time, range and maximum height (calculated vs. measured with % difference); launch speed and angle; consistency check. Equations, substitutions and units shown (1 pt each).</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkSimpStatus4">—</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding: 0.45rem 0.7rem; font-weight: 700;">5. Apex &amp; a_y reasoning</td>
-                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td>
+                <td style="padding: 0.45rem 0.7rem; text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td>
                 <td style="padding: 0.45rem 0.7rem;">Explained whether the ball stops in 2D at \(v_y = 0\), why \(a_y\) is negative on both sides of the apex, and completed the gravity conclusion.</td>
                 <td style="padding: 0.45rem 0.7rem; text-align: center;" id="chkSimpStatus5">—</td>
               </tr>
@@ -1495,7 +1603,7 @@
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <span style="font-size: 1.3rem;">📖</span>
           <div>
-            <h3 id="helpModalTitle" style="margin: 0; font-size: 1.1rem; color: #ffffff; font-weight: 700;">Quick Student Guide &amp; 10-Point Rubric</h3>
+            <h3 id="helpModalTitle" style="margin: 0; font-size: 1.1rem; color: #ffffff; font-weight: 700;">Quick Student Guide &amp; Rubric</h3>
           </div>
         </div>
         <button type="button" id="btnCloseHelpModal" class="help-close-btn" aria-label="Close Directions">✕</button>
@@ -1535,12 +1643,12 @@
             </ul>
           </div>
           <div class="show-in-simplified-only">
-            <h4>Tabs 4–5: Core Calculations (5a, 5b, 5c, 5e), Apex &amp; Conclusion</h4>
+            <h4>Tabs 4–5: Calculations 1–7, Apex &amp; Conclusion</h4>
             <ul class="help-list">
-              <li><strong>5a (Horizontal Velocity):</strong> Compute \(v_{0x} = \Delta x / \Delta t\) using two points on fitted \(x(t)\) and compare with fitted slope \(m\).</li>
-              <li><strong>5b (Vertical Acceleration):</strong> Compute \(a_{y,\text{fit}} = \Delta v_y / \Delta t\) on fitted \(v_y(t)\) and compare with \(-9.8\text{ m/s}^2\).</li>
-              <li><strong>5c (Initial Vertical Velocity):</strong> Use apex condition (\(v_y = 0\)) to predict \(v_{0y,\text{pred}} = -(-9.8\text{ m/s}^2) \times t_{\text{up}}\) and compare with fitted parameter \(B\).</li>
-              <li><strong>5e (Maximum Height):</strong> Find apex upward displacement \(\Delta y_{\text{up}}\) and add \(y_0\) to predict \(y_{\max}\), then compare with your highest tracked point.</li>
+              <li><strong>1 (Fit values):</strong> Read \(x_0, y_0, v_{0x}, v_{0y}, a_x, a_y\) from your fits (\(v_{0x} = m\), \(v_{0y} = B\), \(a_y = 2A\)); compare \(a_y\) with \(-9.8\text{ m/s}^2\).</li>
+              <li><strong>2–4 (Hang time, range, maximum height):</strong> Calculate each with the equations for accelerating motion, measure it from your tracked data, and find the percent difference.</li>
+              <li><strong>5–6 (Launch speed and angle):</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), \(\theta = \tan^{-1}(v_{0y}/v_{0x})\).</li>
+              <li><strong>7 (Consistency check):</strong> Find \(v_{0x}\) and \(v_{0y}\) again from your measured range, hang time and maximum height, and compare with Calculation 1.</li>
               <li><strong>Tab 5B (Motion Meaning &amp; Conclusion):</strong> Explain why the ball is not at rest in 2D at \(v_y = 0\), explain negative \(a_y\), state your measurement limitation with direction (too high vs. too low), and write your gravity conclusion.</li>
             </ul>
           </div>
@@ -1548,13 +1656,13 @@
 
         <div id="help-rubric" class="help-tab-panel">
           <div class="hide-in-simplified">
-            <h4>Recommended 10-Point Lab Report Rubric</h4>
+            <h4>Extended Version: 10-Point Lab Report Rubric</h4>
             <p style="font-size: 0.85rem; color: var(--muted);">
               See the checklist in <strong>Tab 6: Submit Report</strong> for real-time status on all 5 rubric sections (2 + 2 + 2 + 3 + 1 = 10 points).
             </p>
           </div>
           <div class="show-in-simplified-only">
-            <h4>20-Point Simplified Lab Report Rubric</h4>
+            <h4>20-Point Lab Report Rubric</h4>
             <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; border: 1px solid var(--border); margin-top: 0.5rem;">
               <thead>
                 <tr style="background: var(--primary-teal); color: #ffffff;">
@@ -1565,10 +1673,10 @@
               </thead>
               <tbody>
                 <tr style="border-bottom: 1px solid var(--border-light);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">1. Setup &amp; data quality</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td><td style="padding: 0.35rem 0.5rem;">Calibrated scale, origin, 8+ tracked points, rise time \(t_{\text{up}}\) with uncertainty.</td></tr>
-                <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">2. Prediction vs. result</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td><td style="padding: 0.35rem 0.5rem;">Locked predictions before reveal, plus reasoned comparison &amp; revisions notes.</td></tr>
-                <tr style="border-bottom: 1px solid var(--border-light);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">3. Graph connections</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">4</td><td style="padding: 0.35rem 0.5rem;">Position fits, 3+ tangent slopes plotted, velocity/accel fits chosen, connections explained.</td></tr>
-                <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">4. Calculations 5a, 5b, 5c, 5e with comparisons</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">4</td><td style="padding: 0.35rem 0.5rem;">Calculations shown with units and comparisons to model values.</td></tr>
-                <tr style="border-bottom: 1px solid var(--border-light);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">5. Apex &amp; a_y reasoning</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td><td style="padding: 0.35rem 0.5rem;">2D apex rest explanation, acceleration signs on ascent/descent, and gravity conclusion.</td></tr>
+                <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">2. Prediction vs. result</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td><td style="padding: 0.35rem 0.5rem;">Locked predictions before reveal, plus reasoned comparison &amp; revisions notes.</td></tr>
+                <tr style="border-bottom: 1px solid var(--border-light);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">3. Graph connections</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td><td style="padding: 0.35rem 0.5rem;">Position fits, 3+ tangent slopes plotted, velocity/accel fits chosen, connections explained.</td></tr>
+                <tr style="border-bottom: 1px solid var(--border-light); background: var(--surface-alt);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">4. Calculations 1–7</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">7</td><td style="padding: 0.35rem 0.5rem;">One point per calculation: equations, substitutions, units, and percent differences shown.</td></tr>
+                <tr style="border-bottom: 1px solid var(--border-light);"><td style="padding: 0.35rem 0.5rem; font-weight: 700;">5. Apex &amp; a_y reasoning</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">2</td><td style="padding: 0.35rem 0.5rem;">2D apex rest explanation, acceleration signs on ascent/descent, and gravity conclusion.</td></tr>
                 <tr><td style="padding: 0.35rem 0.5rem; font-weight: 700;">6. Limitation with direction</td><td style="text-align: center; font-weight: 700; color: var(--accent-amber-dark);">3</td><td style="padding: 0.35rem 0.5rem;">Specific limitation identified and explained whether value was too high or too low.</td></tr>
               </tbody>
             </table>

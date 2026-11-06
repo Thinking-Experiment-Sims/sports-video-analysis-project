@@ -2473,3 +2473,13 @@ body.mode-simplified #subtab-4c .calc-grid-2 {
 
 
 
+
+/* Standard version: Calculations 1–7 */
+.std-calc-block { background: var(--surface-alt); padding: 0.95rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light); margin-bottom: 0.8rem; }
+.std-calc-block h4 { font-size: 0.92rem; color: var(--primary-teal); margin: 0 0 0.25rem 0; }
+.std-calc-hint { font-size: 0.78rem; color: var(--muted); margin: 0 0 0.5rem 0; }
+.std-calc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.45rem 0.7rem; margin-bottom: 0.35rem; }
+.std-calc-grid .calc-field-group label { font-size: 0.76rem; }
+.std-calc-grid .input-control { width: 100%; }
+.std-work-label { font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem; }
+.std-calc-block textarea { width: 100%; font-size: 0.78rem; margin-top: 0.15rem; }
