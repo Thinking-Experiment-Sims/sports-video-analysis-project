@@ -2868,6 +2868,12 @@ function getExpectedPhysicsValues() {
 }
 
 function updateReferenceQuantitiesBar() {
+  // Best-fit equations (Tab 3) repeated in the pinned bar so Tab 4 needs no back-navigation
+  const eqText = getSixGraphEquationsText();
+  const stripR2 = (str) => String(str).replace(/\s*\[R².*\]\s*$/, '');
+  if (el('refFitEqX')) el('refFitEqX').textContent = stripR2(eqText.xPos);
+  if (el('refFitEqY')) el('refFitEqY').textContent = stripR2(eqText.yPos);
+
   const exp = getExpectedPhysicsValues();
   if (!exp) return;
 
@@ -3051,6 +3057,12 @@ function setAppMode(mode) {
   if (el('btnModeSimplified')) el('btnModeSimplified').classList.toggle('active', state.mode === 'simplified');
 
   document.body.classList.toggle('mode-simplified', state.mode === 'simplified');
+
+  // Tab 5 label: the Standard version has no signed-area sub-tab, so it must not be called "Area"
+  const stepBtn5 = el('stepBtn5');
+  if (stepBtn5 && stepBtn5.lastChild && stepBtn5.lastChild.nodeType === Node.TEXT_NODE) {
+    stepBtn5.lastChild.textContent = (state.mode === 'simplified') ? ' Meaning & Conclusion' : ' Area & Motion';
+  }
 
   const badge = el('simplifiedHeaderBadge');
   if (badge) badge.style.display = (state.mode === 'full') ? 'inline-block' : 'none';

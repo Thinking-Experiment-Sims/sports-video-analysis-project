@@ -870,8 +870,8 @@
          TAB 4: KINEMATICS CALCULATIONS (5a–5f Split into 3 Clean Sub-Tabs)
          ===================================================================== -->
     <section id="stepView4" class="step-view" style="padding: 0.5rem 0; max-width: 1360px; margin: 0 auto; display: none;">
-      <!-- Persistent Compact Reference Values Bar -->
-      <div class="card" style="padding: 0.85rem 1.1rem; margin-bottom: 0.85rem; background: #eef7fa; border: 1.5px solid var(--primary-teal);">
+      <!-- Persistent Compact Reference Values Bar (pinned while scrolling Tab 4) -->
+      <div class="card ref-bar-sticky" id="refValuesBar" style="padding: 0.85rem 1.1rem; margin-bottom: 0.85rem; background: #eef7fa; border: 1.5px solid var(--primary-teal);">
         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
           <strong style="color: var(--primary-teal); font-size: 0.88rem;">📌 Your Reference Values<span class="hide-in-simplified"> (Use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\) for predictions 5c–5e)</span><span class="show-in-simplified-only"> (measured from your tracked data)</span></strong>
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -901,6 +901,17 @@
           <div style="background: #ffffff; padding: 0.35rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-light);">
             <span style="color: var(--muted);">Peak \(y_{\max}\) | Fitted \(B\):</span><br>
             <strong id="refReadoutYMaxTrack">—</strong> | <span id="refReadoutFitB">—</span>
+          </div>
+        </div>
+        <!-- Best-fit equations from Tab 3, so students do not have to navigate back -->
+        <div class="ref-fit-eq-row">
+          <div class="ref-fit-eq">
+            <span class="ref-fit-eq-label">Your best-fit line (Tab 3):</span>
+            <strong id="refFitEqX">Track ≥ 3 points to fit x(t)</strong>
+          </div>
+          <div class="ref-fit-eq">
+            <span class="ref-fit-eq-label">Your best-fit curve (Tab 3):</span>
+            <strong id="refFitEqY">Track ≥ 3 points to fit y(t)</strong>
           </div>
         </div>
       </div>

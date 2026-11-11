@@ -2483,3 +2483,58 @@ body.mode-simplified #subtab-4c .calc-grid-2 {
 .std-calc-grid .input-control { width: 100%; }
 .std-work-label { font-size: 0.76rem; font-weight: 600; color: var(--primary-teal); display: block; margin-top: 0.4rem; }
 .std-calc-block textarea { width: 100%; font-size: 0.78rem; margin-top: 0.15rem; }
+
+/* ============================================================================
+   Tab 4: pinned reference bar + best-fit equations
+   ============================================================================ */
+.ref-bar-sticky {
+  position: sticky;
+  top: 0.4rem;
+  z-index: 60;
+  box-shadow: 0 6px 14px rgba(12, 54, 68, 0.14);
+}
+
+.ref-fit-eq-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+  font-size: 0.76rem;
+}
+
+.ref-fit-eq {
+  background: #ffffff;
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid var(--primary-teal);
+}
+
+.ref-fit-eq-label {
+  display: block;
+  color: var(--muted);
+}
+
+.ref-fit-eq strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.84rem;
+  color: var(--primary-teal);
+  white-space: nowrap;
+}
+
+/* Short or narrow screens: a tall pinned bar would cover the work area */
+@media (max-height: 640px), (max-width: 720px) {
+  .ref-bar-sticky {
+    position: static;
+    box-shadow: none;
+  }
+  .ref-fit-eq strong {
+    white-space: normal;
+  }
+}
+
+@media print {
+  .ref-bar-sticky {
+    position: static;
+    box-shadow: none;
+  }
+}
