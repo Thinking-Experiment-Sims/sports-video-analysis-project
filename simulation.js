@@ -189,8 +189,6 @@ const state = {
     inpNegDirStart: '',
     inpNegDirEnd: '',
     txtStopExplanation: '',
-    inpNegAccStart: '',
-    inpNegAccEnd: '',
     txtAccSignExplanation: '',
     // Specific measurement limitation tied to a reported result
     reflectionText: '',
@@ -3561,13 +3559,11 @@ function checkNumbersForPracticeFeedback(e) {
     badgeArea.className = `pct-diff-badge ${okArea ? 'good' : 'warn'}`;
   }
 
-  // --- Direction Intervals & Negative Acceleration Interval ---
+  // --- Direction Intervals ---
   const pStart = parseNum(sr.inpPosDirStart);
   const pEnd = parseNum(sr.inpPosDirEnd);
   const nStart = parseNum(sr.inpNegDirStart);
   const nEnd = parseNum(sr.inpNegDirEnd);
-  const accStart = parseNum(sr.inpNegAccStart);
-  const accEnd = parseNum(sr.inpNegAccEnd);
 
   if (!exp.hasTurnaround) {
     setFeedbackBox('fbIntervals', 'warn', 'Cannot verify upward/downward intervals until the tracked trajectory includes an interior apex.');
@@ -3577,13 +3573,7 @@ function checkNumbersForPracticeFeedback(e) {
              withinTol(pEnd, exp.tZero, 0.06, 0.04) &&
              withinTol(nStart, exp.tZero, 0.06, 0.04) &&
              withinTol(nEnd, exp.T, 0.06, 0.04)) {
-    const accOk = accStart !== null && accEnd !== null &&
-      withinTol(accStart, 0, 0.05, 0.03) && withinTol(accEnd, exp.T, 0.06, 0.04);
-    if (accOk) {
-      setFeedbackBox('fbIntervals', 'good', `✓ Interval bounds checked: Upward on (0.000 s, ${exp.tZero.toFixed(3)} s), downward on (${exp.tZero.toFixed(3)} s, ${exp.T.toFixed(3)} s) excluding the turnaround instant t_zero, and aᵧ < 0 throughout [0.000 s, ${exp.T.toFixed(3)} s]. Written explanations are submitted for teacher review.`);
-    } else {
-      setFeedbackBox('fbIntervals', 'warn', `Upward and downward intervals match! Check the interval where aᵧ < 0 (gravity acts downward throughout the entire airborne flight [0, ${exp.T.toFixed(3)} s]).`);
-    }
+    setFeedbackBox('fbIntervals', 'good', `✓ Interval bounds checked: Upward on (0.000 s, ${exp.tZero.toFixed(3)} s) and downward on (${exp.tZero.toFixed(3)} s, ${exp.T.toFixed(3)} s), excluding the turnaround instant t_zero. Written explanations are submitted for teacher review.`);
   } else {
     setFeedbackBox('fbIntervals', 'warn', `Check your direction intervals: upward motion (vᵧ > 0) is from 0 to t_zero (${exp.tZero.toFixed(3)} s), and downward motion (vᵧ < 0) is from t_zero (${exp.tZero.toFixed(3)} s) to t_hang (${exp.T.toFixed(3)} s), excluding the turnaround instant.`);
   }
@@ -4283,9 +4273,6 @@ function preparePrintableReport() {
             </div>
             <div class="report-box">
               <div class="report-box-title">When Is Vertical Acceleration Negative? Reasoning on Both Sides of Apex</div>
-              <div style="font-size: 0.78rem; margin-bottom: 0.35rem;">
-                <strong>Submitted Interval where a<sub>y</sub> &lt; 0:</strong> ${fmtStudentVal(sr.inpNegAccStart, 's')} to ${fmtStudentVal(sr.inpNegAccEnd, 's')}
-              </div>
               ${fmtStudentText(sr.txtAccSignExplanation)}
             </div>
           </div>
@@ -4532,8 +4519,6 @@ function loadSessionJSON(file) {
           inpNegDirStart: gi.negDirStart !== undefined ? String(gi.negDirStart) : '',
           inpNegDirEnd: gi.negDirEnd !== undefined ? String(gi.negDirEnd) : '',
           txtStopExplanation: gi.stopExplanation || '',
-          inpNegAccStart: gi.negAccStart !== undefined ? String(gi.negAccStart) : '',
-          inpNegAccEnd: gi.negAccEnd !== undefined ? String(gi.negAccEnd) : '',
           txtAccSignExplanation: gi.accSignExplanation || '',
           reflectionText: s.reflectionText || ''
         };

@@ -1346,9 +1346,9 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1.05rem; color: var(--primary-teal); margin: 0;">Step 5B: Direction Intervals, 2D Apex Rest &amp; Measurement Limitation</h3>
             <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-              <span id="checkIntervalsHint" class="check-lock-hint" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Complete answers to unlock check</span>
+              <span id="checkIntervalsHint" class="check-lock-hint hide-in-simplified" style="font-size: 0.74rem; color: #b45309; font-weight: 600;">✍️ Complete answers to unlock check</span>
               <span class="pct-diff-badge" id="badgeMotionReasoning">Teacher review</span>
-              <button type="button" id="btnCheckIntervalsTab5" class="btn btn-amber" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;" disabled>✓ Check Interval Numbers</button>
+              <button type="button" id="btnCheckIntervalsTab5" class="btn btn-amber hide-in-simplified" style="font-size: 0.78rem; padding: 0.32rem 0.7rem;" disabled>✓ Check Interval Numbers</button>
             </div>
           </div>
 
@@ -1390,17 +1390,13 @@
               <strong style="font-size: 0.86rem; color: var(--accent-amber-dark); display: block; margin-bottom: 0.35rem;">
                 2. Why Is Vertical Acceleration \(a_y\) Negative on Both Sides of the Apex?
               </strong>
-              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; margin-bottom: 0.45rem;">
-                <span>Interval where \(a_y < 0\):</span>
-                <input type="number" id="inpNegAccStart" class="input-control" step="0.001" style="width: 68px;" placeholder="0.000">
-                <span>s to</span>
-                <input type="number" id="inpNegAccEnd" class="input-control" step="0.001" style="width: 68px;" placeholder="t_hang">
-                <span>s</span>
-              </div>
               <label for="txtAccSignExplanation" style="font-size: 0.76rem; font-weight: 700; color: var(--ink); display: block; margin-bottom: 0.15rem;">
                 Explain how negative \(a_y\) affects the ball on the way up vs. on the way down:
               </label>
-              <textarea id="txtAccSignExplanation" class="input-control" rows="3" style="width: 100%; font-size: 0.78rem;" placeholder="On the way up (vᵧ > 0), negative aᵧ slows the ball down; on the way down (vᵧ < 0), negative aᵧ speeds it up in the −y direction..."></textarea>
+              <div style="font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem;">
+                A complete answer states the sign of \(a_y\) before, at, and after the apex, and explains why one constant downward acceleration slows the ball going up but speeds it up coming down.
+              </div>
+              <textarea id="txtAccSignExplanation" class="input-control" rows="4" style="width: 100%; font-size: 0.78rem;" placeholder="Use vᵧ and aᵧ by name, and say what happens at the apex itself..."></textarea>
             </div>
           </div>
 
