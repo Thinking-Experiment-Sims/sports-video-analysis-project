@@ -201,6 +201,7 @@ const state = {
     stdRangeCalc: '', stdRangeMeas: '', stdRangePct: '', stdWork3: '',
     stdYmaxCalc: '', stdYmaxMeas: '', stdYmaxPct: '', stdWork4: '',
     stdV0: '', stdWork5: '', stdTheta: '', stdWork6: '',
+    stdGMeas: '', stdGPctFit: '', stdGPctRef: '',
     stdVxCheck: '', stdVxCheckPct: '', stdVyCheck: '', stdVyCheckPct: '', stdWork7: ''
   },
 
@@ -2855,6 +2856,9 @@ function getExpectedPhysicsValues() {
   const yMaxTrackVal = cov.peakPoint ? cov.peakPoint.y : null;
   const vxCheckMeas = (T > 0 && cov.dxTrack !== null && cov.dxTrack !== undefined) ? cov.dxTrack / T : null;
   const vyCheckMeas = (yMaxTrackVal !== null && yMaxTrackVal > y0) ? Math.sqrt(2 * Math.abs(ayFit) * (yMaxTrackVal - y0)) : null;
+  const dyUpTrack = (yMaxTrackVal !== null && y0 !== null) ? (yMaxTrackVal - y0) : null;
+  const gFitMag = ayFit !== null ? Math.abs(ayFit) : null;
+  const gMeasApex = (dyUpTrack !== null && tUp > 0) ? (2 * dyUpTrack) / (tUp * tUp) : null;
 
   return {
     T,
@@ -2867,6 +2871,7 @@ function getExpectedPhysicsValues() {
     dyTrack: cov.dyTrack,
     yMaxTrack: cov.peakPoint ? cov.peakPoint.y : null,
     hangCalcFit, rangeCalcFit, yMaxCalcFit, v0Fit, thetaFit, vxCheckMeas, vyCheckMeas,
+    dyUpTrack, gFitMag, gMeasApex,
     tPeakTrack: cov.peakPoint ? cov.peakPoint.time : null,
     m,
     c,
@@ -2946,6 +2951,59 @@ function updateObservedTUpUncertainty() {
   } else {
     node.innerHTML = `Frame spacing: &plusmn;${dtStep.toFixed(2)} s (&Delta;t = step &divide; FPS)`;
   }
+}
+
+// ============================================================================
+// Lab Authenticity & Anti-Plagiarism Verification Engine
+// ============================================================================
+function fastHash64(str) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b9;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 ^= ch;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= (ch + (h1 << 5) + (h1 >>> 2));
+    h2 = Math.imul(h2, 0x27d4eb2d);
+  }
+  h1 = (h1 ^ (h1 >>> 16)) >>> 0;
+  h2 = (h2 ^ (h2 >>> 15)) >>> 0;
+  const s1 = h1.toString(16).padStart(8, '0').toUpperCase();
+  const s2 = h2.toString(16).padStart(8, '0').toUpperCase();
+  return (s1 + s2);
+}
+
+function generateDataSignature(points, pixelsPerMeter) {
+  if (!points || !Array.isArray(points) || points.length === 0) {
+    return 'DSIG-NONE-0000';
+  }
+  const coordStr = points.map(p => {
+    const t = p.time !== undefined ? Number(p.time).toFixed(3) : '0';
+    const x = p.x !== undefined ? Number(p.x).toFixed(4) : '0';
+    const y = p.y !== undefined ? Number(p.y).toFixed(4) : '0';
+    return `${t}:${x}:${y}`;
+  }).join(';');
+  const scaleStr = pixelsPerMeter ? Number(pixelsPerMeter).toFixed(2) : '0';
+  const h = fastHash64(`${coordStr}|scale:${scaleStr}`);
+  return `DSIG-${h.slice(0, 4)}-${h.slice(4, 8)}`;
+}
+
+function generateVerificationId(studentName, teacherName, dsig, isoTimestamp, ptsCount) {
+  const sName = (studentName || 'unnamed').trim().toLowerCase();
+  const tName = (teacherName || 'teacher').trim().toLowerCase();
+  const payload = `${sName}|${tName}|${dsig}|${isoTimestamp}|${ptsCount}`;
+  const h = fastHash64(payload);
+  return `TE-PVL-${h.slice(0, 4)}-${h.slice(4, 8)}-${h.slice(8, 12)}`;
+}
+
+function computeCoordFingerprint(points) {
+  if (!points || points.length === 0) return 'no-points';
+  const sample = [
+    points[0],
+    points[Math.floor(points.length / 2)],
+    points[points.length - 1]
+  ];
+  return sample.map(p => `${Number(p.time).toFixed(2)}s:(${Number(p.x).toFixed(3)},${Number(p.y).toFixed(3)})`).join('|');
 }
 
 function syncStudentInputsFromDOM() {
@@ -3450,18 +3508,50 @@ function checkStandardCalculations(exp) {
   if (th === null || !( (exp.thetaFit !== null && Math.abs(Math.abs(th) - exp.thetaFit) <= 1.0) || (ownTh !== null && Math.abs(Math.abs(th) - ownTh) <= 1.0) )) bad5.push('launch angle (tan⁻¹ of v₀ᵧ ÷ v₀ₓ, calculator in DEGREES)');
   report('fbStd5', bad5.length === 0, '✓ Launch speed and angle check out.', 'Check: ' + bad5.join('; ') + '.');
 
-  // 7. Consistency check from measured values
-  const vxc = P(sr.stdVxCheck), vyc = P(sr.stdVyCheck), vxp = P(sr.stdVxCheckPct), vyp = P(sr.stdVyCheckPct);
+  // 7. Consistency check: acceleration of gravity
+  const gm = P(sr.stdGMeas);
+  const gpFit = P(sr.stdGPctFit);
+  const gpRef = P(sr.stdGPctRef);
   const bad7 = [];
-  const ownVxc = (rm !== null && hm) ? rm / hm : null;
-  const vyAlt = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.C) ? Math.sqrt(2 * Math.abs(exp.ayFit) * (exp.yMaxTrack - exp.C)) : null;
-  const vyRef = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.y0) ? Math.sqrt(2 * 9.8 * (exp.yMaxTrack - exp.y0)) : null;
-  const ownVyc = (ym !== null && y0 !== null && ay !== null && ym > y0) ? Math.sqrt(2 * Math.abs(ay) * (ym - y0)) : null;
-  if (!nearAny(vxc, [exp.vxCheckMeas, ownVxc], 0.03, 0.02)) bad7.push('v₀ₓ from measured range ÷ measured hang time');
-  if (!nearAny(vyc, [exp.vyCheckMeas, vyAlt, vyRef, ownVyc], 0.04, 0.03)) bad7.push('v₀ᵧ from your measured maximum height');
-  if (!pctOk(vxp, vxc, vx)) bad7.push('% difference for v₀ₓ (compare with Calculation 1)');
-  if (!pctOk(vyp, vyc, vy)) bad7.push('% difference for v₀ᵧ (compare with Calculation 1)');
-  report('fbStd7', bad7.length === 0, '✓ Consistency check complete. Explain in your work whether the two methods agree.', 'Check: ' + bad7.join('; ') + '.');
+
+  if (gm === null && (sr.stdVxCheck || sr.stdVyCheck)) {
+    // Legacy session support
+    const vxc = P(sr.stdVxCheck), vyc = P(sr.stdVyCheck), vxp = P(sr.stdVxCheckPct), vyp = P(sr.stdVyCheckPct);
+    const ownVxc = (rm !== null && hm) ? rm / hm : null;
+    const vyAlt = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.C) ? Math.sqrt(2 * Math.abs(exp.ayFit) * (exp.yMaxTrack - exp.C)) : null;
+    const vyRef = (exp.yMaxTrack !== null && exp.yMaxTrack > exp.y0) ? Math.sqrt(2 * 9.8 * (exp.yMaxTrack - exp.y0)) : null;
+    const ownVyc = (ym !== null && y0 !== null && ay !== null && ym > y0) ? Math.sqrt(2 * Math.abs(ay) * (ym - y0)) : null;
+    if (!nearAny(vxc, [exp.vxCheckMeas, ownVxc], 0.03, 0.02)) bad7.push('v₀ₓ from measured range ÷ measured hang time');
+    if (!nearAny(vyc, [exp.vyCheckMeas, vyAlt, vyRef, ownVyc], 0.04, 0.03)) bad7.push('v₀ᵧ from your measured maximum height');
+    if (!pctOk(vxp, vxc, vx)) bad7.push('% difference for v₀ₓ (compare with Calculation 1)');
+    if (!pctOk(vyp, vyc, vy)) bad7.push('% difference for v₀ᵧ (compare with Calculation 1)');
+    report('fbStd7', bad7.length === 0, '✓ Consistency check complete. Explain in your work whether the two methods agree.', 'Check: ' + bad7.join('; ') + '.');
+  } else {
+    // Gravity consistency check: curve fit vs. apex kinematics
+    const gFitMag = exp.ayFit !== null ? Math.abs(exp.ayFit) : null;
+    const dyUpApex = (exp.yMaxTrack !== null && exp.y0 !== null && exp.yMaxTrack > exp.y0)
+      ? (exp.yMaxTrack - exp.y0)
+      : (exp.dyUpPred !== null ? exp.dyUpPred : null);
+    const tUpApex = exp.tUp || exp.tPeakTrack;
+    const gApex = (dyUpApex !== null && tUpApex && tUpApex > 0) ? (2 * dyUpApex) / (tUpApex * tUpApex) : null;
+    const gVyApex = (exp.B !== null && tUpApex && tUpApex > 0) ? Math.abs(exp.B) / tUpApex : null;
+    const ownDyUp = (ym !== null && y0 !== null && ym > y0) ? (ym - y0) : null;
+    const ownGApex = (ownDyUp !== null && tUpApex && tUpApex > 0) ? (2 * ownDyUp) / (tUpApex * tUpApex) : null;
+
+    const gTargets = [gApex, ownGApex, gVyApex, gFitMag, 9.8].filter(v => v !== null);
+    const gmMag = gm !== null ? Math.abs(gm) : null;
+
+    if (gmMag === null || !nearAny(gmMag, gTargets, 0.08, 0.5)) {
+      bad7.push('measured gravity g_meas (use 2Δy_up / t_up² from your apex data, expected ~9.8 m/s²)');
+    }
+    if (gpFit === null || !pctOk(gpFit, gmMag, gFitMag)) {
+      bad7.push('% difference vs. fitted |a_y|');
+    }
+    if (gpRef === null || !pctOk(gpRef, gmMag, 9.8)) {
+      bad7.push('% difference vs. reference 9.8 m/s²');
+    }
+    report('fbStd7', bad7.length === 0, '✓ Gravity consistency check complete. Explain in your work whether the two methods agree.', 'Check: ' + bad7.join('; ') + '.');
+  }
 
   const okCount = res.filter(Boolean).length;
   const badge = el('badgeStdCalcs');
@@ -3807,7 +3897,8 @@ function updateRubricChecklistUI() {
 
   const s4Ok = ['stdVx0', 'stdVy0', 'stdAy', 'stdAyPct', 'stdWork1', 'stdHangCalc', 'stdHangMeas', 'stdHangPct', 'stdWork2',
     'stdRangeCalc', 'stdRangeMeas', 'stdRangePct', 'stdWork3', 'stdYmaxCalc', 'stdYmaxMeas', 'stdYmaxPct', 'stdWork4',
-    'stdV0', 'stdWork5', 'stdTheta', 'stdWork6', 'stdVxCheck', 'stdVyCheck', 'stdWork7'].every(k => hasVal(sr[k]));
+    'stdV0', 'stdWork5', 'stdTheta', 'stdWork6', 'stdWork7'].every(k => hasVal(sr[k])) &&
+    ((hasVal(sr.stdGMeas) && hasVal(sr.stdGPctFit) && hasVal(sr.stdGPctRef)) || (hasVal(sr.stdVxCheck) && hasVal(sr.stdVyCheck)));
   if (el('chkSimpStatus4')) {
     el('chkSimpStatus4').innerHTML = s4Ok
       ? '<span class="pct-diff-badge good">Filled</span>'
@@ -4011,7 +4102,12 @@ function preparePrintableReport() {
 
   const sName = (state.studentName || '').trim() || 'Not submitted';
   const tName = (state.teacherName || '').trim() || 'Physics Teacher';
-  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const now = new Date();
+  const isoTimestamp = now.toISOString();
+  const dateFormatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const fullTimestamp = `${dateFormatted} at ${timeFormatted}`;
+
   const clipSourceLabel = state.isSynthetic
     ? (SYNTHETIC_MODELS[state.syntheticType] ? SYNTHETIC_MODELS[state.syntheticType].label : 'SYNTHETIC MODEL CLIP (Practice)')
     : `MEASURED VIDEO FILE (${state.videoFileName || 'Local Video'})`;
@@ -4024,7 +4120,11 @@ function preparePrintableReport() {
   const imgXAcc = generateChartImageData('x-acc');
   const imgYAcc = generateChartImageData('y-acc');
 
-  const pts = state.series[state.activeSeries] || [];
+  const pts = state.series[state.activeSeries] || state.series.A || [];
+  const dsig = generateDataSignature(pts, state.pixelsPerMeter);
+  const verifId = generateVerificationId(sName, tName, dsig, isoTimestamp, pts.length);
+  const coordFingerprint = computeCoordFingerprint(pts);
+  const integrityToken = fastHash64(`${sName}|${tName}|${dsig}|${isoTimestamp}|${pts.length}`);
 
   const firstPredHtml = pred.isSaved
     ? (pred.isLegacyMissing
@@ -4064,7 +4164,9 @@ function preparePrintableReport() {
           <div class="report-doc-meta">
             <span><strong>Student:</strong> ${escapeHtml(sName)}</span>
             <span><strong>Teacher:</strong> ${escapeHtml(tName)}</span>
-            <span><strong>Date:</strong> ${escapeHtml(dateStr)}</span>
+            <span><strong>Generated:</strong> ${escapeHtml(fullTimestamp)}</span>
+            <span><strong>Verification Code:</strong> <code style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #0f7e9b;">${verifId}</code></span>
+            <span><strong>Data Signature:</strong> <code style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #d67b19;">${dsig}</code></span>
           </div>
         </div>
         <div class="report-source-badge">
@@ -4239,8 +4341,12 @@ function preparePrintableReport() {
               <tr><td><strong>4. Maximum height</strong></td><td>${fmtStudentVal(sr.stdYmaxCalc, 'm')}</td><td>${fmtStudentVal(sr.stdYmaxMeas, 'm')}</td><td>${fmtStudentVal(sr.stdYmaxPct, '%')}</td></tr>
               <tr><td><strong>5. Launch speed v₀</strong></td><td>${fmtStudentVal(sr.stdV0, 'm/s')}</td><td>—</td><td>—</td></tr>
               <tr><td><strong>6. Launch angle θ</strong></td><td>${fmtStudentVal(sr.stdTheta, '°')}</td><td>—</td><td>—</td></tr>
-              <tr><td><strong>7. v₀ₓ from measured values</strong></td><td>${fmtStudentVal(sr.stdVxCheck, 'm/s')}</td><td>fit v₀ₓ: ${fmtStudentVal(sr.stdVx0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVxCheckPct, '%')}</td></tr>
-              <tr><td><strong>7. v₀ᵧ from measured values</strong></td><td>${fmtStudentVal(sr.stdVyCheck, 'm/s')}</td><td>fit v₀ᵧ: ${fmtStudentVal(sr.stdVy0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVyCheckPct, '%')}</td></tr>
+              ${sr.stdGMeas ? `
+                <tr><td><strong>7. Gravity check g<sub>meas</sub></strong></td><td>${fmtStudentVal(sr.stdGMeas, 'm/s²')}</td><td>Fit |a<sub>y</sub>|: ${fmtStudentVal(sr.stdAy, 'm/s²')} &bull; Ref: &minus;9.8 m/s²</td><td>vs. fit: ${fmtStudentVal(sr.stdGPctFit, '%')} &bull; vs. ref: ${fmtStudentVal(sr.stdGPctRef, '%')}</td></tr>
+              ` : `
+                <tr><td><strong>7. v₀ₓ from measured values</strong></td><td>${fmtStudentVal(sr.stdVxCheck, 'm/s')}</td><td>fit v₀ₓ: ${fmtStudentVal(sr.stdVx0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVxCheckPct, '%')}</td></tr>
+                <tr><td><strong>7. v₀ᵧ from measured values</strong></td><td>${fmtStudentVal(sr.stdVyCheck, 'm/s')}</td><td>fit v₀ᵧ: ${fmtStudentVal(sr.stdVy0, 'm/s')}</td><td>${fmtStudentVal(sr.stdVyCheckPct, '%')}</td></tr>
+              `}
             </tbody>
           </table>
           <table class="report-table">
@@ -4257,7 +4363,7 @@ function preparePrintableReport() {
               <tr><td><strong>4. Maximum height</strong></td><td>${fmtStudentText(sr.stdWork4)}</td></tr>
               <tr><td><strong>5. Launch speed</strong></td><td>${fmtStudentText(sr.stdWork5)}</td></tr>
               <tr><td><strong>6. Launch angle</strong></td><td>${fmtStudentText(sr.stdWork6)}</td></tr>
-              <tr><td><strong>7. Consistency check</strong></td><td>${fmtStudentText(sr.stdWork7)}</td></tr>
+              <tr><td><strong>7. Consistency check (gravity)</strong></td><td>${fmtStudentText(sr.stdWork7)}</td></tr>
             </tbody>
           </table>
         </section>
@@ -4413,6 +4519,35 @@ function preparePrintableReport() {
           </div>
         </section>
       `}
+
+      <!-- Authenticity & Verification Audit Footer -->
+      <footer class="report-doc-audit-footer">
+        <div>
+          <strong>Document Verification ID:</strong> <code style="font-family: monospace; font-weight: 700; color: #0f7e9b;">${verifId}</code> &bull;
+          <strong>Data Signature:</strong> <code style="font-family: monospace; font-weight: 700; color: #d67b19;">${dsig}</code> &bull;
+          <strong>Points Tracked:</strong> ${pts.length}
+        </div>
+        <div>
+          <strong>Generated:</strong> ${escapeHtml(fullTimestamp)} &bull;
+          <span>The Thinking Experiment &bull; PhysicsKit Lab Verification</span>
+        </div>
+      </footer>
+
+      <!-- Secret Steganographic Authenticity Layer for Plagiarism Detection (Preserved in Saved PDF) -->
+      <div class="report-secret-authenticity" aria-hidden="true">
+        === THE THINKING EXPERIMENT LAB AUTHENTICITY CERTIFICATE ===
+        Document: 2D Projectile Motion Lab Report
+        Student: ${escapeHtml(sName)}
+        Teacher: ${escapeHtml(tName)}
+        Generated-ISO: ${isoTimestamp}
+        Verification-ID: ${verifId}
+        Data-Signature: ${dsig}
+        Points-Count: ${pts.length}
+        Coordinate-Fingerprint: ${coordFingerprint}
+        Mode: ${state.mode || 'simplified'}
+        Integrity: ${integrityToken}
+        === END LAB AUTHENTICITY CERTIFICATE ===
+      </div>
     </div>
   `;
 
@@ -4431,11 +4566,27 @@ function saveSessionJSON() {
   syncStudentInputsFromDOM();
   autoFitAndDeriveAllGraphs();
 
+  const pts = state.series[state.activeSeries] || state.series.A || [];
+  const dsig = generateDataSignature(pts, state.pixelsPerMeter);
+  const nowIso = new Date().toISOString();
+  const verifId = generateVerificationId(state.studentName, state.teacherName, dsig, nowIso, pts.length);
+  const integrityHash = fastHash64(`${state.studentName}|${state.teacherName}|${dsig}|${nowIso}|${pts.length}`);
+
   const sessionPayload = {
     schemaVersion: '2.1',
-    savedAt: new Date().toISOString(),
+    savedAt: nowIso,
     studentName: state.studentName,
     teacherName: state.teacherName,
+    verification: {
+      version: '1.0',
+      verificationId: verifId,
+      dataSignature: dsig,
+      studentName: state.studentName,
+      teacherName: state.teacherName,
+      generatedAt: nowIso,
+      pointsCount: pts.length,
+      integrityHash: integrityHash
+    },
     state: {
       mode: state.mode || 'full',
       autoSampled: Boolean(state.autoSampled),
@@ -4490,6 +4641,15 @@ function loadSessionJSON(file) {
 
       state.studentName = data.studentName || '';
       state.teacherName = data.teacherName || 'Mr. Lopez';
+
+      // Anti-plagiarism verification check on loaded session
+      if (data.verification) {
+        state.loadedVerification = data.verification;
+        const v = data.verification;
+        if (v.studentName && data.studentName && v.studentName.trim().toLowerCase() !== data.studentName.trim().toLowerCase()) {
+          console.warn(`[Authenticity] Student name changed from original session author "${v.studentName}" to "${data.studentName}".`);
+        }
+      }
 
       // Restore mode: Standard ('simplified') is the default if omitted
       if (s.mode === 'full') {

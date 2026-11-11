@@ -2091,6 +2091,37 @@ body {
   margin-top: 0.25rem;
 }
 
+.report-doc-audit-footer {
+  margin-top: 1.25rem;
+  padding: 0.65rem 0.9rem;
+  border-top: 2px solid #c8dbe3;
+  font-size: 0.74rem;
+  color: #4b6570;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #f4f8fa;
+  border-radius: 6px;
+}
+
+.report-secret-authenticity {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0.002;
+  font-size: 0.1pt;
+  color: #123140;
+  line-height: 0.1pt;
+  pointer-events: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 @media print {
   #reopenVideoNotice {
     display: none !important;
@@ -2101,9 +2132,14 @@ body {
   }
   .report-section,
   .report-box,
-  .report-table tr {
+  .report-table tr,
+  .report-doc-audit-footer {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  .report-secret-authenticity {
+    display: block !important;
+    opacity: 0.002 !important;
   }
 }
 

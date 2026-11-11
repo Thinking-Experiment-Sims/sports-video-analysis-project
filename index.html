@@ -1011,16 +1011,15 @@
 
           <!-- Calculation 7 -->
           <div class="std-calc-block">
-            <h4>7. Consistency check: initial velocity from your measured values</h4>
-            <p class="std-calc-hint">Use your <strong>measured</strong> range, hang time and maximum height (not the fit values) with the equations for accelerating motion: \(v_{0x} = \Delta x_{\text{meas}} / t_{\text{meas}}\) and \(v_{0y} = \sqrt{2|a_y|\,(y_{\max,\text{meas}} - y_0)}\). Compare with \(v_{0x}\) and \(v_{0y}\) from Calculation 1.</p>
+            <h4>7. Consistency check: acceleration of gravity</h4>
+            <p class="std-calc-hint">Compare gravity determined from your best-fit curve against gravity determined from your measured apex motion. From your measured rise \(\Delta y_{\text{up}} = y_{\max} - y_0\) and rise time \(t_{\text{up}}\), compute \(g_{\text{meas}} = \frac{2\Delta y_{\text{up}}}{t_{\text{up}}^2}\). Compare with your fitted \(|a_y| = 2|A|\) and reference \(9.8\text{ m/s}^2\).</p>
             <div class="std-calc-grid">
-              <div class="calc-field-group"><label for="stdVxCheck">\(v_{0x}\) from measured values (m/s)</label><input type="number" id="stdVxCheck" class="input-control" step="0.001"></div>
-              <div class="calc-field-group"><label for="stdVxCheckPct">% difference vs. fit \(v_{0x}\)</label><input type="number" id="stdVxCheckPct" class="input-control" step="0.1"></div>
-              <div class="calc-field-group"><label for="stdVyCheck">\(v_{0y}\) from measured values (m/s)</label><input type="number" id="stdVyCheck" class="input-control" step="0.001"></div>
-              <div class="calc-field-group"><label for="stdVyCheckPct">% difference vs. fit \(v_{0y}\)</label><input type="number" id="stdVyCheckPct" class="input-control" step="0.1"></div>
+              <div class="calc-field-group"><label for="stdGMeas">\(g_{\text{meas}}\) from apex (\(2\Delta y_{\text{up}} / t_{\text{up}}^2\)) (m/s²)</label><input type="number" id="stdGMeas" class="input-control" step="0.01"></div>
+              <div class="calc-field-group"><label for="stdGPctFit">% difference vs. fitted \(|a_y|\)</label><input type="number" id="stdGPctFit" class="input-control" step="0.1"></div>
+              <div class="calc-field-group"><label for="stdGPctRef">% difference vs. \(9.8\text{ m/s}^2\)</label><input type="number" id="stdGPctRef" class="input-control" step="0.1"></div>
             </div>
             <div id="fbStd7" class="practice-feedback-msg"></div>
-            <label for="stdWork7" class="std-work-label">Work, and one sentence: do your two ways of finding the initial velocity agree?</label>
+            <label for="stdWork7" class="std-work-label">Work, and one sentence: do your two methods of determining gravity agree?</label>
             <textarea id="stdWork7" class="input-control" rows="2"></textarea>
           </div>
 
@@ -1485,6 +1484,9 @@
               🔄 Reset All
             </button>
           </div>
+          <div style="width: 100%; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed var(--border-light); font-size: 0.78rem; color: var(--primary-teal);">
+            <strong>📌 Submission Requirement:</strong> Save as PDF (do not print on paper). Click <strong>🖨️ Print / Save Report as PDF</strong> and choose Destination <strong>"Save as PDF"</strong> in the print window. Both your PDF report and saved <code>.json</code> file embed verification codes and data signatures for authenticity.
+          </div>
         </div>
 
         <!-- 10-Point Practice Report Rubric & Submission Checklist (Full Mode) -->
@@ -1664,7 +1666,7 @@
               <li><strong>1 (Fit values):</strong> Read \(x_0, y_0, v_{0x}, v_{0y}, a_x, a_y\) from your fits (\(v_{0x} = m\), \(v_{0y} = B\), \(a_y = 2A\)); compare \(a_y\) with \(-9.8\text{ m/s}^2\).</li>
               <li><strong>2–4 (Hang time, range, maximum height):</strong> Calculate each with the equations for accelerating motion, measure it from your tracked data, and find the percent difference.</li>
               <li><strong>5–6 (Launch speed and angle):</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), \(\theta = \tan^{-1}(v_{0y}/v_{0x})\).</li>
-              <li><strong>7 (Consistency check):</strong> Find \(v_{0x}\) and \(v_{0y}\) again from your measured range, hang time and maximum height, and compare with Calculation 1.</li>
+              <li><strong>7 (Consistency check):</strong> Determine gravity again using your apex motion (\(g_{\text{meas}} = 2\Delta y_{\text{up}} / t_{\text{up}}^2\)), and compare with your fitted \(|a_y|\) and reference \(9.8\text{ m/s}^2\).</li>
               <li><strong>Tab 5B (Motion Meaning &amp; Conclusion):</strong> Explain why the ball is not at rest in 2D at \(v_y = 0\), explain negative \(a_y\), state your measurement limitation with direction (too high vs. too low), and write your gravity conclusion.</li>
             </ul>
           </div>
