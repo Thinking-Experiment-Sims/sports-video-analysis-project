@@ -52,6 +52,9 @@
           <button type="button" id="btnLoadSessionTop" class="btn" title="Load saved progress (.json)">
             📂 Load
           </button>
+          <button type="button" id="btnResetLabTop" class="btn btn-ghost" style="font-weight: 700; color: #b91c1c; border: 1px solid #fecaca; background: #fff5f5;" title="Reset everything and start over from scratch">
+            🔄 Reset All
+          </button>
           <input type="file" id="loadSessionInput" accept=".json" style="display:none;">
         </div>
       </div>
@@ -125,13 +128,13 @@
         <!-- Primary Core Toolbar -->
         <div class="toolbar">
           <div class="tool-group">
-            <button type="button" id="toolScale" class="btn" title="1. Drag across a known length in the video">
+            <button type="button" id="toolScale" class="btn btn-amber active" title="1. Drag across a known length in the video">
               📏 1. Set Scale
             </button>
             <button type="button" id="toolOrigin" class="btn" title="2. Place y = 0 on the ground and x = 0 below release">
               🎯 2. Set Origin
             </button>
-            <button type="button" id="toolTrack" class="btn btn-amber active" title="3. Click the center of the ball in flight">
+            <button type="button" id="toolTrack" class="btn" title="3. Click the center of the ball in flight">
               ➕ 3. Track Ball
             </button>
           </div>
@@ -434,6 +437,9 @@
             <button type="button" id="btnSavePredictionAndReveal" class="btn btn-amber" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.6rem;">
               🔒 Lock Prediction &amp; Go to Tab 3: Build Graphs →
             </button>
+            <button type="button" id="btnUnlockPredictionTab2" class="btn btn-ghost" style="display: none; width: 100%; justify-content: center; font-size: 0.78rem; font-weight: 600; color: #b91c1c; margin-top: 0.45rem; border: 1px dashed #fca5a5; background: #fffaf0;" title="Unlock prediction fields to modify your initial prediction">
+              🔓 Unlock &amp; Edit Prediction
+            </button>
           </div>
         </div>
       </div>
@@ -730,7 +736,7 @@
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                 <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 700; color: var(--primary-teal); background: #eef7fa; padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--primary-teal-border); cursor: pointer;">
-                  <input type="checkbox" id="chkShowSignedArea" checked>
+                  <input type="checkbox" id="chkShowSignedArea">
                   📐 Shade Signed \(v_y\)–\(t\) Areas
                 </label>
                 <button type="button" id="btnAutoFitAll" class="btn" style="font-size: 0.76rem;">↻ Refresh Panel</button>
@@ -1474,6 +1480,9 @@
             </button>
             <button type="button" id="btnLoadSession" class="btn" title="Load a saved .json progress file">
               📂 Load (.json)
+            </button>
+            <button type="button" id="btnResetLabBottom" class="btn btn-ghost" style="font-weight: 700; color: #b91c1c; border: 1px solid #fecaca; background: #fff5f5;" title="Reset everything and start over from scratch">
+              🔄 Reset All
             </button>
           </div>
         </div>

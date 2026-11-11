@@ -36,7 +36,7 @@ const state = {
   timeOffset: 0,
 
   // Active Tool & Visibility Toggles
-  activeTool: 'track', // 'track', 'scale', 'origin'
+  activeTool: 'scale', // 'scale', 'origin', 'track'
   activeSeries: 'A',
   showPoints: true,
   showVectors: false, // Optional diagnostic finite-difference vectors
@@ -319,6 +319,10 @@ function init() {
 
   updateCheckButtonsAvailability();
   checkAutosaveOnLoad();
+  setActiveTool('scale');
+  if (el('chkShowSignedArea')) {
+    state.showSignedArea = el('chkShowSignedArea').checked;
+  }
   updateStepView(1);
   triggerKaTeXRender(document.body);
 
@@ -440,6 +444,9 @@ function switchSubtab(groupAttr, targetPanelId) {
   if (state.currentStep === 3) {
     renderBuildGraphStep();
     if (targetPanelId === 'subtab-3d') {
+      if (el('chkShowSignedArea')) {
+        el('chkShowSignedArea').checked = state.showSignedArea;
+      }
       renderSixGraphPanel();
     }
   } else if (state.currentStep === 5 && targetPanelId === 'subtab-5a') {
@@ -1570,6 +1577,9 @@ function updatePredictionGateUI() {
       btn.textContent = '✓ Prediction Locked — Continue to Step 3: Build Graphs →';
       btn.disabled = false;
     }
+    if (el('btnUnlockPredictionTab2')) {
+      el('btnUnlockPredictionTab2').style.display = 'inline-flex';
+    }
     if (revealSec) {
       revealSec.style.display = 'block';
     }
@@ -1599,8 +1609,11 @@ function updatePredictionGateUI() {
       badge.className = 'pct-diff-badge';
     }
     if (btn) {
-      btn.textContent = '💾 Lock Prediction & Continue to Step 3 →';
+      btn.textContent = '🔒 Lock Prediction & Go to Tab 3: Build Graphs →';
       btn.disabled = false;
+    }
+    if (el('btnUnlockPredictionTab2')) {
+      el('btnUnlockPredictionTab2').style.display = 'none';
     }
     if (revealSec) {
       revealSec.style.display = 'none';
@@ -1612,6 +1625,16 @@ function updatePredictionGateUI() {
       summaryBox.innerHTML = '<em>First prediction not saved yet.</em>';
     }
   }
+}
+
+function unlockPrediction() {
+  if (!confirm('Unlock your initial prediction? You will be able to edit your predicted shapes and explanation.')) {
+    return;
+  }
+  state.firstAttemptPrediction.isSaved = false;
+  state.firstAttemptPrediction.savedAt = null;
+  updatePredictionGateUI();
+  saveToLocalStorage();
 }
 
 // ============================================================================
@@ -2598,14 +2621,18 @@ function buildChartConfigForGraph(type, isExportImage = false) {
 
     // Shade signed ascent and/or descent areas if requested and valid turnaround exists
     const reg = state.selectedAreaRegion || 'none';
-    const showAscent = (reg === 'ascent' || reg === 'both' || (state.showSignedArea && reg !== 'descent' && reg !== 'none'));
-    const showDescent = (reg === 'descent' || reg === 'both' || (state.showSignedArea && reg !== 'ascent' && reg !== 'none'));
+    const showAscent = reg === 'ascent' || reg === 'both' || (state.showSignedArea && reg !== 'descent');
+    const showDescent = reg === 'descent' || reg === 'both' || (state.showSignedArea && reg !== 'ascent');
 
-    if (cov.hasValidTurnaround && cov.tZero !== null) {
-      const tz = cov.tZero;
+    const tZero = (cov && cov.tZero !== null)
+      ? cov.tZero
+      : (yFit && Math.abs(A) > 1e-4 ? -B / (2 * A) : null);
+
+    if (tZero !== null && tZero > tMin && tZero < tMax) {
+      const tz = tZero;
       if (showAscent) {
         datasets.push({
-          label: `Ascent Region [0.000 s to ${tz.toFixed(3)} s]`,
+          label: `Ascent Region [${tMin.toFixed(3)} s to ${tz.toFixed(3)} s]`,
           data: [{ x: tMin, y: vStart }, { x: tz, y: 0 }],
           type: 'line',
           borderColor: 'rgba(15, 126, 155, 0.85)',
@@ -3047,6 +3074,109 @@ function restoreAutosave() {
   } catch (err) {
     alert('Could not restore autosave: ' + err.message);
   }
+}
+
+function resetEntireLab() {
+  if (!confirm('Are you sure you want to reset EVERYTHING and start over?\n\nThis will clear:\n• All tracked video points\n• All locked predictions\n• All tangent slopes and fit selections\n• All calculation answers and written explanations\n• Saved autosave progress in your browser\n\nThis cannot be undone.')) {
+    return;
+  }
+
+  // Clear localStorage autosave
+  try {
+    localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+  } catch (err) {
+    console.warn('Could not clear autosave:', err);
+  }
+
+  // Reset tracking series
+  state.series.A = [];
+  state.series.B = [];
+  state.observedTUp = '';
+  state.predictionRevision = '';
+  state.graphConnections = '';
+  state.tangentPoints = [];
+  state.selectedFits = {
+    xPos: 'none',
+    yPos: 'none',
+    yVel: 'none',
+    xVel: 'none',
+    xAcc: 'none',
+    yAcc: 'none'
+  };
+  state.showSignedArea = false;
+  state.selectedAreaRegion = 'none';
+  state.autoSampled = false;
+  state.gravityWarningShown = false;
+  state.checkCounts = {
+    '5a': 0, '5b': 0, '5c': 0, '5d': 0, '5e': 0, '5f': 0,
+    '5A_area': 0, '5B_intervals': 0, calculations: 0, area: 0, intervals: 0
+  };
+
+  // Reset first-attempt predictions (completely unlocked)
+  state.firstAttemptPrediction = {
+    isSaved: false,
+    isLegacyMissing: false,
+    savedAt: null,
+    vxShape: '',
+    vyShape: '',
+    axShape: '',
+    ayShape: '',
+    initialNotes: ''
+  };
+
+  // Reset all student response values
+  Object.keys(state.studentResponses).forEach(k => {
+    state.studentResponses[k] = '';
+  });
+
+  // Reset DOM input fields
+  populateDOMFromStudentState();
+  ['predShapeVx', 'predShapeVy', 'predShapeAx', 'predShapeAy'].forEach(id => {
+    const node = el(id);
+    if (node) {
+      node.value = '';
+      node.disabled = false;
+    }
+  });
+  if (el('predInitialNotes')) {
+    el('predInitialNotes').value = '';
+    el('predInitialNotes').disabled = false;
+  }
+  if (el('chkShowSignedArea')) el('chkShowSignedArea').checked = false;
+  if (el('autosaveNoticeBanner')) el('autosaveNoticeBanner').style.display = 'none';
+
+  // Reset fit radios to 'none'
+  document.querySelectorAll('input[type="radio"][value="none"]').forEach(r => {
+    r.checked = true;
+  });
+
+  // Reset tool to scale
+  setActiveTool('scale');
+
+  // Re-initialize experiment cleanly without points
+  initSyntheticExperiment(state.syntheticType || 'basketball');
+  state.series.A = [];
+  state.series.B = [];
+  state.observedTUp = '';
+  if (el('inpObservedTUp')) el('inpObservedTUp').value = '';
+  if (el('inpCalcTUp')) el('inpCalcTUp').value = '';
+
+  // Update all UI systems
+  recalculateKinematics();
+  autoFitAndDeriveAllGraphs();
+  updateTable();
+  updateSetupAndCoverageReadouts();
+  updatePredictionGateUI();
+  updatePosChart();
+  updateReferenceQuantitiesBar();
+  updateSimplifiedComparisons();
+  updateRubricChecklistUI();
+  updateCheckButtonsAvailability();
+  preparePrintableReport();
+  drawOverlay();
+
+  // Navigate to Step 1
+  updateStepView(1);
 }
 
 function setAppMode(mode) {
@@ -5046,6 +5176,9 @@ function initEventListeners() {
   }
   if (el('btnAutoFitAll')) {
     el('btnAutoFitAll').addEventListener('click', () => {
+      if (el('chkShowSignedArea')) {
+        state.showSignedArea = el('chkShowSignedArea').checked;
+      }
       renderBuildGraphStep();
       renderSixGraphPanel();
       updateReferenceQuantitiesBar();
@@ -5164,6 +5297,14 @@ function initEventListeners() {
         loadSessionJSON(e.target.files[0]);
       }
     });
+  }
+
+  // Reset Everything Buttons (Top bar & Step 6)
+  [el('btnResetLabTop'), el('btnResetLabBottom')].forEach(btn => {
+    if (btn) btn.addEventListener('click', resetEntireLab);
+  });
+  if (el('btnUnlockPredictionTab2')) {
+    el('btnUnlockPredictionTab2').addEventListener('click', unlockPrediction);
   }
 
   // Directions & Rubric Modal
