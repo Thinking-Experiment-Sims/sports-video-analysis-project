@@ -3269,6 +3269,13 @@ function setAppMode(mode) {
   saveToLocalStorage();
 }
 
+function setCourseLevel(level) {
+  state.courseLevel = (level === 'on-level') ? 'on-level' : 'honors';
+  if (el('btnLevelOnLevel')) el('btnLevelOnLevel').classList.toggle('active', state.courseLevel === 'on-level');
+  if (el('btnLevelHonors')) el('btnLevelHonors').classList.toggle('active', state.courseLevel === 'honors');
+  updateReferenceQuantitiesBar();
+}
+
 function setTeacherShortcutVisibility(enabled) {
   const isTeacher = Boolean(enabled);
   const btnTrack = el('btnAutoDemoTrack');
