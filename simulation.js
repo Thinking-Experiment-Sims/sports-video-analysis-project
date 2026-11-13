@@ -127,8 +127,7 @@ const state = {
   selectedAreaRegion: 'none', // 'none' | 'ascent' | 'descent' | 'both'
   activeTangentTime: 0.15,
 
-  // Course Level & Pedagogical Gating
-  courseLevel: 'honors',
+  // Pedagogical Gating & Check Tracking
   isTeacherMode: false,
   usedShortcuts: {
     autoTrack: false,
@@ -2913,18 +2912,7 @@ function updateReferenceQuantitiesBar() {
   }
   if (el('refReadoutY0')) el('refReadoutY0').textContent = `y₀ = ${exp.y0.toFixed(3)} m`;
   if (el('refReadoutFitC')) {
-    if (state.courseLevel === 'on-level') {
-      el('refReadoutFitC').style.display = 'none';
-      if (el('refReadoutFitC').previousSibling && el('refReadoutFitC').previousSibling.nodeType === Node.TEXT_NODE) {
-        el('refReadoutFitC').previousSibling.textContent = '';
-      }
-    } else {
-      el('refReadoutFitC').style.display = 'inline';
-      if (el('refReadoutFitC').previousSibling && el('refReadoutFitC').previousSibling.nodeType === Node.TEXT_NODE) {
-        el('refReadoutFitC').previousSibling.textContent = ' | ';
-      }
-      el('refReadoutFitC').textContent = `C = ${exp.C.toFixed(3)} m`;
-    }
+    el('refReadoutFitC').textContent = `C = ${exp.C.toFixed(3)} m`;
   }
   if (el('refReadoutEndpoints')) {
     el('refReadoutEndpoints').textContent = `Δx = ${exp.dxTrack.toFixed(3)} m, Δy = ${exp.dyTrack.toFixed(3)} m`;
@@ -3061,7 +3049,6 @@ function saveToLocalStorage() {
       firstAttemptPrediction: state.firstAttemptPrediction,
       predictionRevision: state.predictionRevision,
       graphConnections: state.graphConnections,
-      courseLevel: state.courseLevel,
       isTeacherMode: state.isTeacherMode,
       usedShortcuts: state.usedShortcuts,
       checkCounts: state.checkCounts,
@@ -3111,7 +3098,6 @@ function restoreAutosave() {
     if (data.firstAttemptPrediction) state.firstAttemptPrediction = data.firstAttemptPrediction;
     if (data.predictionRevision) state.predictionRevision = data.predictionRevision;
     if (data.graphConnections) state.graphConnections = data.graphConnections;
-    if (data.courseLevel) setCourseLevel(data.courseLevel);
     if (data.usedShortcuts) state.usedShortcuts = data.usedShortcuts;
     if (data.checkCounts) state.checkCounts = data.checkCounts;
     if (data.autoSampled !== undefined) state.autoSampled = Boolean(data.autoSampled);
@@ -3267,13 +3253,6 @@ function setAppMode(mode) {
   updateCheckButtonsAvailability();
   preparePrintableReport();
   saveToLocalStorage();
-}
-
-function setCourseLevel(level) {
-  state.courseLevel = (level === 'on-level') ? 'on-level' : 'honors';
-  if (el('btnLevelOnLevel')) el('btnLevelOnLevel').classList.toggle('active', state.courseLevel === 'on-level');
-  if (el('btnLevelHonors')) el('btnLevelHonors').classList.toggle('active', state.courseLevel === 'honors');
-  updateReferenceQuantitiesBar();
 }
 
 function setTeacherShortcutVisibility(enabled) {
@@ -4599,7 +4578,6 @@ function saveSessionJSON() {
       autoSampled: Boolean(state.autoSampled),
       gravityWarningShown: Boolean(state.gravityWarningShown),
       checkCounts: state.checkCounts || {},
-      courseLevel: state.courseLevel,
       usedShortcuts: state.usedShortcuts,
       isSynthetic: state.isSynthetic,
       syntheticType: state.syntheticType,
@@ -4670,8 +4648,7 @@ function loadSessionJSON(file) {
       if (s.checkCounts) {
         state.checkCounts = { ...state.checkCounts, ...s.checkCounts };
       }
-      if (s.courseLevel) setCourseLevel(s.courseLevel);
-      if (s.usedShortcuts) state.usedShortcuts = { ...state.usedShortcuts, ...s.usedShortcuts };
+      if (s.usedShortcuts) state.usedShortcuts = { ...s.usedShortcuts, ...s.usedShortcuts };
 
       // Restore video / synthetic setup
       if (s.isSynthetic === false) {
@@ -5512,14 +5489,6 @@ function initEventListeners() {
   }
   if (el('btnModeSimplified')) {
     el('btnModeSimplified').addEventListener('click', () => setAppMode('simplified'));
-  }
-
-  // Course Level Toggle (On-Level vs. Honors)
-  if (el('btnLevelOnLevel')) {
-    el('btnLevelOnLevel').addEventListener('click', () => setCourseLevel('on-level'));
-  }
-  if (el('btnLevelHonors')) {
-    el('btnLevelHonors').addEventListener('click', () => setCourseLevel('honors'));
   }
 
   // Teacher Mode Toggle
