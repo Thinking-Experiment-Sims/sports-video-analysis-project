@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Quick-Reference Cheat Sheet — Projectile Video Lab</title>
+  <meta name="description" content="Printable front-and-back reference sheet for the Projectile Video Analysis Lab: step-by-step clicks, equation decoder, kinematics formulas, and troubleshooting FAQ.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface-alt: #f5f9fb;
+      --primary-teal: #0f7e9b;
+      --primary-teal-dark: #095f76;
+      --primary-teal-light: #e6f4f8;
+      --primary-teal-border: #b3d9e6;
+      --accent-amber: #d67b19;
+      --accent-amber-dark: #b06210;
+      --accent-amber-light: #fdf3e7;
+      --accent-amber-border: #f5d0a9;
+      --ink: #123140;
+      --muted: #4b6570;
+      --border: #c8dbe3;
+      --border-light: #e2edf3;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f3f7f9;
+      color: var(--ink);
+      font-family: 'Inter', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .sheet-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.1rem 1.25rem 2rem;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+      padding: 0.65rem 0.9rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.42rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--primary-teal);
+    }
+
+    .btn-amber {
+      background: var(--accent-amber);
+      border-color: var(--accent-amber);
+      color: #ffffff;
+    }
+
+    .page-sheet {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 2px 8px rgba(18, 49, 64, 0.05);
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 0.75rem;
+      border-bottom: 2.5px solid var(--primary-teal);
+      padding-bottom: 0.45rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .sheet-kicker {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-amber-dark);
+    }
+
+    h1 {
+      font-size: 1.28rem;
+      color: var(--primary-teal);
+      margin: 0.1rem 0 0;
+    }
+
+    .page-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--primary-teal-dark);
+      background: var(--primary-teal-light);
+      border: 1px solid var(--primary-teal-border);
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .sec-title {
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: var(--primary-teal);
+      margin: 0.65rem 0 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 0.2rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.6rem 0.75rem;
+    }
+
+    .card.teal-tint {
+      background: var(--primary-teal-light);
+      border-color: var(--primary-teal-border);
+    }
+
+    .card.amber-tint {
+      background: var(--accent-amber-light);
+      border-color: var(--accent-amber-border);
+    }
+
+    .card h3 {
+      margin: 0 0 0.3rem;
+      font-size: 0.85rem;
+      color: var(--primary-teal-dark);
+    }
+
+    .card.amber-tint h3 {
+      color: var(--accent-amber-dark);
+    }
+
+    ul.tight {
+      margin: 0.15rem 0;
+      padding-left: 1.05rem;
+    }
+
+    ul.tight li {
+      margin-bottom: 0.24rem;
+    }
+
+    .pill {
+      display: inline-block;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.04rem 0.32rem;
+      font-weight: 700;
+      font-size: 0.76rem;
+      color: var(--ink);
+    }
+
+    .pill.amber {
+      background: var(--accent-amber-light);
+      border-color: var(--accent-amber-border);
+      color: var(--accent-amber-dark);
+    }
+
+    .eq-big {
+      font-size: 0.95rem;
+      font-weight: 700;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.32rem 0.5rem;
+      margin: 0.25rem 0 0.35rem;
+      text-align: center;
+    }
+
+    .pct-banner {
+      background: var(--primary-teal-light);
+      border: 1px solid var(--primary-teal-border);
+      border-left: 4px solid var(--primary-teal);
+      border-radius: 6px;
+      padding: 0.38rem 0.65rem;
+      margin-bottom: 0.55rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-bottom: 0.55rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.34rem 0.48rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--primary-teal);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.76rem;
+    }
+
+    tr:nth-child(even) td {
+      background: var(--surface-alt);
+    }
+
+    .faq-item {
+      margin-bottom: 0.38rem;
+      padding-bottom: 0.34rem;
+      border-bottom: 1px dashed var(--border-light);
+    }
+
+    .faq-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: var(--accent-amber-dark);
+      display: block;
+      margin-bottom: 0.08rem;
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.35in 0.4in;
+      }
+      body {
+        background: #ffffff !important;
+        font-size: 10.5px;
+        line-height: 1.32;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print { display: none !important; }
+      .sheet-wrap { padding: 0; max-width: 100%; }
+      .page-sheet {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        page-break-after: always;
+        break-after: page;
+      }
+      .page-sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .card, table, tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      table { font-size: 9.8px; }
+      th, td { padding: 0.26rem 0.38rem; }
+      .card { padding: 0.45rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet-wrap">
+    <!-- Non-printing Action Bar -->
+    <div class="top-bar no-print">
+      <div>
+        <strong style="color: var(--primary-teal);">Student Reference Cheat Sheet</strong>
+        <span style="color: var(--muted); font-size: 0.8rem; margin-left: 0.4rem;">Formatted for 1 sheet (front &amp; back)</span>
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="index.html" class="btn">← Return to Projectile Video Lab</a>
+        <a href="student-guide.html" class="btn">📘 Full Deliverables Handout</a>
+        <button type="button" onclick="window.print()" class="btn btn-amber">🖨️ Print Cheat Sheet</button>
+      </div>
+    </div>
+
+    <!-- ==================== PAGE 1 (FRONT): WORKFLOW & EQUATION DECODER ==================== -->
+    <section class="page-sheet">
+      <header class="sheet-header">
+        <div>
+          <div class="sheet-kicker">The Thinking Experiment &bull; PhysicsKit Reference</div>
+          <h1>Projectile Video Lab — Student Quick Cheat Sheet</h1>
+        </div>
+        <span class="page-tag">Page 1 of 2 &bull; Tabs 1–3 &amp; Equations</span>
+      </header>
+
+      <div class="sec-title">1. Step-by-Step Workflow (Tabs 1 &rarr; 3)</div>
+      <div class="grid-2">
+        <!-- Tabs 1 & 2 -->
+        <div class="card">
+          <h3>Tabs 1 &amp; 2: Calibrate, Track &amp; Predict</h3>
+          <ul class="tight">
+            <li><strong>Open Video &amp; Set FPS:</strong> Click <span class="pill">📹 Open Video</span>. Set <span class="pill">FPS</span> to your phone's real rate (normal = <code>30</code> or <code>60</code>; iPhone slow-mo = <code>120</code> or <code>240</code>).</li>
+            <li><strong>1. Set Scale (Do First!):</strong> Click <span class="pill amber">📏 1. Set Scale</span>, drag across your meter stick/known length in the frame, enter meters in <strong>1A</strong>, and click <span class="pill amber">Apply Scale</span>.</li>
+            <li><strong>2. Set Origin:</strong> Click <span class="pill">🎯 2. Set Origin</span> and place the crosshairs with \(y = 0\) on the <strong>floor</strong> and \(x = 0\) directly below launch.</li>
+            <li><strong>3. Track Ball:</strong> Step forward until the ball cleanly leaves the hand/launcher. Select <span class="pill">➕ 3. Track Ball</span> and click the ball's center <strong>10–15 times</strong> across rise, apex, and fall. <em>Stop before bounce/catch!</em></li>
+            <li><strong>4. Set \(t_{\text{up}}\) (Step 1B):</strong> Click <span class="pill">Use Peak Frame t</span> (or type the time of the highest tracked frame).</li>
+            <li><strong>Tab 2 (Predict):</strong> Choose shapes for \(v_x, v_y, a_x, a_y\), write a 1-sentence reason, and click <span class="pill amber">🔒 Lock Prediction &amp; Go to Tab 3: Build Graphs →</span>.<br><em>Shot from right to left? Choose <strong>Flat negative horizontal line (\(v_x &lt; 0\))</strong>!</em></li>
+          </ul>
+        </div>
+
+        <!-- Tab 3 -->
+        <div class="card">
+          <h3>Tab 3: Build All 6 Motion Graphs (3A &rarr; 3D)</h3>
+          <ul class="tight">
+            <li><strong>3A. Position Fits:</strong>
+              <br>&bull; Horizontal \(x(t)\) &rarr; select <span class="pill">Linear (\(x = mt + c\))</span>
+              <br>&bull; Vertical \(y(t)\) &rarr; select <span class="pill">Quadratic (\(At^2+Bt+C\))</span>
+            </li>
+            <li><strong>3B. Tangent Slopes &rarr; Velocity:</strong>
+              <br>&bull; On \(y(t)\), click <span class="pill">Ascent</span>, <span class="pill">Apex</span>, and <span class="pill">Descent</span>, pressing <span class="pill amber">➕ Plot This Tangent Slope</span> at least <strong>3 times</strong> (5 recommended).
+              <br>&bull; Vertical \(v_y(t)\) &rarr; select <span class="pill">Linear (\(v_y = a_y t + v_{0y}\))</span>
+              <br>&bull; Horizontal \(v_x(t)\) &rarr; select <span class="pill">Constant (\(v_x = m\))</span>
+            </li>
+            <li><strong>3C. Acceleration Fits:</strong>
+              <br>&bull; Horizontal \(a_x(t)\) &rarr; select <span class="pill">Constant Zero (\(a_x = 0\))</span>
+              <br>&bull; Vertical \(a_y(t)\) &rarr; select <span class="pill">Constant (\(a_y = \text{slope of } v_y\))</span>
+            </li>
+            <li><strong>3D. Review &amp; Notes:</strong> Inspect all 6 graphs (Extended: toggle <span class="pill">📐 Shade Signed \(v_y\)–\(t\) Areas</span>), then write how your predictions compared and how \(v\) and \(a\) come from slopes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sec-title">2. Best-Fit Equation Decoder Ring (Displayed at the Top of Tab 4)</div>
+      <div class="grid-2">
+        <div class="card teal-tint">
+          <h3>Horizontal Motion: Best-Fit Line \(x(t)\)</h3>
+          <div class="eq-big">$$x(t) = m\,t + c$$</div>
+          <ul class="tight">
+            <li><strong>Initial horizontal position:</strong> \(x_0 = c\) (m)</li>
+            <li><strong>Initial horizontal velocity:</strong> \(v_{0x} = m\) (m/s) &mdash; <em>constant!</em></li>
+            <li><strong>Horizontal acceleration:</strong> \(a_x = 0\text{ m/s}^2\) (no air drag model)</li>
+            <li><strong>Direction sign rule:</strong> Shot left-to-right \(\Rightarrow m &gt; 0\). Shot right-to-left \(\Rightarrow m &lt; 0\) (keep the negative sign!).</li>
+          </ul>
+        </div>
+
+        <div class="card amber-tint">
+          <h3>Vertical Motion: Best-Fit Curve \(y(t)\)</h3>
+          <div class="eq-big">$$y(t) = A\,t^2 + B\,t + C$$</div>
+          <ul class="tight">
+            <li><strong>Initial vertical height:</strong> \(y_0 = C\) (m)</li>
+            <li><strong>Initial vertical velocity:</strong> \(v_{0y} = B\) (m/s)</li>
+            <li><strong>Vertical acceleration:</strong> \(a_y = \mathbf{2A}\) (m/s\(^2\)) &mdash; <strong>WATCH OUT!</strong> From \(y = y_0 + v_{0y}t + \tfrac{1}{2}a_y t^2\), \(A = \tfrac{1}{2}a_y\), so you <strong>MUST multiply \(A\) by 2</strong> (keep the minus sign, expect near \(-9.8\text{ m/s}^2\)).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 0.6rem; background: var(--surface-alt);">
+        <h3>Important Symbols &amp; Reminders</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.78rem;">
+          <div><strong>\(t_{\text{hang}}\) (Flight Time):</strong> Time from first tracked point (\(t = 0\)) to last tracked point. <em>Do NOT assume \(t_{\text{hang}} = 2t_{\text{up}}\) unless launch and end heights match!</em></div>
+          <div><strong>\(t_{\text{up}}\) (Rise Time):</strong> Observed time from \(t = 0\) to the highest tracked frame in Step 1B. Precision is \(\pm \Delta t\) between tracked frames.</div>
+          <div><strong>\(y_{\text{final}}\) (End Height):</strong> Height \(y\) of your <em>last</em> tracked frame (usually <strong>not zero</strong> because tracking stops before ground impact!).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 2 (BACK): CALCULATIONS 1–7 & TROUBLESHOOTING FAQ ==================== -->
+    <section class="page-sheet">
+      <header class="sheet-header">
+        <div>
+          <div class="sheet-kicker">The Thinking Experiment &bull; PhysicsKit Reference</div>
+          <h1>Calculations 1–7 &amp; Troubleshooting FAQ</h1>
+        </div>
+        <span class="page-tag">Page 2 of 2 &bull; Tabs 4–6 &amp; Help</span>
+      </header>
+
+      <div class="sec-title">3. Tab 4: Kinematics Calculations 1–7 (Standard Version)</div>
+      <div class="pct-banner">
+        <span><strong>Percent Difference Formula (Calc 1–4 &amp; 7):</strong> \(\;\text{\% diff} = \dfrac{|\text{Calculated} - \text{Measured (or Reference)}|}{|\text{Measured (or Reference)}|} \times 100\%\)</span>
+        <span><strong>Work Requirement:</strong> Write equation + numbers + units in every Work box!</span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 19%;">Calculation</th>
+            <th style="width: 48%;">How to Calculate (Best-Fit Model Values)</th>
+            <th style="width: 33%;">What to Measure / Compare With</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Fit Values</strong></td>
+            <td>Read directly from your Tab 3 equations: \(x_0 = c\), \(v_{0x} = m\), \(a_x = 0\), \(y_0 = C\), \(v_{0y} = B\), and \(a_y = \mathbf{2A}\).</td>
+            <td>Compare \(a_y\) against reference \(-9.8\text{ m/s}^2\) (% diff). Compare \(a_x\) with \(0\text{ m/s}^2\) (no % diff).</td>
+          </tr>
+          <tr>
+            <td><strong>2. Hang Time \(t_{\text{hang}}\)</strong></td>
+            <td>Solve \(y_{\text{final}} = y_0 + v_{0y}t + \tfrac{1}{2}a_y t^2 \Rightarrow \left(\tfrac{1}{2}a_y\right)t^2 + v_{0y}t + (y_0 - y_{\text{final}}) = 0\) with the quadratic formula:<br>\(t = \dfrac{-v_{0y} \pm \sqrt{v_{0y}^2 - 4\left(\tfrac{1}{2}a_y\right)(y_0 - y_{\text{final}})}}{a_y}\). Keep the larger positive descent root; state which root you rejected and why.</td>
+            <td><strong>Measured:</strong> Last tracked time minus first tracked time (shown as \(t_{\text{hang}}\) in the pinned Tab 4 bar).</td>
+          </tr>
+          <tr>
+            <td><strong>3. Range \(\Delta x\)</strong></td>
+            <td>Use \(\Delta x = v_{0x}\,t_{\text{calc}} + \tfrac{1}{2}a_x t_{\text{calc}}^2 = v_{0x}\,t_{\text{calc}}\) (since \(a_x = 0\), plug in your <em>calculated</em> hang time from #2).</td>
+            <td><strong>Measured:</strong> \(x_{\text{final}} - x_{\text{initial}}\) from Tab 1C table (or \(\Delta x\) in Tab 4 reference bar).</td>
+          </tr>
+          <tr>
+            <td><strong>4. Max Height \(y_{\max}\)</strong></td>
+            <td>At apex, \(v_y = 0\): use \(0 = v_{0y}^2 + 2a_y \Delta y_{\text{up}} \Rightarrow \Delta y_{\text{up}} = \dfrac{-v_{0y}^2}{2a_y} = \dfrac{v_{0y}^2}{2|a_y|}\). Then add \(y_0\): \(y_{\max} = y_0 + \Delta y_{\text{up}}\).</td>
+            <td><strong>Measured:</strong> Highest \(y\) value in your Tab 1C table (shown as \(y_{\max}\) in Tab 4 reference bar).</td>
+          </tr>
+          <tr>
+            <td><strong>5. Launch Speed \(v_0\)</strong></td>
+            <td>Combine \(x\) and \(y\) components: \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\).</td>
+            <td>Magnitude only (always positive, units: m/s).</td>
+          </tr>
+          <tr>
+            <td><strong>6. Launch Angle \(\theta\)</strong></td>
+            <td>Make sure calculator is in <strong>DEG (degrees)</strong> mode! Calculate \(\theta = \tan^{-1}\!\left(\dfrac{|v_{0y}|}{|v_{0x}|}\right)\) above the horizontal (or \(180^\circ - \theta\) from \(+x\) if shot right-to-left).</td>
+            <td>Check: steep lob &gt; \(45^\circ\), low line drive &lt; \(45^\circ\).</td>
+          </tr>
+          <tr>
+            <td><strong>7. Consistency Check: Gravity \(g_{\text{meas}}\)</strong></td>
+            <td>From measured rise \(\Delta y_{\text{up}} = y_{\max,\text{meas}} - y_0\) and observed video rise time \(t_{\text{up}}\), use \(\Delta y_{\text{up}} = \tfrac{1}{2}g t_{\text{up}}^2\) to compute:<br>\(g_{\text{meas}} = \dfrac{2(y_{\max,\text{meas}} - y_0)}{t_{\text{up}}^2}\)</td>
+            <td>Compute <strong>% diff vs. fitted \(|a_y|\)</strong> (from Calc 1) AND <strong>% diff vs. \(9.8\text{ m/s}^2\)</strong>. State in 1 sentence whether your two methods agree.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="font-size: 0.74rem; color: var(--muted); margin-bottom: 0.45rem;">
+        <strong>Extended Mode Quick Note (5a–5f &amp; 5A):</strong> In Extended mode, 5a–5b take two-point slopes from the fitted lines; 5c predicts \(v_{0y,\text{pred}} = -(-9.8)\,t_{\text{up}}\) and compares with \(B\); 5d–5e use \(a_{y,\text{ref}} = -9.8\text{ m/s}^2\); and 5A splits signed triangles at \(t_{\text{zero}}\) so \(C + \text{Area}_{\text{up}} + \text{Area}_{\text{down}} \approx y_{\text{fit}}(t_{\text{hang}})\).
+      </div>
+
+      <div class="sec-title">4. Tab 5 Key Explanations &amp; Before-You-Ask Troubleshooting</div>
+      <div class="grid-2">
+        <!-- Tab 5 Concepts -->
+        <div class="card">
+          <h3>Tab 5B Conceptual Checklist</h3>
+          <ul class="tight">
+            <li><strong>Is the ball at rest at the apex (\(v_y = 0\))?</strong> <strong>No!</strong> Only its vertical velocity is instantaneously zero while switching from up to down. Its horizontal velocity \(v_x\) is still constant and non-zero, so it is moving horizontally in 2D.</li>
+            <li><strong>Why is \(a_y\) negative on BOTH sides of the apex?</strong> Gravity pulls downward (\(-y\)) before, at, and after the peak. On the way up (\(v_y &gt; 0\)), negative \(a_y\) opposes motion and <em>slows the ball down</em>. On the way down (\(v_y &lt; 0\)), negative \(a_y\) matches motion and <em>speeds the ball up</em> downward.</li>
+            <li><strong>Limitation + Direction (Required):</strong> Name one concrete limit (frame spacing hiding the true apex, motion blur, or scale bar closer/farther than the ball) AND explain whether it made your result <strong>too high or too low</strong>.</li>
+            <li><strong>Gravity Conclusion:</strong> State your \(a_y\) vs. \(-9.8\text{ m/s}^2\) % difference; if &gt;15% off, explain whether wrong FPS or out-of-plane scale caused it.</li>
+          </ul>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="card amber-tint">
+          <h3>FAQ: Fixes Before Asking Your Teacher</h3>
+          <div class="faq-item">
+            <span class="faq-q">Why is "✓ Check My Numbers" greyed out / disabled?</span>
+            Type at least a brief equation/substitution into at least one <strong>Work</strong> box in Tab 4 first. Checks are unlocked once written work is entered!
+          </div>
+          <div class="faq-item">
+            <span class="faq-q">Red Banner: "Your FPS setting may be 2×/4× off"?</span>
+            Slow-motion clips often export at 30 fps or play at 120/240 fps. Change the <span class="pill">FPS</span> box in Tab 1 (try <code>30</code>, <code>60</code>, <code>120</code>, or <code>240</code>) until \(a_y = 2A\) is near \(-9.8\text{ m/s}^2\).
+          </div>
+          <div class="faq-item">
+            <span class="faq-q">Points &amp; scale shifted when reloading video + <code>.json</code>?</span>
+            Use the <span class="pill">🎯 Align Overlay to Video</span> sliders (<code>X</code>, <code>Y</code>, <code>Scale</code>) at the top of Tab 1 to visually line points back onto your video—your numbers and calculations stay untouched!
+          </div>
+          <div class="faq-item">
+            <span class="faq-q">How do I save progress &amp; submit without printing?</span>
+            Click <span class="pill">💾 Save (.json)</span> anytime to back up work. In <strong>Tab 6</strong>, enter Name &amp; Teacher, click <span class="pill amber">🖨️ Print / Save Report as PDF</span>, and change Destination to <strong>Save as PDF</strong> (do <em>not</em> print paper).
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
