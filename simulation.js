@@ -47,6 +47,10 @@ const state = {
   motionFilter: 'both',
 
   // Calibration & Coordinate Transform (y = 0 at ground reference, x = 0 below release)
+  canvasWidth: 832,
+  canvasHeight: 520,
+  sessionRestoredAwaitingVideo: false,
+  overlayOffset: { x: 0, y: 0, scale: 1.0 },
   pixelsPerMeter: 112,
   origin: { x: 110, y: 426 },
   originAngle: 0,
@@ -941,11 +945,33 @@ function updateScaleReadout() {
 // ============================================================================
 // Canvas Overlay Rendering
 // ============================================================================
+function getOverlayTransform() {
+  const off = state.overlayOffset || {};
+  return {
+    x: Number.isFinite(off.x) ? off.x : 0,
+    y: Number.isFinite(off.y) ? off.y : 0,
+    scale: (Number.isFinite(off.scale) && off.scale > 0) ? off.scale : 1.0
+  };
+}
+
 function resizeCanvas() {
   if (!overlayCanvas || !viewportContainer) return;
-  const rect = viewportContainer.getBoundingClientRect();
-  const w = Math.round(rect.width) || 860;
-  const h = Math.round(rect.height) || 520;
+  const hasTrackedData = (state.series.A && state.series.A.length > 0) ||
+                         (state.series.B && state.series.B.length > 0) ||
+                         state.sessionRestoredAwaitingVideo;
+
+  let w, h;
+  if (hasTrackedData && state.canvasWidth > 0 && state.canvasHeight > 0) {
+    w = state.canvasWidth;
+    h = state.canvasHeight;
+  } else {
+    const rect = viewportContainer.getBoundingClientRect();
+    w = Math.round(rect.width) || 832;
+    h = Math.round(rect.height) || 520;
+    state.canvasWidth = w;
+    state.canvasHeight = h;
+  }
+
   overlayCanvas.width = w;
   overlayCanvas.height = h;
 
@@ -964,9 +990,14 @@ function drawOverlay() {
     ctx.drawImage(state.syntheticCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
   }
 
+  const tr = getOverlayTransform();
+  ctx.save();
+  ctx.translate(tr.x, tr.y);
+  ctx.scale(tr.scale, tr.scale);
   if (state.showOrigin) drawAxes();
   if (state.showScale) drawScaleStick();
   if (state.showPoints) drawTrackedPoints();
+  ctx.restore();
 }
 
 function drawAxes() {
@@ -1812,6 +1843,23 @@ function renderBuildChartInstance(canvasId, datasets, tMin, tMax, yTitle, sugMin
   });
 }
 
+function getXPosSugBounds(pts) {
+  const allX = pts.map(p => p.x);
+  const minX = allX.length ? Math.min(0, ...allX) : 0;
+  const maxX = allX.length ? Math.max(0, ...allX) : 1.0;
+  return {
+    sugMin: minX < 0 ? minX * 1.18 : 0,
+    sugMax: maxX > 0 ? Math.max(1.0, maxX) * 1.18 : 0.5
+  };
+}
+
+function getXVelSugBounds(m) {
+  return {
+    sugMin: m < 0 ? Math.min(-2.0, m * 1.35) : Math.min(0, m * 1.2),
+    sugMax: m < 0 ? Math.max(0.5, m * 1.2) : Math.max(2.0, m * 1.35)
+  };
+}
+
 function renderBuildGraphStep() {
   autoFitAndDeriveAllGraphs();
   syncFitRadioButtonsFromState();
@@ -1855,7 +1903,7 @@ function renderBuildGraphStep() {
     });
     if (coachX) {
       coachX.className = 'per-coach-box good';
-      coachX.innerHTML = `<strong>✓ Linear Fit Selected:</strong> <code>x(t) = (${m.toFixed(3)} m/s)t ${signStr(c)} m</code> [R² = ${xFit.r2.toFixed(4)}]. Because horizontal position increases at a steady rate, the horizontal velocity slope <code>vₓ = ${m.toFixed(3)} m/s</code> is constant!`;
+      coachX.innerHTML = `<strong>✓ Linear Fit Selected:</strong> <code>x(t) = (${m.toFixed(3)} m/s)t ${signStr(c)} m</code> [R² = ${xFit.r2.toFixed(4)}]. Because horizontal position changes at a steady rate, the horizontal velocity slope <code>vₓ = ${m.toFixed(3)} m/s</code> is constant!`;
     }
     if (badgeX) {
       badgeX.textContent = '✓ Linear Fit Selected';
@@ -1918,8 +1966,8 @@ function renderBuildGraphStep() {
       badgeX.className = 'pct-diff-badge';
     }
   }
-  const allX = pts.map(p => p.x);
-  renderBuildChartInstance('canvasBuildXPos', xDatasets, tMin, tMax, 'Horizontal Position x (m)', Math.min(0, ...allX), Math.max(1.0, ...allX) * 1.18);
+  const xBounds = getXPosSugBounds(pts);
+  renderBuildChartInstance('canvasBuildXPos', xDatasets, tMin, tMax, 'Horizontal Position x (m)', xBounds.sugMin, xBounds.sugMax);
 
   const qualX = el('fitQualityXPos');
   if (qualX) {
@@ -2260,7 +2308,8 @@ function renderBuildGraphStep() {
       badgeVX.className = 'pct-diff-badge';
     }
   }
-  renderBuildChartInstance('canvasBuildXVel', vxDatasets, tMin, tMax, 'Horizontal Velocity vₓ (m/s)', Math.min(0, m * 1.2), Math.max(2.0, m * 1.35));
+  const vxBounds = getXVelSugBounds(m);
+  renderBuildChartInstance('canvasBuildXVel', vxDatasets, tMin, tMax, 'Horizontal Velocity vₓ (m/s)', vxBounds.sugMin, vxBounds.sugMax);
 
   // --- 3C Left: Horizontal Acceleration a_x(t) ---
   const axDatasets = [];
@@ -2523,9 +2572,9 @@ function buildChartConfigForGraph(type, isExportImage = false) {
         fill: false
       }
     ];
-    const allX = pts.map(p => p.x);
-    sugMin = Math.min(0, ...allX);
-    sugMax = Math.max(1.0, ...allX) * 1.18;
+    const xBounds = getXPosSugBounds(pts);
+    sugMin = xBounds.sugMin;
+    sugMax = xBounds.sugMax;
   } else if (type === 'y-pos') {
     yAxisTitle = 'Vertical Position y (m)';
     const fitLine = [];
@@ -2592,8 +2641,9 @@ function buildChartConfigForGraph(type, isExportImage = false) {
         fill: false
       }
     ];
-    sugMin = Math.min(0, m * 1.2);
-    sugMax = Math.max(2.0, m * 1.35);
+    const vxBounds = getXVelSugBounds(m);
+    sugMin = vxBounds.sugMin;
+    sugMax = vxBounds.sugMax;
   } else if (type === 'y-vel') {
     yAxisTitle = 'Vertical Velocity vᵧ (m/s)';
     const vStart = ay * tMin + B;
@@ -3034,6 +3084,19 @@ function populateDOMFromStudentState() {
 
 const AUTOSAVE_STORAGE_KEY = 'projectile_video_lab_autosave_v2';
 
+function syncOverlayAlignUI(showBar) {
+  const tr = getOverlayTransform();
+  if (el('overlayOffsetXInput')) el('overlayOffsetXInput').value = Math.round(tr.x);
+  if (el('overlayOffsetYInput')) el('overlayOffsetYInput').value = Math.round(tr.y);
+  const pct = Math.round(tr.scale * 100);
+  if (el('overlayScaleInput')) el('overlayScaleInput').value = pct;
+  if (el('overlayScaleLabel')) el('overlayScaleLabel').textContent = `${pct}%`;
+  const bar = el('overlayAlignBar');
+  if (bar && showBar !== undefined) {
+    bar.style.display = showBar ? 'flex' : 'none';
+  }
+}
+
 function saveToLocalStorage() {
   try {
     syncStudentInputsFromDOM();
@@ -3041,6 +3104,9 @@ function saveToLocalStorage() {
       timestamp: Date.now(),
       studentName: state.studentName,
       activeSeries: state.activeSeries,
+      canvasWidth: state.canvasWidth,
+      canvasHeight: state.canvasHeight,
+      overlayOffset: state.overlayOffset,
       series: state.series,
       observedTUp: state.observedTUp,
       selectedFits: state.selectedFits,
@@ -3090,6 +3156,9 @@ function restoreAutosave() {
     const data = JSON.parse(raw);
     if (data.mode) setAppMode(data.mode);
     if (data.studentName) state.studentName = data.studentName;
+    if (data.canvasWidth) state.canvasWidth = data.canvasWidth;
+    if (data.canvasHeight) state.canvasHeight = data.canvasHeight;
+    if (data.overlayOffset) state.overlayOffset = { ...{ x: 0, y: 0, scale: 1.0 }, ...data.overlayOffset };
     if (data.series) state.series = data.series;
     if (data.observedTUp) state.observedTUp = data.observedTUp;
     if (data.selectedFits) state.selectedFits = data.selectedFits;
@@ -3103,6 +3172,8 @@ function restoreAutosave() {
     if (data.autoSampled !== undefined) state.autoSampled = Boolean(data.autoSampled);
     if (data.gravityWarningShown !== undefined) state.gravityWarningShown = Boolean(data.gravityWarningShown);
 
+    syncOverlayAlignUI(!state.isSynthetic);
+    resizeCanvas();
     populateDOMFromStudentState();
     autoFitAndDeriveAllGraphs();
     updatePosChart();
@@ -3131,6 +3202,10 @@ function resetEntireLab() {
   } catch (err) {
     console.warn('Could not clear autosave:', err);
   }
+
+  state.sessionRestoredAwaitingVideo = false;
+  state.overlayOffset = { x: 0, y: 0, scale: 1.0 };
+  syncOverlayAlignUI(false);
 
   // Reset tracking series
   state.series.A = [];
@@ -3470,9 +3545,14 @@ function checkStandardCalculations(exp) {
   const rc = P(sr.stdRangeCalc), rm = P(sr.stdRangeMeas), rp = P(sr.stdRangePct);
   const bad3 = [];
   const ownRange = (vx !== null && hc !== null) ? vx * hc : null;
-  if (!nearAny(rc, [exp.rangeCalcFit, ownRange], 0.03, 0.02)) bad3.push('calculated range (Δx = v₀ₓ × your calculated hang time)');
-  if (!near(rm, exp.dxTrack, 0.03, 0.02)) bad3.push('measured range (x of last point − x of first point)');
-  if (!pctOk(rp, rc, rm)) bad3.push('% difference');
+  const rcAbs = rc !== null ? Math.abs(rc) : null;
+  const rmAbs = rm !== null ? Math.abs(rm) : null;
+  const expRangeAbs = exp.rangeCalcFit !== null && exp.rangeCalcFit !== undefined ? Math.abs(exp.rangeCalcFit) : null;
+  const ownRangeAbs = ownRange !== null ? Math.abs(ownRange) : null;
+  const dxTrackAbs = exp.dxTrack !== null && exp.dxTrack !== undefined ? Math.abs(exp.dxTrack) : null;
+  if (!nearAny(rcAbs, [expRangeAbs, ownRangeAbs], 0.03, 0.02)) bad3.push('calculated range (Δx = v₀ₓ × your calculated hang time)');
+  if (!near(rmAbs, dxTrackAbs, 0.03, 0.02)) bad3.push('measured range (x of last point − x of first point)');
+  if (!pctOk(rp, rcAbs, rmAbs)) bad3.push('% difference');
   report('fbStd3', bad3.length === 0, '✓ Range calculated, measured and compared.', 'Check: ' + bad3.join('; ') + '.');
 
   // 4. Maximum height
@@ -3491,7 +3571,8 @@ function checkStandardCalculations(exp) {
   const ownV0 = (vx !== null && vy !== null) ? Math.hypot(vx, vy) : null;
   const ownTh = (vx !== null && vy !== null && vx !== 0) ? Math.atan(Math.abs(vy) / Math.abs(vx)) * 180 / Math.PI : null;
   if (!nearAny(v0, [exp.v0Fit, ownV0], 0.02, 0.02)) bad5.push('launch speed (Pythagorean theorem with v₀ₓ and v₀ᵧ; units are m/s)');
-  if (th === null || !( (exp.thetaFit !== null && Math.abs(Math.abs(th) - exp.thetaFit) <= 1.0) || (ownTh !== null && Math.abs(Math.abs(th) - ownTh) <= 1.0) )) bad5.push('launch angle (tan⁻¹ of v₀ᵧ ÷ v₀ₓ, calculator in DEGREES)');
+  const angleOk = (tVal, refVal) => refVal !== null && (Math.abs(Math.abs(tVal) - refVal) <= 1.0 || Math.abs((180 - Math.abs(tVal)) - refVal) <= 1.0);
+  if (th === null || !(angleOk(th, exp.thetaFit) || angleOk(th, ownTh))) bad5.push('launch angle (tan⁻¹ of v₀ᵧ ÷ v₀ₓ, calculator in DEGREES)');
   report('fbStd5', bad5.length === 0, '✓ Launch speed and angle check out.', 'Check: ' + bad5.join('; ') + '.');
 
   // 7. Consistency check: acceleration of gravity
@@ -3717,9 +3798,13 @@ function checkNumbersForPracticeFeedback(e) {
     const usedVy0 = vy0PredVal !== null ? vy0PredVal : (exp.vy0Pred || exp.B);
     const targetV0 = Math.hypot(usedVx, usedVy0);
     const targetTheta = Math.atan2(usedVy0, usedVx) * 180 / Math.PI;
+    const acuteTheta = Math.atan2(Math.abs(usedVy0), Math.abs(usedVx)) * 180 / Math.PI;
 
     if ((withinTol(v0Val, targetV0) || withinTol(v0Val, exp.v0Pred)) &&
-        (withinTol(thetaVal, targetTheta, 0.06, 1.5) || withinTol(thetaVal, exp.thetaPred, 0.06, 1.5))) {
+        (withinTol(thetaVal, targetTheta, 0.06, 1.5) ||
+         withinTol(thetaVal, exp.thetaPred, 0.06, 1.5) ||
+         withinTol(thetaVal, acuteTheta, 0.06, 1.5) ||
+         withinTol(thetaVal, -acuteTheta, 0.06, 1.5))) {
       ok5f = true;
       setFeedbackBox('fb5f', 'good', `✓ Numbers checked: v₀ = ${v0Val.toFixed(3)} m/s at θ = ${thetaVal.toFixed(2)}° above +x.`);
     } else {
@@ -3915,19 +4000,35 @@ function updateRubricChecklistUI() {
 
 // High-resolution snapshot of video + calibration stick + origin + tracked trajectory
 function getVideoSnapshotData() {
+  const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : (state.canvasWidth || 832);
+  const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : (state.canvasHeight || 520);
   const w = 880;
-  const h = 495;
+  const h = Math.round(880 * (srcH / srcW)) || 550;
   const offCanvas = document.createElement('canvas');
   offCanvas.width = w;
   offCanvas.height = h;
   const offCtx = offCanvas.getContext('2d');
 
-  offCtx.fillStyle = '#f8fafc';
+  offCtx.fillStyle = '#ffffff';
   offCtx.fillRect(0, 0, w, h);
 
   if (!state.isSynthetic && video && video.videoWidth > 0) {
     try {
-      offCtx.drawImage(video, 0, 0, w, h);
+      if (video.videoHeight > 0) {
+        const boxRatio = w / h;
+        const vidRatio = video.videoWidth / video.videoHeight;
+        let drawW = w, drawH = h, drawX = 0, drawY = 0;
+        if (vidRatio > boxRatio) {
+          drawH = w / vidRatio;
+          drawY = (h - drawH) / 2;
+        } else {
+          drawW = h * vidRatio;
+          drawX = (w - drawW) / 2;
+        }
+        offCtx.drawImage(video, drawX, drawY, drawW, drawH);
+      } else {
+        offCtx.drawImage(video, 0, 0, w, h);
+      }
     } catch (e) {}
   } else if (state.isSynthetic && state.syntheticCanvas) {
     renderSyntheticFrame(state.currentTime);
@@ -3936,15 +4037,16 @@ function getVideoSnapshotData() {
     } catch (e) {}
   }
 
-  const srcW = (overlayCanvas && overlayCanvas.width > 0) ? overlayCanvas.width : w;
-  const srcH = (overlayCanvas && overlayCanvas.height > 0) ? overlayCanvas.height : h;
   const scaleX = w / srcW;
   const scaleY = h / srcH;
+  const tr = getOverlayTransform();
+  const mapX = (cx) => (cx * tr.scale + tr.x) * scaleX;
+  const mapY = (cy) => (cy * tr.scale + tr.y) * scaleY;
 
   // Draw Origin Axes
   if (state.origin) {
-    const ox = state.origin.x * scaleX;
-    const oy = state.origin.y * scaleY;
+    const ox = mapX(state.origin.x);
+    const oy = mapY(state.origin.y);
     offCtx.save();
     offCtx.translate(ox, oy);
     offCtx.rotate(-(state.originAngle || 0));
@@ -3981,10 +4083,10 @@ function getVideoSnapshotData() {
 
   // Draw Scale Stick
   if (state.scaleStick && state.scaleStick.start && state.scaleStick.end) {
-    const sx = state.scaleStick.start.x * scaleX;
-    const sy = state.scaleStick.start.y * scaleY;
-    const ex = state.scaleStick.end.x * scaleX;
-    const ey = state.scaleStick.end.y * scaleY;
+    const sx = mapX(state.scaleStick.start.x);
+    const sy = mapY(state.scaleStick.start.y);
+    const ex = mapX(state.scaleStick.end.x);
+    const ey = mapY(state.scaleStick.end.y);
 
     offCtx.save();
     offCtx.strokeStyle = '#d67b19';
@@ -4015,16 +4117,16 @@ function getVideoSnapshotData() {
     offCtx.lineWidth = 2.2;
     offCtx.beginPath();
     pts.forEach((p, idx) => {
-      const px = p.videoX * scaleX;
-      const py = p.videoY * scaleY;
+      const px = mapX(p.videoX);
+      const py = mapY(p.videoY);
       if (idx === 0) offCtx.moveTo(px, py);
       else offCtx.lineTo(px, py);
     });
     offCtx.stroke();
 
     pts.forEach((p, idx) => {
-      const px = p.videoX * scaleX;
-      const py = p.videoY * scaleY;
+      const px = mapX(p.videoX);
+      const py = mapY(p.videoY);
       offCtx.beginPath();
       offCtx.arc(px, py, 6, 0, Math.PI * 2);
       offCtx.fillStyle = idx === 0 ? '#1a7f37' : '#d67b19';
@@ -4582,6 +4684,9 @@ function saveSessionJSON() {
       isSynthetic: state.isSynthetic,
       syntheticType: state.syntheticType,
       videoFileName: state.videoFileName,
+      canvasWidth: state.canvasWidth,
+      canvasHeight: state.canvasHeight,
+      overlayOffset: state.overlayOffset,
       fps: state.fps,
       stepFrames: state.stepFrames,
       duration: state.duration,
@@ -4650,9 +4755,20 @@ function loadSessionJSON(file) {
       }
       if (s.usedShortcuts) state.usedShortcuts = { ...s.usedShortcuts, ...s.usedShortcuts };
 
+      state.canvasWidth = (Number.isFinite(s.canvasWidth) && s.canvasWidth > 0) ? s.canvasWidth : 832;
+      state.canvasHeight = (Number.isFinite(s.canvasHeight) && s.canvasHeight > 0) ? s.canvasHeight : 520;
+      state.overlayOffset = (s.overlayOffset && typeof s.overlayOffset === 'object')
+        ? {
+            x: Number.isFinite(s.overlayOffset.x) ? s.overlayOffset.x : 0,
+            y: Number.isFinite(s.overlayOffset.y) ? s.overlayOffset.y : 0,
+            scale: (Number.isFinite(s.overlayOffset.scale) && s.overlayOffset.scale > 0) ? s.overlayOffset.scale : 1.0
+          }
+        : { x: 0, y: 0, scale: 1.0 };
+
       // Restore video / synthetic setup
       if (s.isSynthetic === false) {
         state.isSynthetic = false;
+        state.sessionRestoredAwaitingVideo = true;
         state.videoFileName = s.videoFileName || 'recorded video file';
         const badge = el('clipSourceTypeBadge');
         if (badge) {
@@ -4662,8 +4778,17 @@ function loadSessionJSON(file) {
           badge.style.borderColor = '#b3d9e6';
         }
         if (el('reopenVideoFileName')) el('reopenVideoFileName').textContent = state.videoFileName;
-        if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'block';
+        if (video && video.src && video.readyState >= 1) {
+          video.style.display = 'block';
+          if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'none';
+          state.sessionRestoredAwaitingVideo = false;
+        } else {
+          if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'block';
+        }
+        syncOverlayAlignUI(true);
       } else {
+        state.sessionRestoredAwaitingVideo = false;
+        syncOverlayAlignUI(false);
         const synType = s.syntheticType && SYNTHETIC_MODELS[s.syntheticType] ? s.syntheticType : 'basketball';
         initSyntheticExperiment(synType);
       }
@@ -4798,8 +4923,27 @@ function loadSessionJSON(file) {
         };
       }
 
-      updateScaleReadout();
-      recalculateKinematics();
+      const hasSavedScale = Number.isFinite(s.pixelsPerMeter) && s.pixelsPerMeter > 0;
+      if (hasSavedScale) {
+        state.pixelsPerMeter = s.pixelsPerMeter;
+        if (el('scaleReadout') && state.scaleStick) {
+          el('scaleReadout').textContent = `Current Scale: ${state.pixelsPerMeter.toFixed(1)} px/m (${Number(state.scaleStick.lengthMeters || 1).toFixed(2)} m reference)`;
+        }
+      } else {
+        updateScaleReadout();
+      }
+      const allPtsHavePhysicsCoords = ['A', 'B'].every(k =>
+        (state.series[k] || []).every(p => Number.isFinite(p.x) && Number.isFinite(p.y))
+      );
+      if (!allPtsHavePhysicsCoords) {
+        recalculateKinematics();
+      }
+      if (!state.isSynthetic && video && video.src && video.readyState >= 1) {
+        const seekTarget = state.timeOffset || 0;
+        video.currentTime = seekTarget;
+        state.currentTime = seekTarget;
+      }
+      resizeCanvas();
       autoFitAndDeriveAllGraphs();
       if (state.firstAttemptPrediction.isSaved && (!state.tangentPoints || state.tangentPoints.length === 0)) {
         sampleFiveTangentPoints();
@@ -5131,12 +5275,25 @@ function initEventListeners() {
     let isDragging = false;
     let dragTarget = null;
 
-    overlayCanvas.addEventListener('mousedown', (e) => {
+    const getLogicalCanvasCoords = (e, clamp = false) => {
       const rect = overlayCanvas.getBoundingClientRect();
       const scaleX = overlayCanvas.width / rect.width;
       const scaleY = overlayCanvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      let rawX = (e.clientX - rect.left) * scaleX;
+      let rawY = (e.clientY - rect.top) * scaleY;
+      if (clamp) {
+        rawX = Math.max(0, Math.min(overlayCanvas.width, rawX));
+        rawY = Math.max(0, Math.min(overlayCanvas.height, rawY));
+      }
+      const tr = getOverlayTransform();
+      return {
+        x: (rawX - tr.x) / tr.scale,
+        y: (rawY - tr.y) / tr.scale
+      };
+    };
+
+    overlayCanvas.addEventListener('mousedown', (e) => {
+      const { x, y } = getLogicalCanvasCoords(e, false);
 
       if (state.activeTool === 'track') {
         addTrackPoint(x, y);
@@ -5186,11 +5343,7 @@ function initEventListeners() {
       }
 
       if (!isDragging) return;
-      const rect = overlayCanvas.getBoundingClientRect();
-      const scaleX = overlayCanvas.width / rect.width;
-      const scaleY = overlayCanvas.height / rect.height;
-      const x = Math.max(0, Math.min(overlayCanvas.width, (e.clientX - rect.left) * scaleX));
-      const y = Math.max(0, Math.min(overlayCanvas.height, (e.clientY - rect.top) * scaleY));
+      const { x, y } = getLogicalCanvasCoords(e, true);
 
       if (dragTarget === 'scaleStart') {
         state.scaleStick.start = { x, y };
@@ -5218,13 +5371,24 @@ function initEventListeners() {
   // Local Video File Loading
   const loadUserVideoFile = (file) => {
     if (!file) return;
+    const keepRestoredSession = Boolean(
+      state.sessionRestoredAwaitingVideo ||
+      (!state.isSynthetic && ((state.series.A && state.series.A.length > 0) || (state.series.B && state.series.B.length > 0)))
+    );
     state.isSynthetic = false;
+    state.sessionRestoredAwaitingVideo = false;
     state.videoFileName = file.name;
-    state.series.A = [];
-    state.series.B = [];
-    state.observedTUp = '';
-    if (el('inpObservedTUp')) el('inpObservedTUp').value = '';
-    if (el('inpCalcTUp')) el('inpCalcTUp').value = '';
+    if (!keepRestoredSession) {
+      state.series.A = [];
+      state.series.B = [];
+      state.observedTUp = '';
+      if (el('inpObservedTUp')) el('inpObservedTUp').value = '';
+      if (el('inpCalcTUp')) el('inpCalcTUp').value = '';
+      state.overlayOffset = { x: 0, y: 0, scale: 1.0 };
+      syncOverlayAlignUI(false);
+    } else {
+      syncOverlayAlignUI(true);
+    }
     if (el('reopenVideoNotice')) el('reopenVideoNotice').style.display = 'none';
 
     const badge = el('clipSourceTypeBadge');
@@ -5242,17 +5406,23 @@ function initEventListeners() {
     video.onloadedmetadata = () => {
       const dur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 10;
       state.duration = dur;
-      state.currentTime = 0;
-      state.timeOffset = 0;
+      const seekT = keepRestoredSession ? (state.timeOffset || 0) : 0;
+      if (!keepRestoredSession) {
+        state.timeOffset = 0;
+      }
+      state.currentTime = seekT;
+      if (seekT > 0) {
+        video.currentTime = seekT;
+      }
       const scrubber = el('timeScrubber');
       if (scrubber) {
         scrubber.min = 0;
         scrubber.max = dur;
         scrubber.step = 1 / state.fps;
-        scrubber.value = 0;
+        scrubber.value = seekT;
       }
       resizeCanvas();
-      updateTimeAndFrame(0);
+      updateTimeAndFrame(seekT);
       updateTable();
       updateSetupAndCoverageReadouts();
       updateStepView(1);
@@ -5264,6 +5434,27 @@ function initEventListeners() {
       if (e.target.files && e.target.files[0]) {
         loadUserVideoFile(e.target.files[0]);
       }
+      e.target.value = '';
+    });
+  }
+
+  // Overlay Visual Alignment Controls (non-destructive visual alignment over video)
+  const handleOverlayAlignChange = () => {
+    const ox = el('overlayOffsetXInput') ? (parseFloat(el('overlayOffsetXInput').value) || 0) : 0;
+    const oy = el('overlayOffsetYInput') ? (parseFloat(el('overlayOffsetYInput').value) || 0) : 0;
+    const scPct = el('overlayScaleInput') ? (parseFloat(el('overlayScaleInput').value) || 100) : 100;
+    state.overlayOffset = { x: ox, y: oy, scale: scPct / 100 };
+    if (el('overlayScaleLabel')) el('overlayScaleLabel').textContent = `${Math.round(scPct)}%`;
+    drawOverlay();
+  };
+  ['overlayOffsetXInput', 'overlayOffsetYInput', 'overlayScaleInput'].forEach(id => {
+    if (el(id)) el(id).addEventListener('input', handleOverlayAlignChange);
+  });
+  if (el('btnResetOverlayAlign')) {
+    el('btnResetOverlayAlign').addEventListener('click', () => {
+      state.overlayOffset = { x: 0, y: 0, scale: 1.0 };
+      syncOverlayAlignUI();
+      drawOverlay();
     });
   }
 
@@ -5440,6 +5631,7 @@ function initEventListeners() {
       if (e.target.files && e.target.files[0]) {
         loadSessionJSON(e.target.files[0]);
       }
+      e.target.value = '';
     });
   }
 

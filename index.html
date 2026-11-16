@@ -194,6 +194,16 @@
           </div>
         </div>
 
+        <!-- Overlay Visual Alignment Bar (shown when reloading a video session so overlay aligns cleanly without modifying physics values) -->
+        <div id="overlayAlignBar" style="display: none; padding: 0.35rem 0.85rem; background: #fff7ed; border-bottom: 1px solid var(--accent-amber-border); font-size: 0.75rem; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <strong style="color: var(--accent-amber-dark);">🎯 Align Overlay to Video:</strong>
+          <label style="display: inline-flex; align-items: center; gap: 0.25rem;">X: <input type="range" id="overlayOffsetXInput" min="-260" max="260" step="1" value="0" style="width: 80px;"></label>
+          <label style="display: inline-flex; align-items: center; gap: 0.25rem;">Y: <input type="range" id="overlayOffsetYInput" min="-160" max="160" step="1" value="0" style="width: 80px;"></label>
+          <label style="display: inline-flex; align-items: center; gap: 0.25rem;">Scale: <input type="range" id="overlayScaleInput" min="70" max="140" step="1" value="100" style="width: 80px;"><span id="overlayScaleLabel">100%</span></label>
+          <button type="button" id="btnResetOverlayAlign" class="btn" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Reset</button>
+          <span style="color: var(--muted); font-size: 0.71rem;">(Visual alignment only — does not change your data or calculations)</span>
+        </div>
+
         <!-- Video Canvas Stage -->
         <div class="video-workspace">
           <div class="viewport-container" id="viewportContainer">
@@ -394,8 +404,11 @@
                 <select id="predShapeVx" class="input-control" style="width: 100%; font-size: 0.78rem; margin-top: 0.2rem;">
                   <option value="">-- Choose shape --</option>
                   <option value="Constant positive horizontal line (vₓ > 0)">Flat positive horizontal line (vₓ &gt; 0)</option>
+                  <option value="Constant negative horizontal line (vₓ < 0)">Flat negative horizontal line (vₓ &lt; 0)</option>
                   <option value="Straight line sloping upward from 0">Line sloping upward from 0</option>
                   <option value="Straight line sloping downward to 0">Line sloping downward to 0</option>
+                  <option value="Straight line sloping upward toward 0 (from vₓ < 0)">Line sloping upward toward 0 (from vₓ &lt; 0)</option>
+                  <option value="Straight line sloping downward away from 0 (vₓ < 0)">Line sloping downward (more negative vₓ)</option>
                   <option value="Parabola curving downward">Parabola curving downward</option>
                 </select>
               </div>

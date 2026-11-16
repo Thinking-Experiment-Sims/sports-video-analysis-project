@@ -395,7 +395,7 @@ body {
 .viewport-container {
   position: relative;
   width: 100%;
-  max-width: 880px;
+  max-width: 832px;
   aspect-ratio: 16 / 10;
   max-height: 520px;
   display: flex;
