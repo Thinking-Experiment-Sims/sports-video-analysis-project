@@ -1426,44 +1426,42 @@ function autoFitAndDeriveAllGraphs() {
   state.fitResults.yAcc = yFit ? { ay: 2 * yFit.A, ref: FIXED_AY_REF } : null;
 
   // Automatic Frame-Rate (FPS) Error Diagnostic Check (Part B Item 1)
+  const hasGravityWarning = Boolean(yFit && pts.length >= 5 && (2 * yFit.A < -11.3 || 2 * yFit.A > -8.3));
+  state.gravityWarningShown = hasGravityWarning;
+
   const fpsBanner = el('fpsWarningBanner');
   const fpsMsg = el('fpsWarningMessage');
   if (fpsBanner && fpsMsg) {
-    if (yFit && pts.length >= 5) {
+    if (hasGravityWarning) {
       const ayFitted = 2 * yFit.A;
-      if (ayFitted < -11.3 || ayFitted > -8.3) {
-        fpsBanner.style.display = 'block';
-        state.gravityWarningShown = true;
-        const absAy = Math.max(0.001, Math.abs(ayFitted));
-        const k = Math.sqrt(9.80 / absAy);
-        const invK = 1 / k;
+      fpsBanner.style.display = 'block';
+      const absAy = Math.max(0.001, Math.abs(ayFitted));
+      const k = Math.sqrt(9.80 / absAy);
+      const invK = 1 / k;
 
-        let matchedN = null;
-        let isTooLow = true;
-        for (const N of [2, 4, 8]) {
-          if (Math.abs(k - N) / N <= 0.15) {
-            matchedN = N;
-            isTooLow = true;
-            break;
-          }
-          if (Math.abs(invK - N) / N <= 0.15) {
-            matchedN = N;
-            isTooLow = false;
-            break;
-          }
+      let matchedN = null;
+      let isTooLow = true;
+      for (const N of [2, 4, 8]) {
+        if (Math.abs(k - N) / N <= 0.15) {
+          matchedN = N;
+          isTooLow = true;
+          break;
         }
+        if (Math.abs(invK - N) / N <= 0.15) {
+          matchedN = N;
+          isTooLow = false;
+          break;
+        }
+      }
 
-        if (matchedN !== null) {
-          if (isTooLow) {
-            fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too low</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at. (Slow-motion clips often export at 30 fps.)`;
-          } else {
-            fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too high</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at.`;
-          }
+      if (matchedN !== null) {
+        if (isTooLow) {
+          fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too low</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at. (Slow-motion clips often export at 30 fps.)`;
         } else {
-          fpsMsg.innerHTML = `Fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code> (outside [−11.3, −8.3] m/s²). Check your scale: is the meter stick in the same plane as the ball, and is the right length typed in 1A?`;
+          fpsMsg.innerHTML = `Your FPS setting may be about <strong>${matchedN}× too high</strong> (fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code>). Check the frame rate your phone actually recorded at.`;
         }
       } else {
-        fpsBanner.style.display = 'none';
+        fpsMsg.innerHTML = `Fitted vertical acceleration is <code>a<sub>y</sub> = ${ayFitted.toFixed(2)} m/s²</code> (outside [−11.3, −8.3] m/s²). Check your scale: is the meter stick in the same plane as the ball, and is the right length typed in 1A?`;
       }
     } else {
       fpsBanner.style.display = 'none';
