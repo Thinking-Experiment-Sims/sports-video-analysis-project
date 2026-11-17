@@ -1025,9 +1025,9 @@
           <!-- Calculation 7 -->
           <div class="std-calc-block">
             <h4>7. Consistency check: acceleration of gravity</h4>
-            <p class="std-calc-hint">Compare gravity determined from your best-fit curve against gravity determined from your measured apex motion. From your measured rise \(\Delta y_{\text{up}} = y_{\max} - y_0\) and rise time \(t_{\text{up}}\), compute \(g_{\text{meas}} = \frac{2\Delta y_{\text{up}}}{t_{\text{up}}^2}\). Compare with your fitted \(|a_y| = 2|A|\) and reference \(9.8\text{ m/s}^2\).</p>
+            <p class="std-calc-hint">Compare gravity determined from your best-fit curve against gravity determined from your measured rise \(\Delta y = y_{\max,\text{meas}} - y_0\) (first height to max height). Since \(v_{\text{top}} = 0\), use \(v_{\text{top}}^2 = v_{0y}^2 - 2|a|\Delta y\) to solve for \(|a| = \frac{v_{0y}^2}{2\Delta y}\). Compare with your fitted \(|a_y| = 2|A|\) and reference \(9.8\text{ m/s}^2\).</p>
             <div class="std-calc-grid">
-              <div class="calc-field-group"><label for="stdGMeas">\(g_{\text{meas}}\) from apex (\(2\Delta y_{\text{up}} / t_{\text{up}}^2\)) (m/s²)</label><input type="number" id="stdGMeas" class="input-control" step="0.01"></div>
+              <div class="calc-field-group"><label for="stdGMeas">\(|a|\) from apex rise (\(v_{0y}^2 / (2\Delta y)\)) (m/s²)</label><input type="number" id="stdGMeas" class="input-control" step="0.01"></div>
               <div class="calc-field-group"><label for="stdGPctFit">% difference vs. fitted \(|a_y|\)</label><input type="number" id="stdGPctFit" class="input-control" step="0.1"></div>
               <div class="calc-field-group"><label for="stdGPctRef">% difference vs. \(9.8\text{ m/s}^2\)</label><input type="number" id="stdGPctRef" class="input-control" step="0.1"></div>
             </div>
@@ -1679,7 +1679,7 @@
               <li><strong>1 (Fit values):</strong> Read \(x_0, y_0, v_{0x}, v_{0y}, a_x, a_y\) from your fits (\(v_{0x} = m\), \(v_{0y} = B\), \(a_y = 2A\)); compare \(a_y\) with \(-9.8\text{ m/s}^2\).</li>
               <li><strong>2–4 (Hang time, range, maximum height):</strong> Calculate each with the equations for accelerating motion, measure it from your tracked data, and find the percent difference.</li>
               <li><strong>5–6 (Launch speed and angle):</strong> \(v_0 = \sqrt{v_{0x}^2 + v_{0y}^2}\), \(\theta = \tan^{-1}(v_{0y}/v_{0x})\).</li>
-              <li><strong>7 (Consistency check):</strong> Determine gravity again using your apex motion (\(g_{\text{meas}} = 2\Delta y_{\text{up}} / t_{\text{up}}^2\)), and compare with your fitted \(|a_y|\) and reference \(9.8\text{ m/s}^2\).</li>
+              <li><strong>7 (Consistency check):</strong> Find \(\Delta y = y_{\max,\text{meas}} - y_0\) and solve \(0 = v_{0y}^2 - 2|a|\Delta y\) for \(|a| = v_{0y}^2 / (2\Delta y)\); compare with your fitted \(|a_y|\) and reference \(9.8\text{ m/s}^2\).</li>
               <li><strong>Tab 5B (Motion Meaning &amp; Conclusion):</strong> Explain why the ball is not at rest in 2D at \(v_y = 0\), explain negative \(a_y\), state your measurement limitation with direction (too high vs. too low), and write your gravity conclusion.</li>
             </ul>
           </div>

@@ -3592,22 +3592,28 @@ function checkStandardCalculations(exp) {
     if (!pctOk(vyp, vyc, vy)) bad7.push('% difference for v₀ᵧ (compare with Calculation 1)');
     report('fbStd7', bad7.length === 0, '✓ Consistency check complete. Explain in your work whether the two methods agree.', 'Check: ' + bad7.join('; ') + '.');
   } else {
-    // Gravity consistency check: curve fit vs. apex kinematics
+    // Gravity consistency check: curve fit vs. apex kinematics (v_top^2 = v0y^2 - 2|a|dy)
     const gFitMag = exp.ayFit !== null ? Math.abs(exp.ayFit) : null;
     const dyUpApex = (exp.yMaxTrack !== null && exp.y0 !== null && exp.yMaxTrack > exp.y0)
       ? (exp.yMaxTrack - exp.y0)
       : (exp.dyUpPred !== null ? exp.dyUpPred : null);
+    const dyUpFitC = (exp.yMaxTrack !== null && exp.C !== null && exp.yMaxTrack > exp.C)
+      ? (exp.yMaxTrack - exp.C)
+      : null;
+    const gVelSqTrack = (exp.B !== null && dyUpApex && dyUpApex > 0) ? (exp.B * exp.B) / (2 * dyUpApex) : null;
+    const gVelSqFitC = (exp.B !== null && dyUpFitC && dyUpFitC > 0) ? (exp.B * exp.B) / (2 * dyUpFitC) : null;
     const tUpApex = exp.tUp || exp.tPeakTrack;
     const gApex = (dyUpApex !== null && tUpApex && tUpApex > 0) ? (2 * dyUpApex) / (tUpApex * tUpApex) : null;
     const gVyApex = (exp.B !== null && tUpApex && tUpApex > 0) ? Math.abs(exp.B) / tUpApex : null;
     const ownDyUp = (ym !== null && y0 !== null && ym > y0) ? (ym - y0) : null;
+    const ownGVelSq = (vy !== null && ownDyUp && ownDyUp > 0) ? (vy * vy) / (2 * ownDyUp) : null;
     const ownGApex = (ownDyUp !== null && tUpApex && tUpApex > 0) ? (2 * ownDyUp) / (tUpApex * tUpApex) : null;
 
-    const gTargets = [gApex, ownGApex, gVyApex, gFitMag, 9.8].filter(v => v !== null);
+    const gTargets = [gVelSqTrack, gVelSqFitC, ownGVelSq, gApex, ownGApex, gVyApex, gFitMag, 9.8].filter(v => v !== null);
     const gmMag = gm !== null ? Math.abs(gm) : null;
 
     if (gmMag === null || !nearAny(gmMag, gTargets, 0.08, 0.5)) {
-      bad7.push('measured gravity g_meas (use 2Δy_up / t_up² from your apex data, expected ~9.8 m/s²)');
+      bad7.push('measured gravity |a| (use v₀ᵧ² / (2Δy) with Δy = y_max − y₀, expected ~9.8 m/s²)');
     }
     if (gpFit === null || !pctOk(gpFit, gmMag, gFitMag)) {
       bad7.push('% difference vs. fitted |a_y|');
